@@ -1,5 +1,5 @@
 /**
- * Tests for install.ps1 wrapper delegation
+ * Tests for uninstall.ps1 wrapper delegation
  */
 
 const assert = require('assert');
@@ -10,7 +10,8 @@ const { execFileSync } = require('child_process');
 
 const { resolveExecutablePath, resolvePowerShellCommand } = require('./powershell-test-utils');
 
-const SCRIPT = path.join(__dirname, '..', '..', 'install.ps1');
+const INSTALL_SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'install-apply.js');
+const SCRIPT = path.join(__dirname, '..', '..', 'uninstall.ps1');
 const PACKAGE_JSON = path.join(__dirname, '..', '..', 'package.json');
 
 /**
@@ -28,7 +29,7 @@ function cleanup(dirPath) {
 }
 
 /**
- * Runs the PowerShell installer wrapper and captures its exit status.
+ * Runs the PowerShell uninstaller wrapper and captures its exit status.
  */
 function run(powerShellCommand, args = [], options = {}) {
   const env = {
@@ -75,37 +76,55 @@ function test(name, fn) {
 }
 
 /**
- * Executes the install.ps1 wrapper regression suite.
+ * Executes the uninstall.ps1 wrapper regression suite.
  */
 function runTests() {
-  console.log('\n=== Testing install.ps1 ===\n');
+  console.log('\n=== Testing uninstall.ps1 ===\n');
 
   let passed = 0;
   let failed = 0;
   let skipped = 0;
   const powerShellCommand = resolvePowerShellCommand();
 
-  if (test('publishes ecc-install through the Node installer runtime for cross-platform npm usage', () => {
+  if (test('publishes the uninstall wrapper entrypoints in the package file list', () => {
     const packageJson = JSON.parse(fs.readFileSync(PACKAGE_JSON, 'utf8'));
-    assert.strictEqual(packageJson.bin['ecc-install'], 'scripts/install-apply.js');
+    assert.ok(packageJson.files.includes('uninstall.sh'));
+    assert.ok(packageJson.files.includes('uninstall.ps1'));
   })) passed++; else failed++;
 
   if (!powerShellCommand) {
     console.log('  - skipped delegation test; PowerShell is not available in PATH');
     skipped++;
-  } else if (test('delegates to the Node installer and preserves dry-run output', () => {
-    const homeDir = createTempDir('install-ps1-home-');
-    const projectDir = createTempDir('install-ps1-project-');
+  } else if (test('delegates to the Node uninstaller and preserves dry-run output', () => {
+    const homeDir = createTempDir('uninstall-ps1-home-');
+    const projectDir = createTempDir('uninstall-ps1-project-');
 
     try {
-      const result = run(powerShellCommand, ['--target', 'cursor', '--dry-run', 'typescript'], {
+      execFileSync('node', [INSTALL_SCRIPT, '--target', 'cursor', 'typescript'], {
+        cwd: projectDir,
+        env: {
+          ...process.env,
+          HOME: homeDir,
+          USERPROFILE: homeDir,
+        },
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+        timeout: 10000,
+      });
+
+      const statePath = path.join(projectDir, '.cursor', 'ecc-install-state.json');
+      assert.ok(fs.existsSync(statePath));
+
+      const result = run(powerShellCommand, ['--target', 'cursor', '--dry-run', '--json'], {
         cwd: projectDir,
         homeDir,
       });
 
       assert.strictEqual(result.code, 0, result.stderr);
-      assert.ok(result.stdout.includes('Dry-run install plan'));
-      assert.ok(!fs.existsSync(path.join(projectDir, '.cursor', 'hooks.json')));
+      const parsed = JSON.parse(result.stdout);
+      assert.strictEqual(parsed.dryRun, true);
+      assert.strictEqual(parsed.summary.plannedRemovalCount, 1);
+      assert.ok(fs.existsSync(statePath));
     } finally {
       cleanup(homeDir);
       cleanup(projectDir);
@@ -117,12 +136,12 @@ function runTests() {
     skipped++;
   } else if (test('surfaces a friendly error when Node.js is not available in PATH', () => {
     const powerShellPath = resolveExecutablePath(powerShellCommand);
-    const emptyPathDir = createTempDir('install-ps1-path-');
-    const homeDir = createTempDir('install-ps1-home-');
-    const projectDir = createTempDir('install-ps1-project-');
+    const emptyPathDir = createTempDir('uninstall-ps1-path-');
+    const homeDir = createTempDir('uninstall-ps1-home-');
+    const projectDir = createTempDir('uninstall-ps1-project-');
 
     try {
-      const result = run(powerShellPath, ['--dry-run', 'typescript'], {
+      const result = run(powerShellPath, ['--dry-run'], {
         cwd: projectDir,
         homeDir,
         env: {
@@ -142,23 +161,23 @@ function runTests() {
   if (!powerShellCommand) {
     console.log('  - skipped missing-script preflight test; PowerShell is not available in PATH');
     skipped++;
-  } else if (test('surfaces a friendly error when the installer runtime script is missing', () => {
-    const wrapperDir = createTempDir('install-ps1-wrapper-');
-    const homeDir = createTempDir('install-ps1-home-');
-    const projectDir = createTempDir('install-ps1-project-');
-    const wrapperScript = path.join(wrapperDir, 'install.ps1');
+  } else if (test('surfaces a friendly error when the uninstaller runtime script is missing', () => {
+    const wrapperDir = createTempDir('uninstall-ps1-wrapper-');
+    const homeDir = createTempDir('uninstall-ps1-home-');
+    const projectDir = createTempDir('uninstall-ps1-project-');
+    const wrapperScript = path.join(wrapperDir, 'uninstall.ps1');
 
     try {
       fs.copyFileSync(SCRIPT, wrapperScript);
 
-      const result = run(powerShellCommand, ['--dry-run', 'typescript'], {
+      const result = run(powerShellCommand, ['--dry-run'], {
         cwd: projectDir,
         homeDir,
         scriptPath: wrapperScript,
       });
 
       assert.strictEqual(result.code, 1);
-      assert.ok(result.stderr.includes(`Installer script not found: ${path.join(wrapperDir, 'scripts', 'install-apply.js')}`));
+      assert.ok(result.stderr.includes(`Uninstaller script not found: ${path.join(wrapperDir, 'scripts', 'uninstall.js')}`));
     } finally {
       cleanup(wrapperDir);
       cleanup(homeDir);

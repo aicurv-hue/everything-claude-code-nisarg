@@ -90,6 +90,8 @@
     ".claude-plugin/README.md",
     "install.sh",
     "install.ps1",
+    "uninstall.sh",
+    "uninstall.ps1",
     "llms.txt"
   ],
   "bin": {

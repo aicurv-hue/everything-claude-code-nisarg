@@ -176,6 +176,34 @@ npm install        # or: pnpm install | yarn install | bun install
 npx ecc-install typescript
 ```
 
+### Uninstall / Remove ECC-managed files
+
+Use the uninstall entrypoint that matches your shell, or the cross-platform
+CLI command:
+
+```bash
+# macOS/Linux
+./uninstall.sh --target cursor --dry-run
+./uninstall.sh --target cursor
+
+# Cross-platform via the main CLI
+npx ecc uninstall --target cursor --dry-run
+```
+
+```powershell
+# Windows PowerShell
+.\uninstall.ps1 --target cursor --dry-run
+.\uninstall.ps1 --target cursor
+
+# Cross-platform via the main CLI
+npx ecc uninstall --target cursor --dry-run
+```
+
+The uninstaller only removes files recorded in ECC install-state and preserves
+unrelated user files. Use `--dry-run` first to preview planned removals. If the
+process hits permission or file-lock issues, it exits with an error summary so
+you can fix the problem and retry safely.
+
 For manual install instructions see the README in the `rules/` folder.
 
 ### Step 3: Start Using
@@ -900,6 +928,18 @@ ECC provides **full Cursor IDE support** with hooks, rules, agents, skills, comm
 # Windows PowerShell
 .\install.ps1 --target cursor typescript
 .\install.ps1 --target cursor python golang swift php
+```
+
+```bash
+# Uninstall Cursor-managed ECC files
+./uninstall.sh --target cursor --dry-run
+./uninstall.sh --target cursor
+```
+
+```powershell
+# Windows PowerShell
+.\uninstall.ps1 --target cursor --dry-run
+.\uninstall.ps1 --target cursor
 ```
 
 ### What's Included

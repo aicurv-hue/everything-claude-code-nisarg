@@ -12,6 +12,9 @@ const {
   resolveInstallConfigPath,
 } = require('../../scripts/lib/install/config');
 
+/**
+ * Runs a synchronous assertion-based test and records the outcome.
+ */
 function test(name, fn) {
   try {
     fn();
@@ -24,19 +27,31 @@ function test(name, fn) {
   }
 }
 
+/**
+ * Creates an isolated temporary directory for a test case.
+ */
 function createTempDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 }
 
+/**
+ * Removes a temporary directory tree created for a test case.
+ */
 function cleanup(dirPath) {
   fs.rmSync(dirPath, { recursive: true, force: true });
 }
 
+/**
+ * Writes a JSON fixture file, creating parent directories as needed.
+ */
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, JSON.stringify(value, null, 2));
 }
 
+/**
+ * Executes the install config regression suite.
+ */
 function runTests() {
   console.log('\n=== Testing install/config.js ===\n');
 
@@ -44,9 +59,22 @@ function runTests() {
   let failed = 0;
 
   if (test('resolves relative config paths from the provided cwd', () => {
-    const cwd = '/workspace/app';
+    const cwd = createTempDir('install-config-cwd-');
+
+    try {
+      const resolved = resolveInstallConfigPath('configs/ecc-install.json', { cwd });
+      assert.strictEqual(resolved, path.resolve(cwd, 'configs', 'ecc-install.json'));
+      assert.ok(path.isAbsolute(resolved));
+    } finally {
+      cleanup(cwd);
+    }
+  })) passed++; else failed++;
+
+  if (test('returns an absolute path even when cwd is relative', () => {
+    const cwd = path.join('relative', 'workspace');
     const resolved = resolveInstallConfigPath('configs/ecc-install.json', { cwd });
-    assert.strictEqual(resolved, path.join(cwd, 'configs', 'ecc-install.json'));
+    assert.strictEqual(resolved, path.resolve(cwd, 'configs', 'ecc-install.json'));
+    assert.ok(path.isAbsolute(resolved));
   })) passed++; else failed++;
 
   if (test('loads and normalizes a valid install config', () => {

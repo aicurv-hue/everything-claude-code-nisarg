@@ -9,6 +9,9 @@ const CONFIG_SCHEMA_PATH = path.join(__dirname, '..', '..', '..', 'schemas', 'ec
 
 let cachedValidator = null;
 
+/**
+ * Reads and parses a JSON file, rewriting parse failures with contextual labels.
+ */
 function readJson(filePath, label) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -17,6 +20,9 @@ function readJson(filePath, label) {
   }
 }
 
+/**
+ * Lazily compiles and caches the install config schema validator.
+ */
 function getValidator() {
   if (cachedValidator) {
     return cachedValidator;
@@ -28,14 +34,23 @@ function getValidator() {
   return cachedValidator;
 }
 
+/**
+ * Returns a de-duplicated list of trimmed string values.
+ */
 function dedupeStrings(values) {
   return [...new Set((Array.isArray(values) ? values : []).map(value => String(value).trim()).filter(Boolean))];
 }
 
+/**
+ * Formats Ajv validation errors into a single human-readable message.
+ */
 function formatValidationErrors(errors = []) {
   return errors.map(error => `${error.instancePath || '/'} ${error.message}`).join('; ');
 }
 
+/**
+ * Resolves an install config path relative to the provided working directory.
+ */
 function resolveInstallConfigPath(configPath, options = {}) {
   if (!configPath) {
     throw new Error('An install config path is required');
@@ -44,9 +59,12 @@ function resolveInstallConfigPath(configPath, options = {}) {
   const cwd = options.cwd || process.cwd();
   return path.isAbsolute(configPath)
     ? configPath
-    : path.normalize(path.join(cwd, configPath));
+    : path.resolve(cwd, configPath);
 }
 
+/**
+ * Loads, validates, and normalizes an ECC install configuration file.
+ */
 function loadInstallConfig(configPath, options = {}) {
   const resolvedPath = resolveInstallConfigPath(configPath, options);
 

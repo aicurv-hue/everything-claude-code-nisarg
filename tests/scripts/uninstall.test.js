@@ -22,20 +22,32 @@ const {
   writeInstallState,
 } = require('../../scripts/lib/install-state');
 
+/**
+ * Creates an isolated temporary directory for an uninstall integration test.
+ */
 function createTempDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 }
 
+/**
+ * Removes a temporary directory tree created by a test.
+ */
 function cleanup(dirPath) {
   fs.rmSync(dirPath, { recursive: true, force: true });
 }
 
+/**
+ * Writes a normalized install state fixture and returns the in-memory state.
+ */
 function writeState(filePath, options) {
   const state = createInstallState(options);
   writeInstallState(filePath, state);
   return state;
 }
 
+/**
+ * Runs the Node uninstaller entrypoint and captures its exit status.
+ */
 function run(args = [], options = {}) {
   const env = {
     ...process.env,
@@ -61,6 +73,9 @@ function run(args = [], options = {}) {
   }
 }
 
+/**
+ * Runs a synchronous assertion-based test and prints the result.
+ */
 function test(name, fn) {
   try {
     fn();
@@ -73,6 +88,9 @@ function test(name, fn) {
   }
 }
 
+/**
+ * Executes the uninstall.js regression suite.
+ */
 function runTests() {
   console.log('\n=== Testing uninstall.js ===\n');
 
@@ -274,6 +292,79 @@ function runTests() {
       assert.ok(fs.existsSync(renderedPath));
       assert.ok(fs.existsSync(statePath));
     } finally {
+      cleanup(homeDir);
+      cleanup(projectRoot);
+    }
+  })) passed++; else failed++;
+
+  if (test('reports permission errors without silently removing managed files', () => {
+    if (process.platform === 'win32' || process.getuid?.() === 0) {
+      console.log('    (skipped — chmod ineffective on Windows/root)');
+      return;
+    }
+
+    const homeDir = createTempDir('uninstall-home-');
+    const projectRoot = createTempDir('uninstall-project-');
+
+    try {
+      const targetRoot = path.join(projectRoot, '.cursor');
+      fs.mkdirSync(targetRoot, { recursive: true });
+      const normalizedTargetRoot = fs.realpathSync(targetRoot);
+      const statePath = path.join(normalizedTargetRoot, 'ecc-install-state.json');
+      const managedPath = path.join(normalizedTargetRoot, 'managed-note.txt');
+      fs.writeFileSync(managedPath, 'managed\n');
+
+      writeState(statePath, {
+        adapter: { id: 'cursor-project', target: 'cursor', kind: 'project' },
+        targetRoot: normalizedTargetRoot,
+        installStatePath: statePath,
+        request: {
+          profile: null,
+          modules: ['platform-configs'],
+          includeComponents: [],
+          excludeComponents: [],
+          legacyLanguages: [],
+          legacyMode: false,
+        },
+        resolution: {
+          selectedModules: ['platform-configs'],
+          skippedModules: [],
+        },
+        operations: [
+          {
+            kind: 'copy-file',
+            moduleId: 'platform-configs',
+            sourceRelativePath: 'rules/common/coding-style.md',
+            destinationPath: managedPath,
+            strategy: 'preserve-relative-path',
+            ownership: 'managed',
+            scaffoldOnly: false,
+          },
+        ],
+        source: {
+          repoVersion: CURRENT_PACKAGE_VERSION,
+          repoCommit: 'abc123',
+          manifestVersion: CURRENT_MANIFEST_VERSION,
+        },
+      });
+
+      fs.chmodSync(normalizedTargetRoot, 0o555);
+
+      const uninstallResult = run(['--target', 'cursor', '--json'], {
+        cwd: projectRoot,
+        homeDir,
+      });
+
+      assert.strictEqual(uninstallResult.code, 1, uninstallResult.stderr);
+      const parsed = JSON.parse(uninstallResult.stdout);
+      assert.strictEqual(parsed.summary.errorCount, 1);
+      assert.strictEqual(parsed.results[0].status, 'error');
+      assert.ok(parsed.results[0].error);
+      assert.ok(fs.existsSync(managedPath));
+      assert.ok(fs.existsSync(statePath));
+    } finally {
+      const targetRoot = path.join(projectRoot, '.cursor');
+      try { fs.chmodSync(targetRoot, 0o755); } catch { /* best-effort */ }
       cleanup(homeDir);
       cleanup(projectRoot);
     }

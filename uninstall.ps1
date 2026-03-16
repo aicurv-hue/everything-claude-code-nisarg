@@ -1,8 +1,8 @@
 #!/usr/bin/env pwsh
-# install.ps1 - Windows-native entrypoint for the ECC installer.
+# uninstall.ps1 — Windows-native entrypoint for the ECC uninstaller.
 #
 # This wrapper resolves the real repo/package root when invoked through a
-# symlinked path, then delegates to the Node-based installer runtime.
+# symlinked path, then delegates to the Node-based uninstall runtime.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -51,17 +51,17 @@ function Resolve-LinkedScriptPath {
 
 $scriptPath = Resolve-LinkedScriptPath -InitialPath $PSCommandPath
 $scriptDir = Split-Path -Parent $scriptPath
-$installerScript = Join-Path -Path (Join-Path -Path $scriptDir -ChildPath 'scripts') -ChildPath 'install-apply.js'
+$uninstallerScript = Join-Path -Path (Join-Path -Path $scriptDir -ChildPath 'scripts') -ChildPath 'uninstall.js'
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
     Write-Error 'Node.js was not found in PATH. Please install Node.js and try again.'
     exit 1
 }
 
-if (-not (Test-Path -LiteralPath $installerScript)) {
-    Write-Error "Installer script not found: $installerScript"
+if (-not (Test-Path -LiteralPath $uninstallerScript)) {
+    Write-Error "Uninstaller script not found: $uninstallerScript"
     exit 1
 }
 
-& node $installerScript @args
+& node $uninstallerScript @args
 exit $LASTEXITCODE
