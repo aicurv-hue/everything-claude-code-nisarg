@@ -19,23 +19,80 @@
 #   3. git repo root path (fallback, machine-specific)
 #   4. "global" (no project context detected)
 
+_clv2_normalize_path() {
+  local input="$1"
+
+  if [ -z "$input" ]; then
+    printf '%s\n' ''
+    return 0
+  fi
+
+  case "$input" in
+    /*)
+      printf '%s\n' "$input"
+      return 0
+      ;;
+  esac
+
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -u "$input" 2>/dev/null && return 0
+  fi
+
+  if command -v wslpath >/dev/null 2>&1; then
+    wslpath -a "$input" 2>/dev/null && return 0
+  fi
+
+  case "$input" in
+    [A-Za-z]:\\*|[A-Za-z]:/*)
+      local drive="${input%%:*}"
+      local rest="${input#?:}"
+      drive=$(printf '%s' "$drive" | tr '[:upper:]' '[:lower:]')
+      rest="${rest//\\//}"
+      printf '/mnt/%s%s\n' "$drive" "$rest"
+      return 0
+      ;;
+  esac
+
+  printf '%s\n' "$input"
+}
+
+_CLV2_ORIGINAL_CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR:-}"
+
+if [ -n "${HOME:-}" ]; then
+  HOME="$(_clv2_normalize_path "$HOME")"
+  export HOME
+elif [ -n "${USERPROFILE:-}" ]; then
+  HOME="$(_clv2_normalize_path "$USERPROFILE")"
+  export HOME
+fi
+
+if [ -n "${USERPROFILE:-}" ]; then
+  USERPROFILE="$(_clv2_normalize_path "$USERPROFILE")"
+  export USERPROFILE
+fi
+
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
+  CLAUDE_PROJECT_DIR="$(_clv2_normalize_path "$CLAUDE_PROJECT_DIR")"
+  export CLAUDE_PROJECT_DIR
+fi
+
 _CLV2_HOMUNCULUS_DIR="${HOME}/.claude/homunculus"
 _CLV2_PROJECTS_DIR="${_CLV2_HOMUNCULUS_DIR}/projects"
 _CLV2_REGISTRY_FILE="${_CLV2_HOMUNCULUS_DIR}/projects.json"
 
 _clv2_resolve_python_cmd() {
   if [ -n "${CLV2_PYTHON_CMD:-}" ] && command -v "$CLV2_PYTHON_CMD" >/dev/null 2>&1; then
-    printf '%s\n' "$CLV2_PYTHON_CMD"
+    command -v "$CLV2_PYTHON_CMD"
     return 0
   fi
 
   if command -v python3 >/dev/null 2>&1; then
-    printf '%s\n' python3
+    command -v python3
     return 0
   fi
 
   if command -v python >/dev/null 2>&1; then
-    printf '%s\n' python
+    command -v python
     return 0
   fi
 
@@ -45,6 +102,28 @@ _clv2_resolve_python_cmd() {
 _CLV2_PYTHON_CMD="$(_clv2_resolve_python_cmd 2>/dev/null || true)"
 CLV2_PYTHON_CMD="$_CLV2_PYTHON_CMD"
 export CLV2_PYTHON_CMD
+
+_clv2_hash_identifier() {
+  local input="$1"
+
+  if [ -z "$input" ]; then
+    return 1
+  fi
+
+  if [ -n "$_CLV2_PYTHON_CMD" ]; then
+    printf '%s' "$input" | "$_CLV2_PYTHON_CMD" -c "import sys,hashlib; print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest()[:12])" 2>/dev/null && return 0
+  fi
+
+  if command -v shasum >/dev/null 2>&1; then
+    printf '%s' "$input" | shasum -a 256 2>/dev/null | cut -c1-12 && return 0
+  fi
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    printf '%s' "$input" | sha256sum 2>/dev/null | cut -c1-12 && return 0
+  fi
+
+  return 1
+}
 
 CLV2_OBSERVER_PROMPT_PATTERN='Can you confirm|requires permission|Awaiting (user confirmation|confirmation|approval|permission)|confirm I should proceed|once granted access|grant.*access'
 export CLV2_OBSERVER_PROMPT_PATTERN
@@ -90,32 +169,30 @@ _clv2_detect_project() {
     fi
   fi
 
-  # Compute hash from the original remote URL (legacy, for backward compatibility)
+  # Compute hash from the original identifier (legacy, for backward compatibility)
   local legacy_hash_input="${remote_url:-$project_root}"
 
   # Strip embedded credentials from remote URL (e.g., https://ghp_xxxx@github.com/...)
   if [ -n "$remote_url" ]; then
     remote_url=$(printf '%s' "$remote_url" | sed -E 's|://[^@]+@|://|')
+  elif [ "$source_hint" = "env" ] && [ -n "$_CLV2_ORIGINAL_CLAUDE_PROJECT_DIR" ]; then
+    legacy_hash_input="$_CLV2_ORIGINAL_CLAUDE_PROJECT_DIR"
   fi
 
   local hash_input="${remote_url:-$project_root}"
   # Prefer Python for consistent SHA256 behavior across shells/platforms.
-  if [ -n "$_CLV2_PYTHON_CMD" ]; then
-    project_id=$(printf '%s' "$hash_input" | "$_CLV2_PYTHON_CMD" -c "import sys,hashlib; print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest()[:12])" 2>/dev/null)
-  fi
+  project_id="$(_clv2_hash_identifier "$hash_input" 2>/dev/null || true)"
 
   # Fallback if Python is unavailable or hash generation failed.
   if [ -z "$project_id" ]; then
-    project_id=$(printf '%s' "$hash_input" | shasum -a 256 2>/dev/null | cut -c1-12 || \
-                 printf '%s' "$hash_input" | sha256sum 2>/dev/null | cut -c1-12 || \
-                 echo "fallback")
+    project_id="fallback"
   fi
 
   # Backward compatibility: if credentials were stripped and the hash changed,
-  # check if a project dir exists under the legacy hash and reuse it
-  if [ "$legacy_hash_input" != "$hash_input" ] && [ -n "$_CLV2_PYTHON_CMD" ]; then
+  # or if a normalized env path changed the identifier, reuse or migrate legacy state.
+  if [ "$legacy_hash_input" != "$hash_input" ]; then
     local legacy_id=""
-    legacy_id=$(printf '%s' "$legacy_hash_input" | "$_CLV2_PYTHON_CMD" -c "import sys,hashlib; print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest()[:12])" 2>/dev/null)
+    legacy_id="$(_clv2_hash_identifier "$legacy_hash_input" 2>/dev/null || true)"
     if [ -n "$legacy_id" ] && [ -d "${_CLV2_PROJECTS_DIR}/${legacy_id}" ] && [ ! -d "${_CLV2_PROJECTS_DIR}/${project_id}" ]; then
       # Migrate legacy directory to new hash
       mv "${_CLV2_PROJECTS_DIR}/${legacy_id}" "${_CLV2_PROJECTS_DIR}/${project_id}" 2>/dev/null || project_id="$legacy_id"
@@ -219,6 +296,7 @@ PROJECT_ID="$_CLV2_PROJECT_ID"
 PROJECT_NAME="$_CLV2_PROJECT_NAME"
 PROJECT_ROOT="$_CLV2_PROJECT_ROOT"
 PROJECT_DIR="$_CLV2_PROJECT_DIR"
+export PROJECT_ID PROJECT_NAME PROJECT_ROOT PROJECT_DIR
 
 if [ -n "$PROJECT_ROOT" ]; then
   CLV2_OBSERVER_SENTINEL_FILE="${PROJECT_ROOT}/.observer.lock"

@@ -7,6 +7,42 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'orchestrate-codex-worker.sh');
+let bashPathStyle = null;
+
+function getBashPathStyle() {
+  if (process.platform !== 'win32') {
+    return 'native';
+  }
+
+  if (bashPathStyle) {
+    return bashPathStyle;
+  }
+
+  const result = spawnSync(
+    'bash',
+    [
+      '-lc',
+      'if command -v cygpath >/dev/null 2>&1; then printf cygwin; elif command -v wslpath >/dev/null 2>&1; then printf wsl; else printf posix; fi'
+    ],
+    {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe']
+    }
+  );
+
+  bashPathStyle = result.status === 0 ? (result.stdout || '').trim() || 'posix' : 'posix';
+  return bashPathStyle;
+}
+
+function toBashPath(filePath) {
+  if (process.platform !== 'win32') {
+    return filePath;
+  }
+
+  const normalized = String(filePath).replace(/\\/g, '/');
+  const drivePrefix = getBashPathStyle() === 'wsl' ? '/mnt/' : '/';
+  return normalized.replace(/^([A-Za-z]):/, (_, driveLetter) => `${drivePrefix}${driveLetter.toLowerCase()}`);
+}
 
 console.log('=== Testing orchestrate-codex-worker.sh ===\n');
 
@@ -24,6 +60,22 @@ function test(desc, fn) {
   }
 }
 
+function cleanupTestDir(testDir) {
+  const retryableCodes = new Set(['EPERM', 'EBUSY', 'ENOTEMPTY']);
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      fs.rmSync(testDir, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (!retryableCodes.has(error.code) || attempt === 4) {
+        throw error;
+      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
+    }
+  }
+}
+
 test('fails fast for an unreadable task file and records failure artifacts', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-orch-worker-'));
   const handoffFile = path.join(tempRoot, '.orchestration', 'docs', 'handoff.md');
@@ -33,7 +85,7 @@ test('fails fast for an unreadable task file and records failure artifacts', () 
   try {
     spawnSync('git', ['init'], { cwd: tempRoot, stdio: 'ignore' });
 
-    const result = spawnSync('bash', [SCRIPT, missingTaskFile, handoffFile, statusFile], {
+    const result = spawnSync('bash', [toBashPath(SCRIPT), toBashPath(missingTaskFile), toBashPath(handoffFile), toBashPath(statusFile)], {
       cwd: tempRoot,
       encoding: 'utf8'
     });
@@ -55,7 +107,7 @@ test('fails fast for an unreadable task file and records failure artifacts', () 
       'Handoff file should explain the task-file failure'
     );
   } finally {
-    fs.rmSync(tempRoot, { recursive: true, force: true });
+    cleanupTestDir(tempRoot);
   }
 });
 

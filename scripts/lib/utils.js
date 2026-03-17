@@ -17,6 +17,23 @@ const isLinux = process.platform === 'linux';
  * Get the user's home directory (cross-platform)
  */
 function getHomeDir() {
+  if (!isWindows && typeof process.env.HOME === 'string' && process.env.HOME.length > 0) {
+    return process.env.HOME;
+  }
+
+  if (typeof process.env.USERPROFILE === 'string' && process.env.USERPROFILE.length > 0) {
+    return process.env.USERPROFILE;
+  }
+
+  if (
+    typeof process.env.HOMEDRIVE === 'string' &&
+    process.env.HOMEDRIVE.length > 0 &&
+    typeof process.env.HOMEPATH === 'string' &&
+    process.env.HOMEPATH.length > 0
+  ) {
+    return path.join(process.env.HOMEDRIVE, process.env.HOMEPATH);
+  }
+
   return os.homedir();
 }
 

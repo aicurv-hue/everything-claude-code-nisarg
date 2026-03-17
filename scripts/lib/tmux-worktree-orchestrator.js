@@ -37,13 +37,32 @@ function formatCommand(program, args) {
 function buildTemplateVariables(values) {
   return Object.entries(values).reduce((accumulator, [key, value]) => {
     const stringValue = String(value);
-    const quotedValue = shellQuote(stringValue);
 
     accumulator[key] = stringValue;
     accumulator[`${key}_raw`] = stringValue;
-    accumulator[`${key}_sh`] = quotedValue;
+    accumulator[`${key}_sh`] = shellQuote(stringValue);
     return accumulator;
   }, {});
+}
+
+const SHELL_PATH_PLACEHOLDERS = {
+  handoff_file: 'handoff_file_sh',
+  repo_root: 'repo_root_sh',
+  status_file: 'status_file_sh',
+  task_file: 'task_file_sh',
+  worktree_path: 'worktree_path_sh'
+};
+
+function validateLauncherCommand(template) {
+  const unsafePlaceholders = Object.entries(SHELL_PATH_PLACEHOLDERS)
+    .filter(([placeholder]) => template.includes(`{${placeholder}}`))
+    .map(([placeholder, safePlaceholder]) => `{${placeholder}} -> {${safePlaceholder}}`);
+
+  if (unsafePlaceholders.length > 0) {
+    throw new Error(
+      `launcherCommand must use shell-safe path placeholders: ${unsafePlaceholders.join(', ')}`
+    );
+  }
 }
 
 function buildSessionBannerCommand(sessionName, coordinationDir) {
@@ -190,6 +209,7 @@ function buildOrchestrationPlan(config = {}) {
     throw new Error('buildOrchestrationPlan requires at least one worker');
   }
 
+  const seenWorkerSlugs = new Set();
   const workerPlans = workers.map((worker, index) => {
     if (!worker || typeof worker.task !== 'string' || worker.task.trim().length === 0) {
       throw new Error(`Worker ${index + 1} is missing a task`);
@@ -197,6 +217,11 @@ function buildOrchestrationPlan(config = {}) {
 
     const workerName = worker.name || `worker-${index + 1}`;
     const workerSlug = slugify(workerName, `worker-${index + 1}`);
+    if (seenWorkerSlugs.has(workerSlug)) {
+      throw new Error(`Workers must produce unique slugs; duplicate slug: ${workerSlug}`);
+    }
+    seenWorkerSlugs.add(workerSlug);
+
     const branchName = `orchestrator-${sessionName}-${workerSlug}`;
     const worktreePath = path.join(worktreeRoot, `${repoName}-${sessionName}-${workerSlug}`);
     const workerCoordinationDir = path.join(coordinationDir, workerSlug);
@@ -206,7 +231,7 @@ function buildOrchestrationPlan(config = {}) {
     const launcherCommand = worker.launcherCommand || defaultLauncher;
     const workerSeedPaths = normalizeSeedPaths(worker.seedPaths, repoRoot);
     const seedPaths = normalizeSeedPaths([...globalSeedPaths, ...workerSeedPaths], repoRoot);
-    const templateVariables = {
+    const templateVariables = buildTemplateVariables({
       branch_name: branchName,
       handoff_file: handoffFilePath,
       repo_root: repoRoot,
@@ -216,11 +241,12 @@ function buildOrchestrationPlan(config = {}) {
       worker_name: workerName,
       worker_slug: workerSlug,
       worktree_path: worktreePath
-    };
+    });
 
     if (!launcherCommand) {
       throw new Error(`Worker ${workerName} is missing a launcherCommand`);
     }
+    validateLauncherCommand(launcherCommand);
 
     const gitArgs = ['worktree', 'add', '-b', branchName, worktreePath, baseRef];
 

@@ -10,6 +10,47 @@ task_file="$1"
 handoff_file="$2"
 status_file="$3"
 
+normalize_path() {
+  local input="$1"
+
+  if [[ -z "$input" ]]; then
+    printf '%s\n' ''
+    return 0
+  fi
+
+  case "$input" in
+    /*)
+      printf '%s\n' "$input"
+      return 0
+      ;;
+  esac
+
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -u "$input" 2>/dev/null && return 0
+  fi
+
+  if command -v wslpath >/dev/null 2>&1; then
+    wslpath -a "$input" 2>/dev/null && return 0
+  fi
+
+  case "$input" in
+    [A-Za-z]:\\*|[A-Za-z]:/*)
+      local drive="${input%%:*}"
+      local rest="${input#?:}"
+      drive="$(printf '%s' "$drive" | tr '[:upper:]' '[:lower:]')"
+      rest="${rest//\\//}"
+      printf '/mnt/%s%s\n' "$drive" "$rest"
+      return 0
+      ;;
+  esac
+
+  printf '%s\n' "$input"
+}
+
+task_file="$(normalize_path "$task_file")"
+handoff_file="$(normalize_path "$handoff_file")"
+status_file="$(normalize_path "$status_file")"
+
 timestamp() {
   date -u +"%Y-%m-%dT%H:%M:%SZ"
 }

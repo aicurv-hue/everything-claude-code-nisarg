@@ -12,6 +12,56 @@
 
 set -e
 
+normalize_shell_path() {
+  local input="$1"
+
+  if [ -z "$input" ]; then
+    printf '%s\n' ''
+    return 0
+  fi
+
+  case "$input" in
+    /*)
+      printf '%s\n' "$input"
+      return 0
+      ;;
+  esac
+
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -u "$input" 2>/dev/null && return 0
+  fi
+
+  if command -v wslpath >/dev/null 2>&1; then
+    wslpath -a "$input" 2>/dev/null && return 0
+  fi
+
+  case "$input" in
+    [A-Za-z]:\\*|[A-Za-z]:/*)
+      local drive="${input%%:*}"
+      local rest="${input#?:}"
+      drive=$(printf '%s' "$drive" | tr '[:upper:]' '[:lower:]')
+      rest="${rest//\\//}"
+      printf '/mnt/%s%s\n' "$drive" "$rest"
+      return 0
+      ;;
+  esac
+
+  printf '%s\n' "$input"
+}
+
+if [ -n "${HOME:-}" ]; then
+  HOME="$(normalize_shell_path "$HOME")"
+  export HOME
+elif [ -n "${USERPROFILE:-}" ]; then
+  HOME="$(normalize_shell_path "$USERPROFILE")"
+  export HOME
+fi
+
+if [ -n "${USERPROFILE:-}" ]; then
+  USERPROFILE="$(normalize_shell_path "$USERPROFILE")"
+  export USERPROFILE
+fi
+
 # Hook phase from CLI argument: "pre" (PreToolUse) or "post" (PostToolUse)
 HOOK_PHASE="${1:-post}"
 
@@ -67,6 +117,7 @@ try:
 except(KeyError, TypeError, ValueError):
     print("")
 ' 2>/dev/null || echo "")
+STDIN_CWD="$(normalize_shell_path "$STDIN_CWD")"
 
 # If cwd was provided in stdin, use it for project detection
 if [ -n "$STDIN_CWD" ] && [ -d "$STDIN_CWD" ]; then

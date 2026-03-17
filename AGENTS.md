@@ -1,6 +1,6 @@
 # Everything Claude Code (ECC) — Agent Instructions
 
-This is a **production-ready AI coding plugin** providing 22 specialized agents, 102 skills, 52 commands, and automated hook workflows for software development.
+This is a **production-ready AI coding plugin** providing 25 specialized agents, 108 skills, 57 commands, and automated hook workflows for software development.
 
 ## Core Principles
 
@@ -18,11 +18,14 @@ This is a **production-ready AI coding plugin** providing 22 specialized agents,
 | architect | System design and scalability | Architectural decisions |
 | tdd-guide | Test-driven development | New features, bug fixes |
 | code-reviewer | Code quality and maintainability | After writing/modifying code |
+| cpp-reviewer | C++ code review | C++ projects, native code changes |
+| cpp-build-resolver | CMake and C++ build errors | C++ build or toolchain failures |
 | security-reviewer | Vulnerability detection | Before commits, sensitive code |
 | build-error-resolver | Fix build/type errors | When build fails |
 | e2e-runner | End-to-end Playwright testing | Critical user flows |
 | refactor-cleaner | Dead code cleanup | Code maintenance |
 | doc-updater | Documentation and codemaps | Updating docs |
+| docs-lookup | Documentation research | Verifying APIs and vendor behavior |
 | go-reviewer | Go code review | Go projects |
 | go-build-resolver | Go build errors | Go build failures |
 | kotlin-reviewer | Kotlin code review | Kotlin/Android/KMP projects |
@@ -134,9 +137,9 @@ Troubleshoot failures: check test isolation → verify mocks → fix implementat
 ## Project Structure
 
 ```
-agents/          — 21 specialized subagents
-skills/          — 102 workflow skills and domain knowledge
-commands/        — 52 slash commands
+agents/          — 25 specialized subagents
+skills/          — 108 workflow skills and domain knowledge
+commands/        — 57 slash commands
 hooks/           — Trigger-based automations
 rules/           — Always-follow guidelines (common + per-language)
 scripts/         — Cross-platform Node.js utilities
