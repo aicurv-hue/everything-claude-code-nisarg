@@ -154,7 +154,6 @@ export function parseCsv(rawText: string): ParseCsvResult {
   const rows:        ParsedCsvRow[]   = [];
   const validations: RowValidation[]  = [];
   const errors:      RowError[]       = [];
-  const now = Date.now();
 
   for (let i = 1; i < nonEmpty.length; i++) {
     const cells  = splitCsvLine(nonEmpty[i]);
@@ -204,8 +203,6 @@ export function parseCsv(rawText: string): ParseCsvResult {
     if (!fieldErrors.date && !fieldErrors.time) {
       if (!parsed) {
         fieldErrors.date = `Cannot parse this date+time. Check values.`;
-      } else if (parsed.getTime() < now + 10 * 60 * 1000) {
-        fieldErrors.date = "Must be at least 10 minutes in the future.";
       }
     }
 

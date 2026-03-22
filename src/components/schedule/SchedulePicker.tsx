@@ -75,20 +75,16 @@ export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId
 
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const minDate = toLocalDateString(new Date(Date.now() + 10 * 60 * 1000));
+  const minDate = toLocalDateString(new Date());
 
-  // isValid: full datetime must be at least 10 min in the future
+  // isValid: just needs to be a parseable datetime
   const selectedDt = new Date(`${date}T${time}`);
-  const isValid = !isNaN(selectedDt.getTime()) && selectedDt.getTime() > Date.now() + 10 * 60 * 1000;
+  const isValid = !isNaN(selectedDt.getTime());
 
   const handleSubmit = () => {
     const dt = new Date(`${date}T${time}`);
     if (isNaN(dt.getTime())) {
       setSubmitError("Please enter a valid date and time.");
-      return;
-    }
-    if (dt.getTime() <= Date.now() + 10 * 60 * 1000) {
-      setSubmitError("Please choose a time at least 10 minutes in the future.");
       return;
     }
     setSubmitError(null);
