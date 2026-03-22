@@ -1,0 +1,81 @@
+import { db, isMock } from "@/lib/firebase";
+import { 
+  setDoc, 
+  getDoc, 
+  doc, 
+  serverTimestamp 
+} from "firebase/firestore";
+
+export interface ProfileSegment {
+  // Identity
+  name?: string;
+  roleOrIndustry?: string;
+  bioOrOffering?: string;
+  niche?: string;
+
+  // Strategy
+  icp?: string;
+  companyStage?: string;
+  jtbd?: string;
+
+  // Branding
+  pillars?: string;
+  personality?: string;
+  usp?: string;
+
+  // Voice
+  customerPains?: string;
+  verbatimLanguage?: string;
+  wordsToAvoid?: string;
+
+  // AI Config
+  model?: string;
+  systemPrompt?: string;
+}
+
+export interface UserProfile {
+  lastActiveSegment: "individual" | "corporate";
+  individual: ProfileSegment;
+  corporate: ProfileSegment;
+}
+
+const COLLECTION_NAME = "profiles";
+
+export const profileService = {
+  async saveProfile(userId: string, profile: UserProfile) {
+    if (isMock || !db) {
+      localStorage.setItem("user_profiles", JSON.stringify(profile));
+      return;
+    }
+    const profileRef = doc(db, COLLECTION_NAME, userId);
+    return await setDoc(profileRef, {
+      ...profile,
+      updated_at: serverTimestamp(),
+    }, { merge: true });
+  },
+
+  async getProfile(userId: string): Promise<UserProfile | null> {
+    if (isMock || !db) {
+      const saved = localStorage.getItem("user_profiles");
+      if (saved) return JSON.parse(saved);
+      
+      // Migration from old single profile
+      const old = localStorage.getItem("client_profile");
+      if (old) {
+        const parsed = JSON.parse(old);
+        return {
+          lastActiveSegment: parsed.profileType || "individual",
+          individual: parsed.profileType === "individual" ? parsed : {},
+          corporate: parsed.profileType === "corporate" ? parsed : {}
+        } as UserProfile;
+      }
+      return null;
+    }
+    const profileRef = doc(db, COLLECTION_NAME, userId);
+    const snapshot = await getDoc(profileRef);
+    if (snapshot.exists()) {
+      return snapshot.data() as UserProfile;
+    }
+    return null;
+  }
+};
