@@ -216,8 +216,10 @@ export default function PostPreviewPage() {
     setScheduleStatus("idle");
     try {
       // Use whatever image the user already chose (AI or upload), or none.
+      // Strip data: URLs — they are local file previews, not storable/usable for LinkedIn.
       // Image auto-generation happens in the background after saving — does NOT block scheduling.
-      const immediateImageUrl: string | undefined = finalImageUrl || undefined;
+      const rawImageUrl = finalImageUrl || undefined;
+      const immediateImageUrl = rawImageUrl?.startsWith("data:") ? undefined : rawImageUrl;
 
       const saved = await postService.createScheduled(
         {
