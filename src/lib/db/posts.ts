@@ -49,14 +49,36 @@ const saveMockPost = (post: any): Post => {
     id: Math.random().toString(36).substr(2, 9),
     created_at: { seconds: Date.now() / 1000 },
   };
-  localStorage.setItem("mock_posts", JSON.stringify([newPost, ...all]));
+  try {
+    localStorage.setItem("mock_posts", JSON.stringify([newPost, ...all]));
+  } catch {
+    // QuotaExceededError — retry without research_data and without image data URLs
+    const slim = { ...newPost, research_data: {} };
+    if (typeof slim.image_url === "string" && slim.image_url.startsWith("data:")) {
+      slim.image_url = undefined;
+    }
+    try {
+      localStorage.setItem("mock_posts", JSON.stringify([slim, ...all]));
+    } catch {
+      // Last resort: evict oldest half and retry
+      const trimmed = all.slice(0, Math.floor(all.length / 2));
+      localStorage.setItem("mock_posts", JSON.stringify([slim, ...trimmed]));
+    }
+  }
   return newPost;
 };
 
 const updateMockPost = (id: string, updates: Partial<Post>) => {
   const all = getMockPosts();
-  const updated = all.map((p) => p.id === id ? { ...p, ...updates } : p);
-  localStorage.setItem("mock_posts", JSON.stringify(updated));
+  // Strip data: URLs from updates — they blow localStorage quota
+  const safeUpdates = { ...updates };
+  if (typeof safeUpdates.image_url === "string" && safeUpdates.image_url.startsWith("data:")) {
+    delete safeUpdates.image_url;
+  }
+  const updated = all.map((p) => p.id === id ? { ...p, ...safeUpdates } : p);
+  try {
+    localStorage.setItem("mock_posts", JSON.stringify(updated));
+  } catch { /* non-critical update */ }
 };
 
 // ── Post Service ──────────────────────────────────────────────────────────────

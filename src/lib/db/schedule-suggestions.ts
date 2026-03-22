@@ -33,7 +33,7 @@ export const suggestionService = {
     const now = Date.now();
     if (isMock || !db) {
       const all = getMock();
-      return all.find((s) => s.user_id === userId && s.segment === segment && s.expires_at > now) || null;
+      return all.find((s) => s.user_id === userId && s.segment === segment && (s.expires_at?.seconds || 0) * 1000 > now) || null;
     }
     const snap = await getDocs(collection(db, COLLECTION));
     const found = snap.docs

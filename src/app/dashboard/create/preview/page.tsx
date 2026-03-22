@@ -268,9 +268,10 @@ export default function PostPreviewPage() {
       } else {
         setScheduleMessage(`Scheduled for ${label} (${timezone})${immediateImageUrl ? " · Image attached" : ""}`);
       }
-    } catch {
+    } catch (err: any) {
+      console.error("[Schedule] Failed:", err);
       setScheduleStatus("error");
-      setScheduleMessage("Failed to schedule. Please try again.");
+      setScheduleMessage(`Failed to schedule: ${err?.message || "Unknown error"}. Check the browser console for details.`);
     } finally {
       setIsScheduling(false);
     }
