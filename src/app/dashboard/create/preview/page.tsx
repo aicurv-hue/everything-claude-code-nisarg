@@ -215,25 +215,11 @@ export default function PostPreviewPage() {
     setIsScheduling(true);
     setScheduleStatus("idle");
     try {
-      // Auto-generate image for scheduled posts if user hasn't manually chosen one
-      let scheduledImageUrl: string | undefined = finalImageUrl || undefined;
-      if (!scheduledImageUrl && imagePrompt) {
-        try {
-          const imgRes = await fetch("/api/image/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: imagePrompt }),
-          });
-          if (imgRes.ok) {
-            const imgData = await imgRes.json();
-            scheduledImageUrl = imgData.url || undefined;
-          }
-        } catch {
-          // Non-critical — schedule without image if generation fails
-        }
-      }
+      // Use whatever image the user already chose (AI or upload), or none.
+      // Image auto-generation happens in the background after saving — does NOT block scheduling.
+      const immediateImageUrl: string | undefined = finalImageUrl || undefined;
 
-      await postService.createScheduled(
+      const saved = await postService.createScheduled(
         {
           user_id: "demo-user",
           account_id: "personal-account",
@@ -245,16 +231,41 @@ export default function PostPreviewPage() {
           custom_instructions: postData.metadata.customInstructions || undefined,
           segment: postData.metadata.segment || "individual",
           research_data: postData.research,
-          image_url: scheduledImageUrl,
+          image_url: immediateImageUrl,
         },
         scheduledAt,
         timezone,
         bestTimeApplied
       );
+
+      // Close modal and show success immediately
       setScheduleStatus("success");
       const label = scheduledAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-      setScheduleMessage(`Scheduled for ${label} (${timezone})${scheduledImageUrl ? " · Image attached" : ""}`);
+      setScheduleMessage(`Scheduled for ${label} (${timezone}) · Generating image in background…`);
       setShowSchedulePicker(false);
+
+      // Generate image in background and silently attach it to the saved post
+      if (!immediateImageUrl && imagePrompt && saved?.id) {
+        fetch("/api/image/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: imagePrompt }),
+        })
+          .then((r) => r.ok ? r.json() : null)
+          .then((d) => {
+            if (d?.url && saved.id) {
+              postService.updatePost(saved.id, { image_url: d.url }).catch(() => {});
+              setScheduleMessage(`Scheduled for ${label} (${timezone}) · Image attached`);
+            } else {
+              setScheduleMessage(`Scheduled for ${label} (${timezone}) · Image generation failed — post will publish without image`);
+            }
+          })
+          .catch(() => {
+            setScheduleMessage(`Scheduled for ${label} (${timezone}) · Image generation failed — post will publish without image`);
+          });
+      } else {
+        setScheduleMessage(`Scheduled for ${label} (${timezone})${immediateImageUrl ? " · Image attached" : ""}`);
+      }
     } catch {
       setScheduleStatus("error");
       setScheduleMessage("Failed to schedule. Please try again.");
