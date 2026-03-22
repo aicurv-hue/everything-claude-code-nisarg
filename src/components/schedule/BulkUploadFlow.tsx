@@ -6,6 +6,7 @@ import {
   CalendarDays, X, AlertTriangle, Info
 } from "lucide-react";
 import { parseCsv, ParsedCsvRow, RowValidation, RowError, CSV_TEMPLATE, VALID_TONES, VALID_LENGTHS } from "@/lib/utils/parseCsv";
+import { postService } from "@/lib/db/posts";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
 
 interface Props {
@@ -88,18 +89,27 @@ export default function BulkUploadFlow({ segment, onComplete, onViewCalendar }: 
     if (!rows.length || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/posts/bulk-schedule", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ posts: rows.map(r => ({ ...r, timezone: r.timezone || tz })), segment }),
-      });
-      const data = await res.json();
-      const r = { scheduled: data.scheduled || 0, errors: data.errors || 0 };
-      setResult(r);
-      onComplete(r);
+      const postsToSchedule = rows.map((r) => ({
+        user_id:           "demo-user",
+        account_id:        "personal-account",
+        content:           r.content || `[Pending generation] ${r.topic}`,
+        topic:             r.topic,
+        tone:              r.tone     || "professional",
+        audience:          r.audience || "",
+        length:            (r.length  || "medium") as "short" | "medium" | "long",
+        segment,
+        research_data:     {},
+        scheduled_at:      new Date(r.scheduled_at),
+        schedule_timezone: r.timezone || tz,
+      }));
+
+      const result = await postService.createBulkScheduled(postsToSchedule);
+      const summary = { scheduled: result.created.length, errors: result.errors.length };
+      setResult(summary);
+      onComplete(summary);
       setStep(3);
-    } catch {
-      setFileError("Upload failed. Please try again.");
+    } catch (err: any) {
+      setFileError(`Scheduling failed: ${err?.message || "Please try again."}`);
     } finally {
       setIsSubmitting(false);
     }
