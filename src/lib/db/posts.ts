@@ -81,6 +81,16 @@ const updateMockPost = (id: string, updates: Partial<Post>) => {
   } catch { /* non-critical update */ }
 };
 
+/**
+ * Firestore rejects `undefined` field values — replace with `null` before any write.
+ * This is a no-op for localStorage (JSON.stringify already drops undefined).
+ */
+function stripUndefined(obj: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => [k, v === undefined ? null : v])
+  );
+}
+
 // ── Post Service ──────────────────────────────────────────────────────────────
 
 export const postService = {
@@ -88,11 +98,11 @@ export const postService = {
   /** Save a generated post as a draft */
   async createDraft(post: Omit<Post, "id" | "created_at" | "status">) {
     if (isMock || !db) return saveMockPost({ ...post, status: "draft" });
-    return await addDoc(collection(db, COLLECTION), {
+    return await addDoc(collection(db, COLLECTION), stripUndefined({
       ...post,
       status: "draft",
       created_at: serverTimestamp(),
-    });
+    }));
   },
 
   /**
@@ -115,7 +125,7 @@ export const postService = {
     };
 
     if (isMock || !db) return saveMockPost(publishedPost);
-    return await addDoc(collection(db, COLLECTION), { ...publishedPost, created_at: serverTimestamp(), published_at: serverTimestamp() });
+    return await addDoc(collection(db, COLLECTION), stripUndefined({ ...publishedPost, created_at: serverTimestamp(), published_at: serverTimestamp() }));
   },
 
   /** Mark a draft as published after LinkedIn confirms it went live */
@@ -151,7 +161,7 @@ export const postService = {
 
   async updatePost(id: string, updates: Partial<Post>) {
     if (isMock || !db) { updateMockPost(id, updates); return; }
-    return await updateDoc(doc(db, COLLECTION, id), { ...updates, updated_at: serverTimestamp() });
+    return await updateDoc(doc(db, COLLECTION, id), stripUndefined({ ...updates, updated_at: serverTimestamp() }));
   },
 
   async deletePost(id: string) {
@@ -205,11 +215,11 @@ export const postService = {
       best_time_applied: bestTimeApplied,
     };
     if (isMock || !db) return saveMockPost(payload);
-    const ref = await addDoc(collection(db, COLLECTION), {
+    const ref = await addDoc(collection(db, COLLECTION), stripUndefined({
       ...payload,
       scheduled_at: scheduledAt,
       created_at: serverTimestamp(),
-    });
+    }));
     return { ...payload, id: ref.id, created_at: { seconds: Date.now() / 1000 } };
   },
 
