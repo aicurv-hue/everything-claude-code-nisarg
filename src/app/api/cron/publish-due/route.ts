@@ -17,8 +17,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { postService } from "@/lib/db/posts";
 import { tokenService } from "@/lib/db/tokens";
+import type { LinkedInTokenRecord } from "@/lib/db/tokens";
 
 const LI_VERSION  = "202505";
 const TIMEOUT_MS  = 20_000;
@@ -182,14 +184,44 @@ export async function POST(req: NextRequest) {
 
   console.log(`[cron] ${due.length} post(s) due for publishing.`);
 
-  // ── Get LinkedIn tokens ────────────────────────────────────────────────────
-  const tokenRecord = await tokenService.get("demo-user");
+  // ── Get LinkedIn tokens (DB first, cookie fallback) ───────────────────────
+  let tokenRecord = await tokenService.get("demo-user").catch(() => null);
+
   if (!tokenRecord) {
-    console.error("[cron] No LinkedIn token found for demo-user. User must connect LinkedIn.");
-    return NextResponse.json({
-      processed: 0,
-      error: "No LinkedIn token found. User must reconnect LinkedIn.",
-    }, { status: 503 });
+    // Fallback: read tokens directly from cookies (set by OAuth callback)
+    const cookieStore = await cookies();
+    const accessToken   = cookieStore.get("li_access_token")?.value;
+    const refreshToken  = cookieStore.get("li_refresh_token")?.value;
+    const expiryStr     = cookieStore.get("li_token_expiry")?.value;
+    const userSub       = cookieStore.get("li_user_sub")?.value;
+    const userName      = cookieStore.get("li_user_name")?.value;
+    const userEmail     = cookieStore.get("li_user_email")?.value;
+    const userPicture   = cookieStore.get("li_user_picture")?.value;
+
+    if (accessToken) {
+      console.log("[cron] Token not in DB — using cookie fallback. Saving to DB for future runs.");
+      tokenRecord = {
+        user_id:       "demo-user",
+        access_token:  accessToken,
+        refresh_token: refreshToken,
+        user_sub:      userSub       || "",
+        user_name:     userName      || "",
+        user_email:    userEmail     || "",
+        user_picture:  userPicture   || "",
+        expires_at:    expiryStr ? parseInt(expiryStr) : Date.now() + 60 * 24 * 60 * 60 * 1000,
+        updated_at:    null,
+      } as LinkedInTokenRecord;
+      // Persist to DB so future runs don't need cookie fallback
+      tokenService.save({ ...tokenRecord }).catch(e =>
+        console.warn("[cron] Could not save token to DB:", e?.message)
+      );
+    } else {
+      console.error("[cron] No LinkedIn token in DB or cookies. User must connect LinkedIn.");
+      return NextResponse.json({
+        processed: 0,
+        error: "No LinkedIn token found. Go to Settings and connect LinkedIn.",
+      }, { status: 503 });
+    }
   }
 
   // Refresh token if expired or within 5 minutes of expiry
