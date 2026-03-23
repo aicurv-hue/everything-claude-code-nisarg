@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, Settings, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays } from "lucide-react";
@@ -101,9 +101,24 @@ function Sidebar() {
   );
 }
 
+function CronPoller() {
+  useEffect(() => {
+    // Trigger the publish-due worker every 60 seconds in local dev
+    // In production, Vercel Cron handles this via vercel.json
+    const run = () => {
+      fetch("/api/cron/publish-due", { method: "POST" }).catch(() => {});
+    };
+    run(); // fire immediately on mount
+    const id = setInterval(run, 60_000);
+    return () => clearInterval(id);
+  }, []);
+  return null;
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <SegmentProvider>
+      <CronPoller />
       <div className="min-h-screen flex bg-slate-50 text-slate-900">
         <Sidebar />
         <main className="flex-1 overflow-auto min-h-screen">

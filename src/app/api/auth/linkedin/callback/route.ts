@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { tokenService } from "@/lib/db/tokens";
 
 const COOKIE_OPTS_PRIVATE = (maxAge: number) => ({
   httpOnly: true,
@@ -116,6 +117,19 @@ export async function GET(request: NextRequest) {
   cookieStore.set("li_user_name",    linkedInName,    COOKIE_OPTS_PUBLIC(refreshExpiresIn));
   cookieStore.set("li_user_picture", linkedInPicture, COOKIE_OPTS_PUBLIC(refreshExpiresIn));
   cookieStore.set("li_user_email",   linkedInEmail,   COOKIE_OPTS_PUBLIC(refreshExpiresIn));
+
+  // ── Step 3b: Persist tokens to DB so the scheduled-post worker can use them ─
+  await tokenService.save({
+    user_id:            "demo-user",
+    access_token:       accessToken,
+    refresh_token:      refreshToken,
+    user_sub:           linkedInSub,
+    user_name:          linkedInName,
+    user_email:         linkedInEmail,
+    user_picture:       linkedInPicture,
+    expires_at:         Date.now() + expiresIn * 1000,
+    refresh_expires_at: refreshToken ? Date.now() + refreshExpiresIn * 1000 : undefined,
+  }).catch(err => console.warn("[linkedin/callback] Token DB save failed (non-critical):", err));
 
   // ── Step 4: Redirect back to where they came from ─────────────────────────
   const destination = returnTo.startsWith("/") ? returnTo : "/dashboard/create/preview";
