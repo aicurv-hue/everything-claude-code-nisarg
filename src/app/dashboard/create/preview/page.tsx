@@ -243,11 +243,15 @@ export default function PostPreviewPage() {
       // Close modal and show success immediately
       setScheduleStatus("success");
       const label = scheduledAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-      setScheduleMessage(`Scheduled for ${label} (${timezone}) · Generating image in background…`);
+      const imageStatusMsg = imageMode === "ai" && !immediateImageUrl
+        ? " · Generating image in background…"
+        : immediateImageUrl ? " · Image attached" : "";
+      setScheduleMessage(`Scheduled for ${label} (${timezone})${imageStatusMsg}`);
       setShowSchedulePicker(false);
 
-      // Generate image in background and silently attach it to the saved post
-      if (!immediateImageUrl && imagePrompt && saved?.id) {
+      // Only auto-generate image if user explicitly chose "AI Generate" mode
+      // and no image has been generated yet (e.g. they scheduled without clicking Generate first)
+      if (imageMode === "ai" && !immediateImageUrl && imagePrompt && saved?.id) {
         fetch("/api/image/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -257,7 +261,7 @@ export default function PostPreviewPage() {
           .then((d) => {
             if (d?.url && saved.id) {
               postService.updatePost(saved.id, { image_url: d.url }).catch(() => {});
-              setScheduleMessage(`Scheduled for ${label} (${timezone}) · Image attached`);
+              setScheduleMessage(`Scheduled for ${label} (${timezone}) · AI image attached`);
             } else {
               setScheduleMessage(`Scheduled for ${label} (${timezone}) · Image generation failed — post will publish without image`);
             }
@@ -265,6 +269,9 @@ export default function PostPreviewPage() {
           .catch(() => {
             setScheduleMessage(`Scheduled for ${label} (${timezone}) · Image generation failed — post will publish without image`);
           });
+      } else if (imageMode === "upload" && !immediateImageUrl) {
+        // Uploaded image was a local file (data: URL) — can't be stored for scheduled posts
+        setScheduleMessage(`Scheduled for ${label} (${timezone}) · Note: uploaded local images can't be used in scheduled posts — post will publish without image`);
       } else {
         setScheduleMessage(`Scheduled for ${label} (${timezone})${immediateImageUrl ? " · Image attached" : ""}`);
       }
