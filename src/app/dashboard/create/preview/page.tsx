@@ -11,8 +11,7 @@ import {
 } from "lucide-react";
 import SchedulePicker from "@/components/schedule/SchedulePicker";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
-import { extractMemory } from "@/lib/ai/memory-extract";
-import { memoryService } from "@/lib/db/memory";
+import { savePostMemory } from "@/lib/ai/save-memory";
 import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 
 type ImageMode = "ai" | "upload" | "none";
@@ -169,24 +168,13 @@ export default function PostPreviewPage() {
         setPublishStatus("success");
         setPublishMessage("Post published successfully to LinkedIn! 🎉");
 
-        // Extract memory — only for posts that actually went live on LinkedIn
-        extractMemory(
-          editedContent,
-          postData.metadata.topic,
-          postData.metadata.audience,
-          postData.metadata.tone
-        ).then(async (extract) => {
-          if (!extract) return;
-          await memoryService.save({
-            user_id: "demo-user",
-            segment: postData.metadata.segment || "individual",
-            topic:       postData.metadata.topic,
-            audience:    postData.metadata.audience,
-            tone:        postData.metadata.tone,
-            summary:     extract.summary,
-            keywords:    extract.keywords,
-            style_notes: extract.style_notes || undefined,
-          }).catch(() => {});
+        // Save to memory — only for posts confirmed live on LinkedIn
+        savePostMemory({
+          content:  editedContent,
+          topic:    postData.metadata.topic,
+          audience: postData.metadata.audience,
+          tone:     postData.metadata.tone,
+          segment:  postData.metadata.segment || "individual",
         }).catch(() => {});
 
         await postService.createPublished(

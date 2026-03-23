@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { postService } from "@/lib/db/posts";
 import { tokenService } from "@/lib/db/tokens";
+import { savePostMemory } from "@/lib/ai/save-memory";
 import type { LinkedInTokenRecord } from "@/lib/db/tokens";
 
 const LI_VERSION  = "202505";
@@ -275,6 +276,16 @@ export async function POST(req: NextRequest) {
 
       await postService.markPublished(post.id, postId, post.image_url || undefined);
       console.log(`[cron] ✅ Published post ${post.id} → LinkedIn ${postId}`);
+
+      // Save to memory — fire and forget, never blocks publishing
+      savePostMemory({
+        content:  content,
+        topic:    post.topic    || "",
+        audience: post.audience || "",
+        tone:     post.tone     || "professional",
+        segment:  (post.segment as "individual" | "corporate") || "individual",
+        userId:   "demo-user",
+      }).catch(() => {});
       results.push({ id: post.id, status: "published" });
 
     } catch (err: any) {
