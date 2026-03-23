@@ -16,16 +16,17 @@ export async function uploadDataUrlToStorage(
   if (isMock || !app || !dataUrl.startsWith("data:")) return null;
 
   try {
-    const storage = getStorage(app);
+    const storage = getStorage(app as any);
     const name = fileName || `post-images/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
     const storageRef = ref(storage, name);
 
-    // Extract content type from data URL
-    const match = dataUrl.match(/^data:([^;]+);base64,/);
-    const contentType = match?.[1] || "image/jpeg";
+    // Convert data: URL to Blob for more reliable upload
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
 
-    const snapshot = await uploadString(storageRef, dataUrl, "data_url", { contentType });
+    const snapshot = await uploadBytes(storageRef, blob, { contentType: blob.type || "image/jpeg" });
     const downloadUrl = await getDownloadURL(snapshot.ref);
+    console.log("[uploadImage] Uploaded to Firebase Storage:", downloadUrl);
     return downloadUrl;
   } catch (err: any) {
     console.error("[uploadImage] Firebase Storage upload failed:", err?.message || err);

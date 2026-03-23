@@ -217,14 +217,18 @@ export default function PostPreviewPage() {
     setScheduleStatus("idle");
     try {
       // Resolve image URL — upload to Firebase Storage if it's a local data: URL
+      // Use a 10s timeout so a slow upload never freezes the schedule button
       let immediateImageUrl: string | undefined = undefined;
       if (finalImageUrl) {
         if (finalImageUrl.startsWith("data:")) {
-          // Upload local file to Firebase Storage to get a real URL
-          const uploaded = await uploadDataUrlToStorage(finalImageUrl, `post-images/${Date.now()}.jpg`);
-          immediateImageUrl = uploaded || undefined;
-          if (!uploaded) {
-            console.warn("[Schedule] Image upload to Firebase Storage failed — scheduling without image.");
+          try {
+            const uploadPromise = uploadDataUrlToStorage(finalImageUrl, `post-images/${Date.now()}.jpg`);
+            const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000));
+            const uploaded = await Promise.race([uploadPromise, timeoutPromise]);
+            immediateImageUrl = uploaded || undefined;
+            if (!uploaded) console.warn("[Schedule] Image upload timed out or failed — scheduling without image.");
+          } catch (uploadErr) {
+            console.warn("[Schedule] Image upload error — scheduling without image:", uploadErr);
           }
         } else {
           immediateImageUrl = finalImageUrl;
