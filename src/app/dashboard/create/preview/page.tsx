@@ -13,6 +13,7 @@ import SchedulePicker from "@/components/schedule/SchedulePicker";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
 import { extractMemory } from "@/lib/ai/memory-extract";
 import { memoryService } from "@/lib/db/memory";
+import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 
 type ImageMode = "ai" | "upload" | "none";
 
@@ -215,11 +216,20 @@ export default function PostPreviewPage() {
     setIsScheduling(true);
     setScheduleStatus("idle");
     try {
-      // Use whatever image the user already chose (AI or upload), or none.
-      // Strip data: URLs — they are local file previews, not storable/usable for LinkedIn.
-      // Image auto-generation happens in the background after saving — does NOT block scheduling.
-      const rawImageUrl = finalImageUrl || undefined;
-      const immediateImageUrl = rawImageUrl?.startsWith("data:") ? undefined : rawImageUrl;
+      // Resolve image URL — upload to Firebase Storage if it's a local data: URL
+      let immediateImageUrl: string | undefined = undefined;
+      if (finalImageUrl) {
+        if (finalImageUrl.startsWith("data:")) {
+          // Upload local file to Firebase Storage to get a real URL
+          const uploaded = await uploadDataUrlToStorage(finalImageUrl, `post-images/${Date.now()}.jpg`);
+          immediateImageUrl = uploaded || undefined;
+          if (!uploaded) {
+            console.warn("[Schedule] Image upload to Firebase Storage failed — scheduling without image.");
+          }
+        } else {
+          immediateImageUrl = finalImageUrl;
+        }
+      }
 
       const saved = await postService.createScheduled(
         {
@@ -269,9 +279,6 @@ export default function PostPreviewPage() {
           .catch(() => {
             setScheduleMessage(`Scheduled for ${label} (${timezone}) · Image generation failed — post will publish without image`);
           });
-      } else if (imageMode === "upload" && !immediateImageUrl) {
-        // Uploaded image was a local file (data: URL) — can't be stored for scheduled posts
-        setScheduleMessage(`Scheduled for ${label} (${timezone}) · Note: uploaded local images can't be used in scheduled posts — post will publish without image`);
       } else {
         setScheduleMessage(`Scheduled for ${label} (${timezone})${immediateImageUrl ? " · Image attached" : ""}`);
       }
