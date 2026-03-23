@@ -105,8 +105,18 @@ function CronPoller() {
   useEffect(() => {
     // Trigger the publish-due worker every 60 seconds in local dev
     // In production, Vercel Cron handles this via vercel.json
-    const run = () => {
-      fetch("/api/cron/publish-due", { method: "POST" }).catch(() => {});
+    const run = async () => {
+      try {
+        const res = await fetch("/api/cron/publish-due", { method: "POST" });
+        const data = await res.json();
+        if (!res.ok) {
+          console.warn("[CronPoller] Worker error:", data);
+        } else {
+          console.log("[CronPoller] Worker result:", data);
+        }
+      } catch (err) {
+        console.error("[CronPoller] Fetch failed:", err);
+      }
     };
     run(); // fire immediately on mount
     const id = setInterval(run, 60_000);

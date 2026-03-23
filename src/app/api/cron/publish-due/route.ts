@@ -157,7 +157,18 @@ export async function POST(req: NextRequest) {
   console.log(`[cron] publish-due triggered at ${now.toISOString()}`);
 
   // ── Fetch all scheduled posts that are due ─────────────────────────────────
-  const allScheduled = await postService.getScheduled("demo-user");
+  let allScheduled: Awaited<ReturnType<typeof postService.getScheduled>>;
+  try {
+    allScheduled = await postService.getScheduled("demo-user");
+    console.log(`[cron] Fetched ${allScheduled.length} scheduled post(s) from DB.`);
+  } catch (fetchErr: any) {
+    console.error("[cron] Failed to fetch scheduled posts:", fetchErr?.message || fetchErr);
+    return NextResponse.json({
+      processed: 0,
+      error: `DB read failed: ${fetchErr?.message || "unknown"}. Check Firestore rules — allow read/write for server-side access.`,
+    }, { status: 500 });
+  }
+
   const due = allScheduled.filter(p => {
     const secs = p.scheduled_at?.seconds ?? (p.scheduled_at instanceof Date ? p.scheduled_at.getTime() / 1000 : null);
     if (!secs) return false;
