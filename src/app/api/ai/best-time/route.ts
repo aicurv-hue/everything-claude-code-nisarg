@@ -105,7 +105,7 @@ Return ONLY a JSON array of exactly 3 objects, no markdown:
           reasoning:   s.reasoning,
         };
       })
-      .filter(Boolean);
+      .filter((s): s is NonNullable<typeof s> => s !== null);
 
     const result = { user_id: userId, segment, suggestions, posts_analyzed: segPosts.length };
     await suggestionService.save(result);
