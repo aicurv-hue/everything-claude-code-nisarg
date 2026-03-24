@@ -18,7 +18,8 @@ const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Satur
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId = "demo-user", segment = "individual", forceRefresh = false } = await req.json();
+    const { userId = "demo-user", segment: rawSegment = "individual", forceRefresh = false } = await req.json();
+    const segment = (rawSegment === "corporate" ? "corporate" : "individual") as "individual" | "corporate";
 
     // Return cached if valid
     if (!forceRefresh) {
