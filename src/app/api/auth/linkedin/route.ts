@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
     "w_member_social",       // post on behalf of personal profile
     "w_organization_social", // post on behalf of company page
     "r_organization_social", // read company page posts
+    "r_social_feed",         // read likes/comments on posts
   ].join(" ");
 
   // Embed returnTo in state for CSRF protection + redirect tracking

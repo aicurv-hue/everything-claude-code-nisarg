@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, Clock, ChevronRight, Search, Linkedin } from "lucide-react";
+import { FileText, Clock, ChevronRight, Search, Linkedin, ThumbsUp, MessageCircle } from "lucide-react";
 import { postService, Post } from "@/lib/db/posts";
 import { useSegment } from "@/lib/context/segment";
 
@@ -139,6 +139,7 @@ export default function HistoryPage() {
               <th className="px-5 py-3">Created</th>
               <th className="px-5 py-3">Published</th>
               <th className="px-5 py-3">Tone</th>
+              <th className="px-5 py-3">Engagement</th>
               <th className="px-5 py-3 text-right">Action</th>
             </tr>
           </thead>
@@ -151,12 +152,13 @@ export default function HistoryPage() {
                   <td className="px-5 py-4"><div className="h-3.5 w-24 bg-slate-100 rounded" /></td>
                   <td className="px-5 py-4"><div className="h-3.5 w-24 bg-slate-100 rounded" /></td>
                   <td className="px-5 py-4"><div className="h-3.5 w-16 bg-slate-100 rounded" /></td>
+                  <td className="px-5 py-4"><div className="h-3.5 w-16 bg-slate-100 rounded" /></td>
                   <td className="px-5 py-4"><div className="h-3.5 w-8 bg-slate-100 rounded ml-auto" /></td>
                 </tr>
               ))
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-5 py-16 text-center text-slate-400 text-sm">
+                <td colSpan={7} className="px-5 py-16 text-center text-slate-400 text-sm">
                   {searchTerm || statusFilter !== "all"
                     ? "No results found for your filters."
                     : "No history yet. Start by generating content!"}
@@ -218,6 +220,24 @@ export default function HistoryPage() {
                   {/* Tone */}
                   <td className="px-5 py-4">
                     <span className="text-xs text-slate-500 capitalize">{post.tone}</span>
+                  </td>
+
+                  {/* Engagement */}
+                  <td className="px-5 py-4">
+                    {post.status === "published" ? (
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1 text-xs text-slate-600 font-medium">
+                          <ThumbsUp className="w-3.5 h-3.5 text-[#0A66C2]" />
+                          {post.likes_count ?? "—"}
+                        </span>
+                        <span className="flex items-center gap-1 text-xs text-slate-600 font-medium">
+                          <MessageCircle className="w-3.5 h-3.5 text-slate-400" />
+                          {post.comments_count ?? "—"}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-300 text-sm">—</span>
+                    )}
                   </td>
 
                   {/* Action */}

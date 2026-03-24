@@ -10,7 +10,10 @@ import {
   Target,
   Palette,
   MessageSquare,
-  ShieldCheck
+  ShieldCheck,
+  Linkedin,
+  RefreshCw,
+  CheckCircle2,
 } from "lucide-react";
 import { profileService, UserProfile, ProfileSegment } from "@/lib/db/profiles";
 import { auth } from "@/lib/firebase";
@@ -56,6 +59,49 @@ export default function SettingsPage() {
   });
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaved, setIsSaved]       = useState(false);
+  const [liConnected, setLiConnected] = useState(false);
+  const [liName, setLiName]           = useState("");
+  const [liEmail, setLiEmail]         = useState("");
+  const [liExpiry, setLiExpiry]       = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/linkedin/status")
+      .then(r => r.json())
+      .then(d => {
+        setLiConnected(d.connected);
+        setLiName(d.name || "");
+        setLiEmail(d.email || "");
+        setLiExpiry(d.expiresAt || null);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleReconnect = () => {
+    // Open LinkedIn OAuth in a popup window
+    const w = 600; const h = 700;
+    const left = window.screenX + (window.outerWidth - w) / 2;
+    const top  = window.screenY + (window.outerHeight - h) / 2;
+    const popup = window.open(
+      "/api/auth/linkedin?returnTo=/dashboard/settings",
+      "linkedin-oauth",
+      `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`
+    );
+    // Poll until popup closes, then refresh status
+    const timer = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(timer);
+        fetch("/api/linkedin/status")
+          .then(r => r.json())
+          .then(d => {
+            setLiConnected(d.connected);
+            setLiName(d.name || "");
+            setLiEmail(d.email || "");
+            setLiExpiry(d.expiresAt || null);
+          })
+          .catch(() => {});
+      }
+    }, 800);
+  };
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -125,6 +171,42 @@ export default function SettingsPage() {
           }`}
         >
           {isSaved ? "✓ Saved" : <><Save className="w-4 h-4" /> Save Changes</>}
+        </button>
+      </div>
+
+      {/* LinkedIn Connection Card */}
+      <div className="card p-5 flex items-center gap-4">
+        <div className="w-10 h-10 rounded-xl bg-[#0A66C2] flex items-center justify-center shrink-0">
+          <Linkedin className="w-5 h-5 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-slate-800">LinkedIn Account</p>
+            {liConnected ? (
+              <span className="flex items-center gap-1 text-[11px] font-medium text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+                <CheckCircle2 className="w-3 h-3" /> Connected
+              </span>
+            ) : (
+              <span className="text-[11px] font-medium text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                Not connected
+              </span>
+            )}
+          </div>
+          {liConnected ? (
+            <p className="text-xs text-slate-400 mt-0.5 truncate">
+              {liName}{liEmail ? ` · ${liEmail}` : ""}
+              {liExpiry ? ` · Token valid ${Math.max(0, Math.round((liExpiry - Date.now()) / 86400000))}d` : ""}
+            </p>
+          ) : (
+            <p className="text-xs text-slate-400 mt-0.5">Connect LinkedIn to enable publishing and engagement tracking.</p>
+          )}
+        </div>
+        <button
+          onClick={handleReconnect}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0A66C2] hover:bg-[#0854a0] text-white text-xs font-semibold transition-all shrink-0"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          {liConnected ? "Reconnect LinkedIn" : "Connect LinkedIn"}
         </button>
       </div>
 

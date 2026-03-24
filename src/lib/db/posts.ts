@@ -28,6 +28,9 @@ export interface Post {
   schedule_timezone?: string;
   best_time_applied?: boolean;
   published_at?: any;
+  likes_count?: number;
+  comments_count?: number;
+  engagement_synced_at?: number; // unix ms — when engagement was last fetched
   created_at: any;
   updated_at?: any;
 }

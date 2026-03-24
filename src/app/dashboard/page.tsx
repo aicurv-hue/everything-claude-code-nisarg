@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   BarChart3, Send, CheckCircle, Clock, TrendingUp,
   FileText, RefreshCw, Linkedin, Zap, Image, AlertTriangle,
-  Wifi, WifiOff, Activity, User, Building2
+  Wifi, WifiOff, Activity, User, Building2, ThumbsUp, MessageCircle
 } from "lucide-react";
 import { postService, Post } from "@/lib/db/posts";
 import { profileService, UserProfile } from "@/lib/db/profiles";
@@ -101,6 +101,7 @@ export default function DashboardHomePage() {
   const [system, setSystem]       = useState<SystemStatus | null>(null);
   const [linkedin, setLinkedIn]   = useState<LinkedInInfo | null>(null);
   const [recentPosts, setRecent]  = useState<Post[]>([]);
+  const [allPosts, setAllPosts]   = useState<Post[]>([]);
   const [profile, setProfile]     = useState<UserProfile | null>(null);
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -124,7 +125,9 @@ export default function DashboardHomePage() {
       setLastUpdated(serverStats.timestamp);
       setProfile(userProfile);
       const all = await postService.getAll("demo-user");
-      setRecent(all.filter((p) => p.segment === segment).slice(0, 6));
+      const segmented = all.filter((p) => p.segment === segment);
+      setAllPosts(segmented);
+      setRecent(segmented.slice(0, 6));
     } catch (err) {
       console.error("Dashboard load failed:", err);
     } finally {
@@ -138,6 +141,10 @@ export default function DashboardHomePage() {
     const interval = setInterval(() => loadAll(true), 30_000);
     return () => clearInterval(interval);
   }, [loadAll]);
+
+  const totalLikes    = allPosts.reduce((s, p) => s + (p.likes_count    ?? 0), 0);
+  const totalComments = allPosts.reduce((s, p) => s + (p.comments_count ?? 0), 0);
+  const totalEngagement = totalLikes + totalComments;
 
   const statCards = stats ? [
     {
@@ -157,12 +164,12 @@ export default function DashboardHomePage() {
       sub: stats.published > 0 ? "Confirmed published" : "No posts published yet",
     },
     {
-      label: "Published Last 7 Days",
-      value: stats.lastWeek,
-      icon: CheckCircle,
-      color: "text-violet-600",
-      bg: "bg-violet-50",
-      sub: stats.scheduled > 0 ? `${stats.scheduled} scheduled` : "Keep publishing to grow",
+      label: "Total Engagement",
+      value: totalEngagement,
+      icon: ThumbsUp,
+      color: "text-rose-600",
+      bg: "bg-rose-50",
+      sub: `${totalLikes} likes · ${totalComments} comments`,
     },
   ] : [];
 
@@ -497,6 +504,17 @@ export default function DashboardHomePage() {
                         <span className="text-slate-300">·</span>
                         <span className="text-[11px] text-[#0A66C2] font-medium flex items-center gap-1">
                           <Linkedin className="w-2.5 h-2.5" /> Live
+                        </span>
+                      </>
+                    )}
+                    {post.status === "published" && (post.likes_count != null || post.comments_count != null) && (
+                      <>
+                        <span className="text-slate-300">·</span>
+                        <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                          <ThumbsUp className="w-3 h-3 text-[#0A66C2]" />{post.likes_count ?? 0}
+                        </span>
+                        <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                          <MessageCircle className="w-3 h-3 text-slate-400" />{post.comments_count ?? 0}
                         </span>
                       </>
                     )}

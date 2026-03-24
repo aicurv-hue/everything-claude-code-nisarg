@@ -298,6 +298,52 @@ export async function POST(req: NextRequest) {
   const published = results.filter(r => r.status === "published").length;
   const failed    = results.filter(r => r.status === "failed").length;
 
+  // ── Hourly engagement sync for recent published posts ─────────────────────
+  // Only runs once per hour (checks last sync time) to respect LinkedIn rate limits
+  try {
+    const oneHourAgo  = Date.now() - 60 * 60 * 1000;
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const allPublished  = await postService.getPublished("demo-user");
+
+    // Posts published in last 30 days that haven't been synced in the last hour
+    const toSync = allPublished.filter(p => {
+      if (!p.linkedin_post_id) return false;
+      const pubMs = (p.published_at?.seconds || 0) * 1000;
+      if (pubMs < thirtyDaysAgo) return false;
+      return !p.engagement_synced_at || p.engagement_synced_at < oneHourAgo;
+    }).slice(0, 20); // max 20 per cron run
+
+    if (toSync.length > 0) {
+      console.log(`[cron] Syncing engagement for ${toSync.length} post(s)…`);
+      const postUrns = toSync.map(p => p.linkedin_post_id!);
+      const engRes = await fetch(
+        new URL("/api/linkedin/engagement", `http://localhost:${process.env.PORT || 3000}`).toString(),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ postUrns }),
+        }
+      ).catch(() => null);
+
+      if (engRes?.ok) {
+        const { results: engResults } = await engRes.json();
+        for (const { urn, likes, comments } of engResults) {
+          const post = toSync.find(p => p.linkedin_post_id === urn);
+          if (post?.id) {
+            await postService.updatePost(post.id, {
+              likes_count: likes,
+              comments_count: comments,
+              engagement_synced_at: Date.now(),
+            }).catch(() => {});
+          }
+        }
+        console.log(`[cron] Engagement synced for ${engResults.length} post(s).`);
+      }
+    }
+  } catch (engErr: any) {
+    console.warn("[cron] Engagement sync failed (non-critical):", engErr?.message);
+  }
+
   console.log(`[cron] Done. Published: ${published}, Failed: ${failed}`);
   return NextResponse.json({ processed: due.length, published, failed, results });
 }

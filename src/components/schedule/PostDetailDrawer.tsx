@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, CalendarDays, Clock, Linkedin, AlertCircle, CheckCircle, Trash2, RotateCcw } from "lucide-react";
+import { X, CalendarDays, Clock, Linkedin, AlertCircle, CheckCircle, Trash2, RotateCcw, ThumbsUp, MessageCircle } from "lucide-react";
 import { Post } from "@/lib/db/posts";
 import SchedulePicker from "./SchedulePicker";
 
@@ -102,12 +102,37 @@ export default function PostDetailDrawer({ post, onClose, onReschedule, onDelete
             </div>
           </div>
 
-          {/* LinkedIn live badge */}
+          {/* LinkedIn live badge + engagement */}
           {post.linkedin_post_id && (
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-blue-50 border border-blue-200">
-              <Linkedin className="w-4 h-4 text-[#0A66C2]" />
-              <span className="text-xs font-medium text-[#0A66C2]">Live on LinkedIn</span>
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse ml-auto" />
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-blue-50 border border-blue-200">
+                <Linkedin className="w-4 h-4 text-[#0A66C2]" />
+                <span className="text-xs font-medium text-[#0A66C2]">Live on LinkedIn</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse ml-auto" />
+              </div>
+              {(post.likes_count != null || post.comments_count != null) && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                    <ThumbsUp className="w-4 h-4 text-[#0A66C2]" />
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">Likes</p>
+                      <p className="text-sm font-bold text-slate-800">{post.likes_count ?? 0}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                    <MessageCircle className="w-4 h-4 text-slate-400" />
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">Comments</p>
+                      <p className="text-sm font-bold text-slate-800">{post.comments_count ?? 0}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {post.likes_count == null && post.comments_count == null && (
+                <p className="text-[11px] text-slate-400 text-center py-1">
+                  Engagement syncs hourly — check back soon
+                </p>
+              )}
             </div>
           )}
 
