@@ -76,31 +76,37 @@ export default function SettingsPage() {
       .catch(() => {});
   }, []);
 
+  const refreshLinkedInStatus = () => {
+    fetch("/api/linkedin/status")
+      .then(r => r.json())
+      .then(d => {
+        setLiConnected(d.connected);
+        setLiName(d.name || "");
+        setLiEmail(d.email || "");
+        setLiExpiry(d.expiresAt || null);
+      })
+      .catch(() => {});
+  };
+
+  // Listen for postMessage from OAuth popup
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type === "linkedin_connected") refreshLinkedInStatus();
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
   const handleReconnect = () => {
-    // Open LinkedIn OAuth in a popup window
     const w = 600; const h = 700;
     const left = window.screenX + (window.outerWidth - w) / 2;
     const top  = window.screenY + (window.outerHeight - h) / 2;
-    const popup = window.open(
+    window.open(
       "/api/auth/linkedin?returnTo=/dashboard/settings",
       "linkedin-oauth",
       `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`
     );
-    // Poll until popup closes, then refresh status
-    const timer = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(timer);
-        fetch("/api/linkedin/status")
-          .then(r => r.json())
-          .then(d => {
-            setLiConnected(d.connected);
-            setLiName(d.name || "");
-            setLiEmail(d.email || "");
-            setLiExpiry(d.expiresAt || null);
-          })
-          .catch(() => {});
-      }
-    }, 800);
   };
 
   useEffect(() => {
