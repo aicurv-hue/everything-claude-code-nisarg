@@ -3,9 +3,11 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { postService, Post } from "@/lib/db/posts";
+import type { Post } from "@/lib/db/posts";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
+import { getIdToken } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import {
   Save, Send, ArrowLeft, CheckCircle, AlertCircle,
   Linkedin, FileText, User, Building2
@@ -45,16 +47,21 @@ export default function DraftEditPage() {
       } catch {}
     }
 
-    // Fallback: load from postService by ID
-    postService.getAll(user!.uid).then((all) => {
-      const found = all.find((p) => p.id === draftId);
-      if (found) {
-        setDraft(found);
-        setContent(found.content);
-      } else {
-        setNotFound(true);
-      }
-    });
+    // Fallback: load from API by ID
+    (async () => {
+      try {
+        const token = auth.currentUser ? await getIdToken(auth.currentUser) : null;
+        const res = await fetch(`/api/posts?id=${draftId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const found = (data.posts || []).find((p: Post) => p.id === draftId);
+          if (found) { setDraft(found); setContent(found.content); }
+          else setNotFound(true);
+        } else { setNotFound(true); }
+      } catch { setNotFound(true); }
+    })();
   }, [draftId]);
 
   useEffect(() => {
@@ -72,7 +79,13 @@ export default function DraftEditPage() {
     setIsSaving(true);
     setSaveStatus("idle");
     try {
-      await postService.updatePost(draft.id, { content });
+      const token = auth.currentUser ? await getIdToken(auth.currentUser) : null;
+      const res = await fetch("/api/posts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ id: draft.id, content }),
+      });
+      if (!res.ok) throw new Error("Save failed");
       setSaveStatus("saved");
       setDraft((prev) => prev ? { ...prev, content, updated_at: { seconds: Date.now() / 1000 } } : prev);
       setTimeout(() => setSaveStatus("idle"), 2500);
@@ -107,9 +120,14 @@ export default function DraftEditPage() {
         setPubStatus("success");
         setPubMessage("Post published to LinkedIn! ✅");
 
-        // Mark as published in DB
+        // Mark as published in DB via API
         if (draft?.id) {
-          await postService.markPublished(draft.id, data.postId || "unknown");
+          const token = auth.currentUser ? await getIdToken(auth.currentUser) : null;
+          await fetch("/api/posts", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: JSON.stringify({ id: draft.id, status: "published", linkedin_post_id: data.postId || "unknown" }),
+          }).catch(() => {});
         }
 
         // Redirect to history after 2s

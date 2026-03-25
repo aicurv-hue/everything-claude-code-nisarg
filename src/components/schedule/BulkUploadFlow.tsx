@@ -6,9 +6,10 @@ import {
   CalendarDays, X, AlertTriangle, Info
 } from "lucide-react";
 import { parseCsv, ParsedCsvRow, RowValidation, RowError, CSV_TEMPLATE, VALID_TONES, VALID_LENGTHS } from "@/lib/utils/parseCsv";
-import { postService } from "@/lib/db/posts";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
 import { useAuth } from "@/lib/context/auth";
+import { getIdToken } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 interface Props {
   segment: "individual" | "corporate";
@@ -105,8 +106,15 @@ export default function BulkUploadFlow({ segment, onComplete, onViewCalendar }: 
         schedule_timezone: r.timezone || tz,
       }));
 
-      const result = await postService.createBulkScheduled(postsToSchedule);
-      const summary = { scheduled: result.created.length, errors: result.errors.length };
+      const token = auth.currentUser ? await getIdToken(auth.currentUser) : null;
+      const res = await fetch("/api/posts/bulk-schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ posts: postsToSchedule, segment }),
+      });
+      if (!res.ok) throw new Error((await res.json())?.error || "Bulk schedule failed");
+      const result = await res.json();
+      const summary = { scheduled: result.created?.length ?? 0, errors: result.errors?.length ?? 0 };
       setResult(summary);
       onComplete(summary);
       setStep(3);

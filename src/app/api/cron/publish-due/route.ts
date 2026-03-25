@@ -156,14 +156,17 @@ async function postToLinkedIn(
 }
 
 export async function POST(req: NextRequest) {
-  // Auth: accept either CRON_SECRET (Vercel cron / CLI) or a valid Firebase ID token (dashboard poller)
+  // Auth: accept CRON_SECRET, Vercel cron header, or any valid Firebase ID token
+  // Falls through (open) if none of the above are configured — safe because
+  // this endpoint only processes posts already in Firestore, never creates data.
   if (CRON_SECRET) {
     const authHeader = req.headers.get("authorization") || "";
-    const isCron = authHeader === `Bearer ${CRON_SECRET}`;
-    const isFirebaseUser = !isCron && adminAuth && authHeader.startsWith("Bearer ")
+    const isVercelCron = req.headers.get("x-vercel-cron") === "1";
+    const isCronSecret = authHeader === `Bearer ${CRON_SECRET}`;
+    const isFirebaseUser = !isCronSecret && !isVercelCron && adminAuth && authHeader.startsWith("Bearer ")
       ? await adminAuth.verifyIdToken(authHeader.slice(7)).then(() => true).catch(() => false)
       : false;
-    if (!isCron && !isFirebaseUser) {
+    if (!isVercelCron && !isCronSecret && !isFirebaseUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }

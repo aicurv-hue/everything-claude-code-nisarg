@@ -84,11 +84,18 @@ export default function CreatePostPage() {
     const selectedModel = activeProfile?.model || "google/gemini-2.0-flash";
 
     try {
+      // Get Firebase token once — used for all authenticated API calls
+      const idToken = auth.currentUser ? await getIdToken(auth.currentUser) : null;
+      const authHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+      };
+
       // ── Stage 1: Research (via API route — supports 60s timeout) ────────────
       setGeneratingStep("research");
       const researchRes = await fetch("/api/ai/research", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify({ topic, options: { segment, model: selectedModel, tone, audience, length, clientProfile: activeProfile } }),
       });
       if (!researchRes.ok) throw new Error(`Research failed: ${await researchRes.text()}`);
@@ -98,10 +105,9 @@ export default function CreatePostPage() {
       setGeneratingStep("memory");
       let memoryContext: any[] = [];
       try {
-        if (auth.currentUser) {
-          const token = await getIdToken(auth.currentUser);
+        if (idToken) {
           const memRes = await fetch(`/api/memory?segment=${segment}&topic=${encodeURIComponent(topic)}&limit=5`, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${idToken}` },
           });
           if (memRes.ok) {
             const memData = await memRes.json();
@@ -114,7 +120,7 @@ export default function CreatePostPage() {
       setGeneratingStep("writing");
       const generateRes = await fetch("/api/ai/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify({
           topic, tone, audience, length, segment, research,
           model: selectedModel,
