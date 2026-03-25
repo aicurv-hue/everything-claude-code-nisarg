@@ -67,6 +67,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Trim env vars — trailing spaces/newlines from Vercel can break the exchange
+  const clientId     = (process.env.LINKEDIN_CLIENT_ID     || "").trim();
+  const clientSecret = (process.env.LINKEDIN_CLIENT_SECRET || "").trim();
+  const redirectUri  = (process.env.LINKEDIN_REDIRECT_URI  || "").trim();
+
   // ── Step 1: Exchange code for tokens ──────────────────────────────────────
   const tokenRes = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
     method: "POST",
@@ -74,17 +79,23 @@ export async function GET(request: NextRequest) {
     body: new URLSearchParams({
       grant_type: "authorization_code",
       code,
-      redirect_uri: process.env.LINKEDIN_REDIRECT_URI!,
-      client_id: process.env.LINKEDIN_CLIENT_ID!,
-      client_secret: process.env.LINKEDIN_CLIENT_SECRET!,
+      redirect_uri: redirectUri,
+      client_id: clientId,
+      client_secret: clientSecret,
     }),
   });
 
   if (!tokenRes.ok) {
     const errText = await tokenRes.text();
     console.error("[linkedin/callback] Token exchange failed:", errText);
+    // Pass the actual LinkedIn error reason to the UI for easier debugging
+    let reason = "token_exchange_failed";
+    try {
+      const errJson = JSON.parse(errText);
+      reason = errJson.error_description || errJson.error || reason;
+    } catch {}
     return NextResponse.redirect(
-      new URL("/dashboard/settings?linkedin_error=token_exchange_failed", request.url)
+      new URL(`/dashboard/settings?linkedin_error=${encodeURIComponent(reason)}`, request.url)
     );
   }
 

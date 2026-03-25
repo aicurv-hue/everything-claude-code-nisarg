@@ -12,8 +12,8 @@ export async function GET(req: NextRequest) {
   const returnTo = searchParams.get("returnTo") || "/dashboard/create/preview";
   const firebaseUid = searchParams.get("uid") || "";
 
-  const clientId   = process.env.LINKEDIN_CLIENT_ID!;
-  const redirectUri = process.env.LINKEDIN_REDIRECT_URI!;
+  const clientId   = (process.env.LINKEDIN_CLIENT_ID   || "").trim();
+  const redirectUri = (process.env.LINKEDIN_REDIRECT_URI || "").trim();
 
   const scope = [
     "openid",
