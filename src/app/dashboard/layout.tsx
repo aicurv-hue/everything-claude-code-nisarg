@@ -138,13 +138,23 @@ function Sidebar() {
 }
 
 function CronPoller() {
+  const { user } = useAuth();
   useEffect(() => {
+    if (!user) return;
     // Polls every 60s so scheduled posts go live in near real-time when
     // the dashboard is open. Vercel Cron (6 AM IST daily) is the safety net
     // for posts that fire while the dashboard is closed.
     const run = async () => {
       try {
-        const res = await fetch("/api/cron/publish-due", { method: "POST" });
+        const { getIdToken } = await import("firebase/auth");
+        const { auth: firebaseAuth } = await import("@/lib/firebase");
+        const token = firebaseAuth.currentUser
+          ? await getIdToken(firebaseAuth.currentUser)
+          : null;
+        const res = await fetch("/api/cron/publish-due", {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         const ct = res.headers.get("content-type") || "";
         if (!ct.includes("application/json")) return;
         const data = await res.json();
@@ -157,7 +167,7 @@ function CronPoller() {
     run();
     const id = setInterval(run, 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [user]);
   return null;
 }
 

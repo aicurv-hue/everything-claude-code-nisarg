@@ -19,7 +19,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { postService, Post } from "@/lib/db/posts";
 import { savePostMemory } from "@/lib/ai/save-memory";
-import { adminDb } from "@/lib/firebase-admin";
+import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 
 const LI_VERSION  = "202505";
@@ -156,10 +156,14 @@ async function postToLinkedIn(
 }
 
 export async function POST(req: NextRequest) {
-  // Optional secret guard — set CRON_SECRET env var to lock this endpoint
+  // Auth: accept either CRON_SECRET (Vercel cron / CLI) or a valid Firebase ID token (dashboard poller)
   if (CRON_SECRET) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${CRON_SECRET}`) {
+    const authHeader = req.headers.get("authorization") || "";
+    const isCron = authHeader === `Bearer ${CRON_SECRET}`;
+    const isFirebaseUser = !isCron && adminAuth && authHeader.startsWith("Bearer ")
+      ? await adminAuth.verifyIdToken(authHeader.slice(7)).then(() => true).catch(() => false)
+      : false;
+    if (!isCron && !isFirebaseUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }
