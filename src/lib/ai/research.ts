@@ -83,85 +83,47 @@ export async function performResearch(
     ? `Client context:\n${profileLines.join("\n")}`
     : "";
 
-  // ── Stage 1: Generate targeted sub-questions ──────────────────────────────
-  const subQuestionsPrompt = `You are a LinkedIn content researcher.
+  // ── Single combined research call — merges sub-questions + synthesis into 1 ─
+  // Two sequential AI calls exceeded Vercel's 60s limit; one call fixes it.
+  const combinedPrompt = `You are an expert LinkedIn content researcher and market analyst.
 
-The goal is to gather research that will be turned into a single LinkedIn post with:
+Produce a research report to power a single LinkedIn post with these parameters:
+- Topic: "${topic}"
 - Tone: ${tone}
 - Target audience: ${audience}
 - Post length: ${length}
-- Segment: ${segment} (${segment === "individual" ? "personal brand, first-person" : "corporate brand, company voice"})
+- Segment: ${segment === "individual" ? "personal brand, first-person" : "corporate brand, company voice"}
 ${clientContext}
 
-Topic: "${topic}"
+Rules:
+- Surface specific, data-backed insights (numbers, named companies, named trends) — no generic claims.
+- Prefer 2024–2026 data.
+- Every insight must be immediately useful for writing a LinkedIn post for ${audience}.
 
-Generate 4–5 tight, researchable sub-questions that will surface the most compelling, specific, data-backed points for this exact audience and tone.
-Focus on: statistics, trends, surprising insights, pain points, and outcomes that a ${audience} audience on LinkedIn would find valuable.
-
-Return ONLY a JSON array of strings. Example: ["question 1", "question 2"]`;
-
-  let subQuestions = [
-    `What are the latest trends in ${topic}?`,
-    `What pain points does ${topic} solve for ${audience}?`,
-    `What data or statistics support the importance of ${topic}?`,
-  ];
-
-  try {
-    const res = await openRouter.chat.completions.create({
-      model,
-      messages: [{ role: "user", content: subQuestionsPrompt }],
-      temperature: 0.4,
-    });
-    const text = res.choices[0].message.content || "";
-    const parsed = extractJSON(text);
-    if (Array.isArray(parsed) && parsed.length > 0) subQuestions = parsed;
-  } catch (e) {
-    console.warn("[research] Sub-question generation failed, using defaults.", e);
-  }
-
-  // ── Stage 2: Synthesise research into structured insights ─────────────────
-  const synthesisPrompt = `You are an expert market researcher using the ECC market-research skill.
-
-Topic: "${topic}"
-Post tone: ${tone}
-Post audience: ${audience}
-Post length target: ${length}
-Sub-questions investigated:
-${subQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}
-${clientContext}
-
-Produce a research report that will power a LinkedIn post for the above audience and tone.
-
-Rules (market-research skill standards):
-- Every claim must include a source or be flagged as an estimate.
-- Prefer 2024–2026 data. Flag older data.
-- Translate findings into value a ${audience} audience will care about.
-- Insights must be specific (numbers, named companies, named trends) — not generic.
-- Summary must be written so the content writer can extract a single strong idea from it.
-
-Return ONLY valid JSON (no markdown fences, no explanation):
+Return ONLY valid JSON (no markdown fences, no extra text):
 {
-  "summary": "2–3 sentence executive summary of the key finding and its implication for ${audience}",
+  "summary": "2–3 sentence executive summary of the single strongest finding and its implication for ${audience}",
   "insights": [
-    { "title": "Short insight title", "content": "1–2 sentence specific finding with stat or example", "source": "Publication / URL" },
+    { "title": "Short insight title", "content": "1–2 sentence specific finding with stat or example", "source": "Publication or year" },
     { "title": "...", "content": "...", "source": "..." },
     { "title": "...", "content": "...", "source": "..." }
   ],
-  "references": ["url1", "url2"]
+  "references": ["source1", "source2"]
 }`;
 
   let synthesis: any;
   try {
     const res = await openRouter.chat.completions.create({
-      model,
-      messages: [{ role: "user", content: synthesisPrompt }],
+      model: "google/gemini-2.0-flash-001",
+      messages: [{ role: "user", content: combinedPrompt }],
       temperature: 0.3,
+      max_tokens: 1200,
     });
     const text = res.choices[0].message.content || "";
     synthesis = extractJSON(text);
-    if (!synthesis?.summary) throw new Error("Malformed synthesis JSON");
+    if (!synthesis?.summary) throw new Error("Malformed research JSON");
   } catch (e) {
-    console.error("[research] Synthesis failed:", e);
+    console.error("[research] Research call failed:", e);
     synthesis = {
       summary: `Research on "${topic}" could not be completed. The post will be generated from the topic alone.`,
       insights: [
