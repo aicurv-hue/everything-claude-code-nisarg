@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { postService } from "@/lib/db/posts";
 import { suggestionService } from "@/lib/db/schedule-suggestions";
+import { adminDb, adminAuth } from "@/lib/firebase-admin";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL          = process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash";
@@ -16,9 +16,25 @@ function nextOccurrence(dayOfWeek: number, hour: number, minute = 0): string {
 
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
+async function verifyToken(req: NextRequest): Promise<string | null> {
+  const auth = req.headers.get("authorization") || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+  if (!token || !adminAuth) return null;
+  try {
+    const decoded = await adminAuth.verifyIdToken(token);
+    return decoded.uid;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { userId = "demo-user", segment: rawSegment = "individual", forceRefresh = false } = await req.json();
+    const uid = await verifyToken(req);
+    const body = await req.json();
+    const userId = uid || body.userId || "demo-user";
+    const rawSegment = body.segment || "individual";
+    const forceRefresh = body.forceRefresh || false;
     const segment = (rawSegment === "corporate" ? "corporate" : "individual") as "individual" | "corporate";
 
     // Return cached if valid
@@ -27,9 +43,20 @@ export async function POST(req: NextRequest) {
       if (cached) return NextResponse.json(cached);
     }
 
-    // Analyse past published posts
-    const published = await postService.getPublished(userId);
-    const segPosts  = published.filter((p) => p.segment === segment).slice(0, 30);
+    // Analyse past published posts via Admin SDK
+    let segPosts: any[] = [];
+    if (adminDb) {
+      try {
+        const snap = await adminDb.collection("posts")
+          .where("user_id", "==", userId)
+          .where("status", "==", "published")
+          .get();
+        segPosts = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .filter((p: any) => p.segment === segment)
+          .slice(0, 30);
+      } catch { /* ignore */ }
+    }
 
     const freq: Record<string, number> = {};
     for (const p of segPosts) {
@@ -119,7 +146,10 @@ Return ONLY a JSON array of exactly 3 objects, no markdown:
 }
 
 export async function DELETE(req: NextRequest) {
-  const { userId = "demo-user", segment = "individual" } = await req.json().catch(() => ({}));
+  const uid = await verifyToken(req);
+  const body = await req.json().catch(() => ({}));
+  const userId = uid || body.userId || "demo-user";
+  const segment = body.segment || "individual";
   await suggestionService.invalidate(userId, segment);
   return NextResponse.json({ ok: true });
 }

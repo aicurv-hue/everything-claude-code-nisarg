@@ -15,7 +15,7 @@ import {
   RefreshCw,
   CheckCircle2,
 } from "lucide-react";
-import { profileService, UserProfile, ProfileSegment } from "@/lib/db/profiles";
+import { UserProfile, ProfileSegment } from "@/lib/db/profiles";
 import { useAuth } from "@/lib/context/auth";
 import { HelpTooltip, FieldHint } from "@/components/ui/HelpTooltip";
 
@@ -112,27 +112,44 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const loadSettings = async () => {
-      const userId = user!.uid;
-      const cloudProfile = await profileService.getProfile(userId);
-      if (cloudProfile) {
-        setSegments({
-          individual: { ...INITIAL_SEGMENT, ...cloudProfile.individual },
-          corporate:  { ...INITIAL_SEGMENT, ...cloudProfile.corporate }
+      try {
+        const { auth: firebaseAuth } = await import("@/lib/firebase");
+        const token = await firebaseAuth?.currentUser?.getIdToken();
+        if (!token) return;
+        const res = await fetch("/api/profiles", {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        setProfileType(cloudProfile.lastActiveSegment || "individual");
+        const data = await res.json();
+        const cloudProfile = data.profile;
+        if (cloudProfile) {
+          setSegments({
+            individual: { ...INITIAL_SEGMENT, ...cloudProfile.individual },
+            corporate:  { ...INITIAL_SEGMENT, ...cloudProfile.corporate }
+          });
+          setProfileType(cloudProfile.lastActiveSegment || "individual");
+        }
+      } catch (err) {
+        console.error("Failed to load settings:", err);
       }
     };
     loadSettings();
   }, []);
 
   const handleSave = async () => {
-    const userId = user!.uid;
-    const data: UserProfile = {
+    const profile: UserProfile = {
       lastActiveSegment: profileType,
       individual: segments.individual,
       corporate:  segments.corporate
     };
-    await profileService.saveProfile(userId, data);
+    const { auth: firebaseAuth } = await import("@/lib/firebase");
+    const token = await firebaseAuth?.currentUser?.getIdToken();
+    if (token) {
+      await fetch("/api/profiles", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ profile }),
+      });
+    }
     localStorage.setItem("ai_model", segments[profileType].model || "google/gemini-2.0-flash");
     localStorage.setItem("system_prompt", segments[profileType].systemPrompt || DEFAULT_SYSTEM_PROMPT);
     localStorage.setItem("client_profile", JSON.stringify({ ...segments[profileType], profileType }));

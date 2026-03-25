@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { postService, Post } from "@/lib/db/posts";
+import { Post } from "@/lib/db/posts";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import { FileText, Clock, Edit3, Trash2, Send, RefreshCw } from "lucide-react";
@@ -23,8 +23,15 @@ export default function DraftsPage() {
   const loadDrafts = useCallback(async () => {
     setLoading(true);
     try {
-      const all = await postService.getDrafts(user!.uid);
-      setDrafts(all.filter((p) => p.segment === segment));
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const token = await firebaseAuth?.currentUser?.getIdToken();
+      if (!token) { setLoading(false); return; }
+      const res = await fetch(`/api/posts?segment=${segment}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      const all: Post[] = data.posts || [];
+      setDrafts(all.filter((p) => p.status === "draft"));
     } catch (err) {
       console.error("Error loading drafts:", err);
     } finally {
@@ -43,7 +50,14 @@ export default function DraftsPage() {
     if (!confirm("Delete this draft? This cannot be undone.")) return;
     setDeleting(id);
     try {
-      await postService.deletePost(id);
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const token = await firebaseAuth?.currentUser?.getIdToken();
+      if (!token) return;
+      await fetch("/api/posts", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
       setDrafts((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
       console.error("Delete failed:", err);

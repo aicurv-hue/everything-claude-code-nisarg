@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, Clock, ChevronRight, Search, Linkedin, ThumbsUp, MessageCircle } from "lucide-react";
-import { postService, Post } from "@/lib/db/posts";
+import { Post } from "@/lib/db/posts";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 
@@ -61,8 +61,14 @@ export default function HistoryPage() {
     async function loadHistory() {
       setIsLoading(true);
       try {
-        const data = await postService.getAll(user!.uid);
-        setPosts(data.filter((p) => p.segment === segment));
+        const { auth: firebaseAuth } = await import("@/lib/firebase");
+        const token = await firebaseAuth?.currentUser?.getIdToken();
+        if (!token) { setIsLoading(false); return; }
+        const res = await fetch(`/api/posts?segment=${segment}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setPosts(data.posts || []);
       } catch (error) {
         console.error("Error loading history:", error);
       } finally {

@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { postService } from "@/lib/db/posts";
+import type { Post } from "@/lib/db/posts";
 import { useAuth } from "@/lib/context/auth";
 import {
   CheckCircle, AlertCircle, Linkedin, FileText, Send,
@@ -41,6 +41,30 @@ export default function PostPreviewPage() {
   const [linkedInConnected, setLinkedInConnected] = useState<boolean | null>(null);
   const [linkedInUser, setLinkedInUser]     = useState<{ name: string; picture: string; email: string } | null>(null);
   const router = useRouter();
+
+  const createPost = async (post: Omit<Post, "id">): Promise<{ id?: string }> => {
+    const { auth: firebaseAuth } = await import("@/lib/firebase");
+    const token = await firebaseAuth?.currentUser?.getIdToken();
+    if (!token) throw new Error("Not authenticated");
+    const res = await fetch("/api/posts", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ post }),
+    });
+    if (!res.ok) throw new Error("Failed to save post");
+    return res.json();
+  };
+
+  const updatePost = async (id: string, updates: Partial<Post>): Promise<void> => {
+    const { auth: firebaseAuth } = await import("@/lib/firebase");
+    const token = await firebaseAuth?.currentUser?.getIdToken();
+    if (!token) return;
+    await fetch("/api/posts", {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...updates }),
+    });
+  };
 
   useEffect(() => {
     const data = localStorage.getItem("latest_post");
@@ -116,9 +140,10 @@ export default function PostPreviewPage() {
     if (!postData || isSaving) return;
     setIsSaving(true);
     try {
-      await postService.createDraft({
+      await createPost({
         user_id: user!.uid,
         account_id: "personal-account",
+        status: "draft",
         content: editedContent,
         topic: postData.metadata.topic,
         tone: postData.metadata.tone,
@@ -127,6 +152,7 @@ export default function PostPreviewPage() {
         custom_instructions: postData.metadata.customInstructions || undefined,
         segment: postData.metadata.segment || "individual",
         research_data: postData.research,
+        created_at: null,
       });
       router.push("/dashboard/drafts");
     } catch {
@@ -157,14 +183,16 @@ export default function PostPreviewPage() {
       if (!res.ok) {
         setPublishStatus("error");
         setPublishMessage(data.error || "Publishing failed. Please try again.");
-        await postService.createDraft({
+        await createPost({
           user_id: user!.uid, account_id: "personal-account",
+          status: "draft",
           content: editedContent, topic: postData.metadata.topic,
           tone: postData.metadata.tone, audience: postData.metadata.audience,
           length: postData.metadata.length,
           custom_instructions: postData.metadata.customInstructions || undefined,
           segment: postData.metadata.segment || "individual",
           research_data: postData.research,
+          created_at: null,
         });
       } else {
         setPublishStatus("success");
@@ -180,19 +208,20 @@ export default function PostPreviewPage() {
           userId:   user!.uid,
         }).catch(() => {});
 
-        await postService.createPublished(
-          {
-            user_id: user!.uid, account_id: "personal-account",
-            content: editedContent, topic: postData.metadata.topic,
-            tone: postData.metadata.tone, audience: postData.metadata.audience,
-            length: postData.metadata.length,
-            custom_instructions: postData.metadata.customInstructions || undefined,
-            segment: postData.metadata.segment || "individual",
-            research_data: postData.research,
-          },
-          data.postId || "unknown",
-          finalImageUrl || undefined
-        );
+        await createPost({
+          user_id: user!.uid, account_id: "personal-account",
+          status: "published",
+          content: editedContent, topic: postData.metadata.topic,
+          tone: postData.metadata.tone, audience: postData.metadata.audience,
+          length: postData.metadata.length,
+          custom_instructions: postData.metadata.customInstructions || undefined,
+          segment: postData.metadata.segment || "individual",
+          research_data: postData.research,
+          linkedin_post_id: data.postId || "unknown",
+          image_url: finalImageUrl || undefined,
+          published_at: new Date().toISOString(),
+          created_at: null,
+        });
       }
     } catch {
       setPublishStatus("error");
@@ -226,24 +255,24 @@ export default function PostPreviewPage() {
         }
       }
 
-      const saved = await postService.createScheduled(
-        {
-          user_id: user!.uid,
-          account_id: "personal-account",
-          content: editedContent,
-          topic: postData.metadata.topic,
-          tone: postData.metadata.tone,
-          audience: postData.metadata.audience,
-          length: postData.metadata.length,
-          custom_instructions: postData.metadata.customInstructions || undefined,
-          segment: postData.metadata.segment || "individual",
-          research_data: postData.research,
-          image_url: immediateImageUrl,
-        },
-        scheduledAt,
-        timezone,
-        bestTimeApplied
-      );
+      const saved = await createPost({
+        user_id: user!.uid,
+        account_id: "personal-account",
+        status: "scheduled",
+        content: editedContent,
+        topic: postData.metadata.topic,
+        tone: postData.metadata.tone,
+        audience: postData.metadata.audience,
+        length: postData.metadata.length,
+        custom_instructions: postData.metadata.customInstructions || undefined,
+        segment: postData.metadata.segment || "individual",
+        research_data: postData.research,
+        image_url: immediateImageUrl,
+        scheduled_at: scheduledAt.toISOString(),
+        schedule_timezone: timezone,
+        best_time_applied: bestTimeApplied,
+        created_at: null,
+      });
 
       // Close modal and show success immediately
       setScheduleStatus("success");
@@ -265,7 +294,7 @@ export default function PostPreviewPage() {
           .then((r) => r.ok ? r.json() : null)
           .then((d) => {
             if (d?.url && saved.id) {
-              postService.updatePost(saved.id, { image_url: d.url }).catch(() => {});
+              saved.id && updatePost(saved.id, { image_url: d.url }).catch(() => {});
               setScheduleMessage(`Scheduled for ${label} (${timezone}) · AI image attached`);
             } else {
               setScheduleMessage(`Scheduled for ${label} (${timezone}) · Image generation failed — post will publish without image`);

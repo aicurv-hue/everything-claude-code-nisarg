@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { RefreshCw, Upload, CalendarDays, CheckCircle, AlertCircle, Clock, Info } from "lucide-react";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
-import { postService, Post } from "@/lib/db/posts";
+import { Post } from "@/lib/db/posts";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import ContentCalendar from "@/components/schedule/ContentCalendar";
@@ -28,8 +28,14 @@ export default function SchedulePage() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const all = await postService.getAll(user!.uid);
-      setPosts(all.filter((p) => p.segment === segment));
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const token = await firebaseAuth?.currentUser?.getIdToken();
+      if (!token) return;
+      const res = await fetch(`/api/posts?segment=${segment}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setPosts(data.posts || []);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -39,13 +45,27 @@ export default function SchedulePage() {
   useEffect(() => { load(); }, [load]);
 
   const handleReschedule = async (postId: string, newDate: Date, tz: string) => {
-    await postService.reschedulePost(postId, newDate, tz);
+    const { auth: firebaseAuth } = await import("@/lib/firebase");
+    const token = await firebaseAuth?.currentUser?.getIdToken();
+    if (!token) return;
+    await fetch("/api/posts", {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ id: postId, status: "scheduled", scheduled_at: newDate.toISOString(), schedule_timezone: tz }),
+    });
     setSelected(null);
     load(true);
   };
 
   const handleDelete = async (postId: string) => {
-    await postService.deletePost(postId);
+    const { auth: firebaseAuth } = await import("@/lib/firebase");
+    const token = await firebaseAuth?.currentUser?.getIdToken();
+    if (!token) return;
+    await fetch("/api/posts", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ id: postId }),
+    });
     setSelected(null);
     load(true);
   };

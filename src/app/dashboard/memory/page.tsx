@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Brain, RefreshCw, Zap, Tag, Clock, TrendingUp, FileText, Sparkles, Trash2 } from "lucide-react";
-import { memoryService, PostMemory } from "@/lib/db/memory";
+import { PostMemory } from "@/lib/db/memory";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 
@@ -61,12 +61,38 @@ export default function MemoryPage() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const [mems, st] = await Promise.all([
-        memoryService.getAll(user!.uid, segment as "individual" | "corporate"),
-        memoryService.getStats(user!.uid, segment as "individual" | "corporate"),
-      ]);
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const token = await firebaseAuth?.currentUser?.getIdToken();
+      if (!token) return;
+      const res = await fetch(`/api/memory?segment=${segment}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      const mems: PostMemory[] = data.entries || [];
       setMemories(mems);
-      setStats(st);
+
+      // Compute stats client-side from the fetched entries
+      const allKeywords = mems.flatMap((m) => m.keywords);
+      const keywordFreq: Record<string, number> = {};
+      for (const kw of allKeywords) keywordFreq[kw] = (keywordFreq[kw] || 0) + 1;
+      const topKeywords = Object.entries(keywordFreq)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15)
+        .map(([kw, count]) => ({ kw, count }));
+
+      const toneBreakdown: Record<string, number> = {};
+      for (const m of mems) toneBreakdown[m.tone] = (toneBreakdown[m.tone] || 0) + 1;
+
+      const uniqueTopics = [...new Set(mems.map((m) => m.topic))];
+
+      setStats({
+        totalMemories: mems.length,
+        uniqueTopics: uniqueTopics.length,
+        topKeywords,
+        toneBreakdown,
+        oldest: mems[mems.length - 1]?.created_at?.seconds ? new Date(mems[mems.length - 1].created_at.seconds * 1000) : null,
+        newest: mems[0]?.created_at?.seconds ? new Date(mems[0].created_at.seconds * 1000) : null,
+      });
     } catch (err) {
       console.error("Failed to load memory:", err);
     } finally {
@@ -78,9 +104,22 @@ export default function MemoryPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Remove this memory entry? Neel will no longer reference it.")) return;
     setDeletingId(id);
-    await memoryService.delete(id).catch(() => {});
-    setMemories((prev) => prev.filter((m) => m.id !== id));
-    setDeletingId(null);
+    try {
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const token = await firebaseAuth?.currentUser?.getIdToken();
+      if (token) {
+        await fetch("/api/memory", {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+      }
+      setMemories((prev) => prev.filter((m) => m.id !== id));
+    } catch {
+      // silent
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   useEffect(() => { load(); }, [load]);
