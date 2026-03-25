@@ -18,10 +18,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { postService, Post } from "@/lib/db/posts";
-import { tokenService } from "@/lib/db/tokens";
 import { savePostMemory } from "@/lib/ai/save-memory";
 import { adminDb } from "@/lib/firebase-admin";
-import type { LinkedInTokenRecord } from "@/lib/db/tokens";
+import { FieldValue } from "firebase-admin/firestore";
 
 const LI_VERSION  = "202505";
 const TIMEOUT_MS  = 20_000;
@@ -54,7 +53,12 @@ async function refreshAccessToken(userId: string, refreshToken: string): Promise
     const data        = await res.json();
     const newToken    = data.access_token;
     const expiresAt   = Date.now() + (data.expires_in || 5184000) * 1000;
-    await tokenService.updateAccessToken(userId, newToken, expiresAt);
+    if (adminDb) {
+      await adminDb.collection("tokens").doc(userId).set(
+        { access_token: newToken, expires_at: expiresAt, updated_at: FieldValue.serverTimestamp() },
+        { merge: true }
+      );
+    }
     console.log(`[cron] Token refreshed for ${userId}`);
     return newToken;
   } catch (err) {
@@ -207,7 +211,7 @@ export async function POST(req: NextRequest) {
   for (const post of due) {
     if (!post.id) continue;
 
-    // In-memory lock — prevents duplicate publish if two cron calls overlap
+    // In-memory lock — prevents duplicate publish within same invocation
     if (publishingIds.has(post.id)) {
       console.log(`[cron] Post ${post.id} already in-flight — skipping.`);
       continue;
@@ -215,12 +219,24 @@ export async function POST(req: NextRequest) {
     publishingIds.add(post.id);
 
     try {
-      // Mark as processing to prevent re-pickup on restart
-      await postService.markProcessing(post.id);
+      // Atomically claim the post: only proceed if it's still "scheduled"
+      const postRef = adminDb!.collection("posts").doc(post.id);
+      const claimed = await adminDb!.runTransaction(async (tx) => {
+        const snap = await tx.get(postRef);
+        if (!snap.exists || snap.data()?.status !== "scheduled") return false;
+        tx.update(postRef, { status: "processing", updated_at: FieldValue.serverTimestamp() });
+        return true;
+      });
+      if (!claimed) {
+        console.log(`[cron] Post ${post.id} already claimed — skipping.`);
+        publishingIds.delete(post.id);
+        continue;
+      }
 
       // ── Get LinkedIn token for this post's owner ──────────────────────────
       const userId = post.user_id;
-      let tokenRecord = await tokenService.get(userId).catch(() => null);
+      const tokenSnap = await adminDb!.collection("tokens").doc(userId).get();
+      const tokenRecord = tokenSnap.exists ? tokenSnap.data() : null;
 
       if (!tokenRecord) {
         throw new Error(`No LinkedIn token for user ${userId}. User must reconnect LinkedIn in Settings.`);
@@ -256,7 +272,12 @@ export async function POST(req: NextRequest) {
       if (!content.trim()) throw new Error("Post content is empty.");
 
       const postId = await postToLinkedIn(accessToken, authorUrn, content, post.image_url || undefined);
-      await postService.markPublished(post.id, postId, post.image_url || undefined);
+      await postRef.update({
+        status: "published",
+        linkedin_post_id: postId,
+        published_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp(),
+      });
       console.log(`[cron] ✅ Published post ${post.id} (user: ${userId}) → LinkedIn ${postId}`);
 
       savePostMemory({
@@ -272,7 +293,10 @@ export async function POST(req: NextRequest) {
 
     } catch (err: any) {
       console.error(`[cron] ❌ Failed to publish post ${post.id}:`, err?.message || err);
-      await postService.markFailed(post.id).catch(() => {});
+      await adminDb!.collection("posts").doc(post.id).update({
+        status: "failed",
+        updated_at: FieldValue.serverTimestamp(),
+      }).catch(() => {});
       results.push({ id: post.id, status: "failed", reason: err?.message });
     } finally {
       publishingIds.delete(post.id);
@@ -314,11 +338,12 @@ export async function POST(req: NextRequest) {
         const { results: engResults } = await engRes.json();
         for (const { urn, likes, comments } of engResults) {
           const post = toSync.find(p => p.linkedin_post_id === urn);
-          if (post?.id) {
-            await postService.updatePost(post.id, {
+          if (post?.id && adminDb) {
+            await adminDb.collection("posts").doc(post.id).update({
               likes_count: likes,
               comments_count: comments,
               engagement_synced_at: Date.now(),
+              updated_at: FieldValue.serverTimestamp(),
             }).catch(() => {});
           }
         }
