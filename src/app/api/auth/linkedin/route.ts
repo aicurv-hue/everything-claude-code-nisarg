@@ -20,8 +20,8 @@ export async function GET(req: NextRequest) {
     "profile",
     "email",
     "w_member_social",       // post on behalf of personal profile
-    "w_organization_social", // post on behalf of company page
-    "r_organization_social", // read company page posts
+    // w_organization_social and r_organization_social require LinkedIn Partner approval
+    // Remove them until the app is approved — they block the consent screen
   ].join(" ");
 
   // Embed returnTo + Firebase UID in state for CSRF protection + user identification
