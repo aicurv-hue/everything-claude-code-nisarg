@@ -81,7 +81,7 @@ export default function CreatePostPage() {
     setIsGenerating(true);
 
     const activeProfile: ProfileSegment | undefined = userProfile ? userProfile[segment] : undefined;
-    const selectedModel = activeProfile?.model || "google/gemini-2.0-flash";
+    const selectedModel = activeProfile?.model || "google/gemini-2.0-flash-001";
 
     try {
       // Get Firebase token once — used for all authenticated API calls

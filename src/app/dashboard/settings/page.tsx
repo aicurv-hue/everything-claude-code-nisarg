@@ -42,7 +42,7 @@ const INITIAL_SEGMENT: ProfileSegment = {
   customerPains: "",
   verbatimLanguage: "",
   wordsToAvoid: "",
-  model: "google/gemini-2.0-flash",
+  model: "google/gemini-2.0-flash-001",
   systemPrompt: DEFAULT_SYSTEM_PROMPT
 };
 
@@ -144,7 +144,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ profile }),
       });
     }
-    localStorage.setItem("ai_model", segments[profileType].model || "google/gemini-2.0-flash");
+    localStorage.setItem("ai_model", segments[profileType].model || "google/gemini-2.0-flash-001");
     localStorage.setItem("system_prompt", segments[profileType].systemPrompt || DEFAULT_SYSTEM_PROMPT);
     localStorage.setItem("client_profile", JSON.stringify({ ...segments[profileType], profileType }));
     setIsSaved(true);
@@ -487,7 +487,7 @@ export default function SettingsPage() {
                 onChange={(e) => handleFieldChange("model", e.target.value)}
                 className={inputClass}
               >
-                <option value="google/gemini-2.0-flash">Google Gemini 2.0 Flash — fastest, great for most posts</option>
+                <option value="google/gemini-2.0-flash-001">Google Gemini 2.0 Flash 001 — fastest, great for most posts</option>
                 <option value="anthropic/claude-3.5-sonnet">Anthropic Claude 3.5 Sonnet — best for natural voice & storytelling</option>
                 <option value="openai/gpt-4o">OpenAI GPT-4o — best for data-heavy & structured posts</option>
               </select>

@@ -252,7 +252,9 @@ Start directly with the hook line. Output nothing else.`;
 
   // Helper: try primary model, fall back to GPT-4o-mini on 5xx errors
   const chatWithFallback = async (messages: any[], temperature: number) => {
-    const primary = model || DEFAULT_MODEL;
+    // Migrate old model IDs saved in user profiles before the -001 fix
+    const raw = model || DEFAULT_MODEL;
+    const primary = raw === "google/gemini-2.0-flash" ? "google/gemini-2.0-flash-001" : raw;
     try {
       const res = await openRouter.chat.completions.create({ model: primary, messages, temperature });
       return res;

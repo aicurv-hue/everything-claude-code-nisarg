@@ -3,7 +3,7 @@ import { suggestionService } from "@/lib/db/schedule-suggestions";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL          = process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash";
+const MODEL          = process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-001";
 
 function nextOccurrence(dayOfWeek: number, hour: number, minute = 0): string {
   const now = new Date();
