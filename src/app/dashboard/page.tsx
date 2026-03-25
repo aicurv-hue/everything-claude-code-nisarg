@@ -7,8 +7,8 @@ import {
   FileText, RefreshCw, Linkedin, Zap, Image, AlertTriangle,
   Wifi, WifiOff, Activity, User, Building2, ThumbsUp, MessageCircle
 } from "lucide-react";
-import { postService, Post } from "@/lib/db/posts";
-import { profileService, UserProfile } from "@/lib/db/profiles";
+import { Post } from "@/lib/db/posts";
+import { UserProfile } from "@/lib/db/profiles";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 
@@ -118,26 +118,25 @@ export default function DashboardHomePage() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Dashboard load timed out. Check your Firebase connection.")), 15_000)
-      );
-      const [postStats, serverStats, userProfile] = await Promise.race([
-        Promise.all([
-          postService.getStats(user.uid, segment),
-          fetch("/api/dashboard/stats").then((r) => r.json()),
-          profileService.getProfile(user.uid),
-        ]),
-        timeout,
-      ]) as [any, any, any];
-      setStats(postStats);
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const token = await firebaseAuth?.currentUser?.getIdToken();
+
+      const [dashData, serverStats] = await Promise.all([
+        fetch(`/api/dashboard/data?segment=${segment}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then((r) => r.json()),
+        fetch("/api/dashboard/stats").then((r) => r.json()),
+      ]);
+
+      if (dashData.error) throw new Error(dashData.error);
+
+      setStats(dashData.stats);
+      setProfile(dashData.profile);
+      setAllPosts(dashData.allPosts || []);
+      setRecent((dashData.posts || []).slice(0, 6));
       setSystem(serverStats.system);
       setLinkedIn(serverStats.linkedin);
       setLastUpdated(serverStats.timestamp);
-      setProfile(userProfile);
-      const all = await postService.getAll(user.uid);
-      const segmented = all.filter((p) => p.segment === segment);
-      setAllPosts(segmented);
-      setRecent(segmented.slice(0, 6));
     } catch (err: any) {
       console.error("Dashboard load failed:", err);
       setError(err?.message || "Failed to load dashboard.");
