@@ -20,8 +20,14 @@ async function verifyAdmin(req: NextRequest): Promise<string | null> {
  * Body: { targetEmail: "nisarg2526@gmail.com" }
  */
 export async function POST(req: NextRequest) {
-  const adminUid = await verifyAdmin(req);
-  if (!adminUid) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // Accept either admin Firebase token OR CRON_SECRET for CLI usage
+  const cronSecret = process.env.CRON_SECRET;
+  const authHeader = req.headers.get("authorization") || "";
+  const isCronAuth = cronSecret && authHeader === `Bearer ${cronSecret}`;
+  if (!isCronAuth) {
+    const adminUid = await verifyAdmin(req);
+    if (!adminUid) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   if (!adminDb || !adminAuth) return NextResponse.json({ error: "Admin SDK not configured" }, { status: 503 });
 
   const { targetEmail } = await req.json();
