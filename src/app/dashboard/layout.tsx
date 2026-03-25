@@ -2,13 +2,16 @@
 
 import React, { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { BarChart3, Settings, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { BarChart3, Settings, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut } from "lucide-react";
 import { SegmentProvider, useSegment } from "@/lib/context/segment";
+import { useAuth } from "@/lib/context/auth";
 
 function Sidebar() {
   const { setSegment, isIndividual, isCorporate } = useSegment();
+  const { user, logOut } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
 
   const navItems = [
     { href: "/dashboard",          label: "Dashboard",   icon: <BarChart3 className="w-4 h-4" /> },
@@ -86,8 +89,8 @@ function Sidebar() {
         })}
       </nav>
 
-      {/* Bottom context */}
-      <div className="px-3 pb-5 pt-3 border-t border-white/[0.07]">
+      {/* Bottom — user + logout */}
+      <div className="px-3 pb-4 pt-3 border-t border-white/[0.07] space-y-2">
         <div className={`px-3 py-2.5 rounded-lg ${isCorporate ? "bg-violet-500/10" : "bg-[#0A66C2]/10"}`}>
           <p className={`text-[10px] font-semibold uppercase tracking-wider mb-0.5 ${isCorporate ? "text-violet-400" : "text-[#0A66C2]"}`}>
             {isIndividual ? "Personal Profile" : "Company Page"}
@@ -96,6 +99,26 @@ function Sidebar() {
             {isIndividual ? "Posts go to your LinkedIn profile" : "Posts go to your company page"}
           </p>
         </div>
+        {user && (
+          <div className="flex items-center gap-2 px-1">
+            <div className="w-6 h-6 rounded-full bg-[#0A66C2]/30 flex items-center justify-center shrink-0">
+              <span className="text-[#0A66C2] text-[10px] font-bold">
+                {(user.displayName || user.email || "U")[0].toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-[11px] font-medium truncate">{user.displayName || "User"}</p>
+              <p className="text-slate-500 text-[10px] truncate">{user.email}</p>
+            </div>
+            <button
+              onClick={async () => { await logOut(); router.replace("/login"); }}
+              className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+              title="Sign out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );
@@ -127,8 +150,31 @@ function CronPoller() {
   return null;
 }
 
+function AuthGuard({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace("/login");
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#0A66C2] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
+  return <>{children}</>;
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
+    <AuthGuard>
     <SegmentProvider>
       <CronPoller />
       <div className="min-h-screen flex bg-slate-50 text-slate-900">
@@ -138,5 +184,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
     </SegmentProvider>
+    </AuthGuard>
   );
 }

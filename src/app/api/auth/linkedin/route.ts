@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const returnTo = searchParams.get("returnTo") || "/dashboard/create/preview";
+  const firebaseUid = searchParams.get("uid") || "";
 
   const clientId   = process.env.LINKEDIN_CLIENT_ID!;
   const redirectUri = process.env.LINKEDIN_REDIRECT_URI!;
@@ -23,8 +24,8 @@ export async function GET(req: NextRequest) {
     "r_organization_social", // read company page posts
   ].join(" ");
 
-  // Embed returnTo in state for CSRF protection + redirect tracking
-  const state = `${Math.random().toString(36).substring(2)}|${encodeURIComponent(returnTo)}`;
+  // Embed returnTo + Firebase UID in state for CSRF protection + user identification
+  const state = `${Math.random().toString(36).substring(2)}|${encodeURIComponent(returnTo)}|${encodeURIComponent(firebaseUid)}`;
 
   const params = new URLSearchParams({
     response_type: "code",

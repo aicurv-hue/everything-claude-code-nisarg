@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Brain, RefreshCw, Zap, Tag, Clock, TrendingUp, FileText, Sparkles, Trash2 } from "lucide-react";
 import { memoryService, PostMemory } from "@/lib/db/memory";
 import { useSegment } from "@/lib/context/segment";
+import { useAuth } from "@/lib/context/auth";
 
 interface MemoryStats {
   totalMemories: number;
@@ -43,6 +44,7 @@ const TONE_BAR: Record<string, string> = {
 };
 
 export default function MemoryPage() {
+  const { user } = useAuth();
   const { segment, isIndividual, isCorporate } = useSegment();
   const [memories, setMemories] = useState<PostMemory[]>([]);
   const [stats, setStats]       = useState<MemoryStats | null>(null);
@@ -60,8 +62,8 @@ export default function MemoryPage() {
     else setRefreshing(true);
     try {
       const [mems, st] = await Promise.all([
-        memoryService.getAll("demo-user", segment as "individual" | "corporate"),
-        memoryService.getStats("demo-user", segment as "individual" | "corporate"),
+        memoryService.getAll(user!.uid, segment as "individual" | "corporate"),
+        memoryService.getStats(user!.uid, segment as "individual" | "corporate"),
       ]);
       setMemories(mems);
       setStats(st);

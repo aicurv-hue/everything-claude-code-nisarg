@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { performResearch } from "@/lib/ai/research";
 import { generatePost } from "@/lib/ai/generate";
 import { profileService, UserProfile, ProfileSegment } from "@/lib/db/profiles";
-import { auth } from "@/lib/firebase";
 import { useSegment } from "@/lib/context/segment";
+import { useAuth } from "@/lib/context/auth";
 import { memoryService } from "@/lib/db/memory";
 import { Zap, Search, Brain, SlidersHorizontal, ChevronDown, ChevronUp, User, Building2, Sparkles, Info } from "lucide-react";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
@@ -36,6 +36,7 @@ export default function CreatePostPage() {
   const [tone, setTone]               = useState("professional");
   const [audience, setAudience]       = useState("founders");
   const [length, setLength]           = useState("medium");
+  const { user } = useAuth();
   const { segment, isIndividual, isCorporate } = useSegment();
 
   const [userProfile, setUserProfile]       = useState<UserProfile | null>(null);
@@ -52,7 +53,7 @@ export default function CreatePostPage() {
 
   useEffect(() => {
     const loadProfile = async () => {
-      const userId = auth?.currentUser?.uid || "demo-user";
+      const userId = user!.uid;
       const [profile, memories] = await Promise.all([
         profileService.getProfile(userId),
         memoryService.getAll(userId, segment),

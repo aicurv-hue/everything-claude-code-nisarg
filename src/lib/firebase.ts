@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, Auth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getAnalytics, isSupported, Analytics } from "firebase/analytics";
 
@@ -13,8 +13,8 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Check if we have real config
-const isMock = !process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-api-key";
+// Mock mode only when env vars are genuinely absent (local dev without .env.local)
+export const isMock = !process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "mock-api-key";
 
 let app: FirebaseApp;
 let analytics: Analytics | null = null;
@@ -22,22 +22,22 @@ let analytics: Analytics | null = null;
 try {
   if (!isMock) {
     app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-    // Initialize Analytics only in browser
     if (typeof window !== "undefined") {
       isSupported().then(yes => {
         if (yes) analytics = getAnalytics(app);
       });
     }
   } else {
-    console.warn("Firebase: Using mock mode. Persistence will be simulated.");
-    app = { name: "[DEFAULT]-mock", options: {}, automaticDataCollectionEnabled: false };
+    console.warn("Firebase: Using mock mode (no env vars). Set NEXT_PUBLIC_FIREBASE_* to use real Firebase.");
+    app = { name: "[DEFAULT]-mock", options: {}, automaticDataCollectionEnabled: false } as any;
   }
 } catch (e) {
   console.error("Firebase init error:", e);
-  app = { name: "[DEFAULT]-error", options: {}, automaticDataCollectionEnabled: false };
+  app = { name: "[DEFAULT]-error", options: {}, automaticDataCollectionEnabled: false } as any;
 }
 
-const auth = !isMock ? getAuth(app as any) : { currentUser: { uid: "demo-user" } } as any;
-const db = !isMock ? getFirestore(app as any) : null;
-
-export { app, auth, db, analytics, isMock };
+// Real Firebase Auth instance — no mock fallback.
+// Components use AuthContext (src/lib/context/auth.tsx) to get the current user.
+export const auth: Auth = !isMock ? getAuth(app as any) : null as any;
+export const db = !isMock ? getFirestore(app as any) : null;
+export { app, analytics };

@@ -10,6 +10,7 @@ import {
 import { postService, Post } from "@/lib/db/posts";
 import { profileService, UserProfile } from "@/lib/db/profiles";
 import { useSegment } from "@/lib/context/segment";
+import { useAuth } from "@/lib/context/auth";
 
 interface SystemStatus {
   aiEngine: "ready" | "degraded";
@@ -96,6 +97,7 @@ const STATUS_ICON_BG: Record<string, string> = {
 };
 
 export default function DashboardHomePage() {
+  const { user } = useAuth();
   const { segment, isIndividual, isCorporate } = useSegment();
   const [stats, setStats]         = useState<DashboardStats | null>(null);
   const [system, setSystem]       = useState<SystemStatus | null>(null);
@@ -115,16 +117,16 @@ export default function DashboardHomePage() {
     else setRefreshing(true);
     try {
       const [postStats, serverStats, userProfile] = await Promise.all([
-        postService.getStats("demo-user", segment),
+        postService.getStats(user!.uid, segment),
         fetch("/api/dashboard/stats").then((r) => r.json()),
-        profileService.getProfile("demo-user"),
+        profileService.getProfile(user!.uid),
       ]);
       setStats(postStats);
       setSystem(serverStats.system);
       setLinkedIn(serverStats.linkedin);
       setLastUpdated(serverStats.timestamp);
       setProfile(userProfile);
-      const all = await postService.getAll("demo-user");
+      const all = await postService.getAll(user!.uid);
       const segmented = all.filter((p) => p.segment === segment);
       setAllPosts(segmented);
       setRecent(segmented.slice(0, 6));

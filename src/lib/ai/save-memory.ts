@@ -11,7 +11,7 @@ export async function savePostMemory({
   audience,
   tone,
   segment,
-  userId = "demo-user",
+  userId = "",
 }: {
   content: string;
   topic: string;

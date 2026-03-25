@@ -17,10 +17,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { postService } from "@/lib/db/posts";
+import { postService, Post } from "@/lib/db/posts";
 import { tokenService } from "@/lib/db/tokens";
 import { savePostMemory } from "@/lib/ai/save-memory";
+import { adminDb } from "@/lib/firebase-admin";
 import type { LinkedInTokenRecord } from "@/lib/db/tokens";
 
 const LI_VERSION  = "202505";
@@ -163,144 +163,107 @@ export async function POST(req: NextRequest) {
   const now = new Date();
   console.log(`[cron] publish-due triggered at ${now.toISOString()}`);
 
-  // ── Fetch all scheduled posts that are due ─────────────────────────────────
-  let allScheduled: Awaited<ReturnType<typeof postService.getScheduled>>;
+  // ── Fetch ALL scheduled posts across ALL users (Admin SDK bypasses security rules) ──
+  let due: Post[] = [];
   try {
-    allScheduled = await postService.getScheduled("demo-user");
-    console.log(`[cron] Fetched ${allScheduled.length} scheduled post(s) from DB.`);
+    if (adminDb) {
+      // Admin SDK path — works in production with Firestore security rules enabled
+      const snapshot = await adminDb.collection("posts")
+        .where("status", "==", "scheduled")
+        .get();
+      const allScheduled = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Post));
+      due = allScheduled.filter(p => {
+        const secs = p.scheduled_at?.seconds ?? (p.scheduled_at instanceof Date ? p.scheduled_at.getTime() / 1000 : null);
+        if (!secs) return false;
+        return secs * 1000 <= now.getTime();
+      });
+    } else {
+      // Fallback — local dev without Admin SDK (uses mock/client-side Firestore)
+      const allScheduled = await postService.getScheduled("local-dev");
+      due = allScheduled.filter(p => {
+        const secs = p.scheduled_at?.seconds ?? (p.scheduled_at instanceof Date ? p.scheduled_at.getTime() / 1000 : null);
+        if (!secs) return false;
+        return secs * 1000 <= now.getTime();
+      });
+    }
+    console.log(`[cron] ${due.length} post(s) due across all users.`);
   } catch (fetchErr: any) {
     console.error("[cron] Failed to fetch scheduled posts:", fetchErr?.message || fetchErr);
-    return NextResponse.json({
-      processed: 0,
-      error: `DB read failed: ${fetchErr?.message || "unknown"}. Check Firestore rules — allow read/write for server-side access.`,
-    }, { status: 500 });
+    return NextResponse.json({ processed: 0, error: `DB read failed: ${fetchErr?.message}` }, { status: 500 });
   }
-
-  const due = allScheduled.filter(p => {
-    const secs = p.scheduled_at?.seconds ?? (p.scheduled_at instanceof Date ? p.scheduled_at.getTime() / 1000 : null);
-    if (!secs) return false;
-    return secs * 1000 <= now.getTime();
-  });
 
   if (due.length === 0) {
     console.log("[cron] No posts due.");
     return NextResponse.json({ processed: 0, message: "No posts due." });
   }
 
-  console.log(`[cron] ${due.length} post(s) due for publishing.`);
-
-  // ── Get LinkedIn tokens (DB first, cookie fallback) ───────────────────────
-  let tokenRecord = await tokenService.get("demo-user").catch(() => null);
-
-  if (!tokenRecord) {
-    // Fallback: read tokens directly from cookies (set by OAuth callback)
-    const cookieStore = await cookies();
-    const accessToken   = cookieStore.get("li_access_token")?.value;
-    const refreshToken  = cookieStore.get("li_refresh_token")?.value;
-    const expiryStr     = cookieStore.get("li_token_expiry")?.value;
-    const userSub       = cookieStore.get("li_user_sub")?.value;
-    const userName      = cookieStore.get("li_user_name")?.value;
-    const userEmail     = cookieStore.get("li_user_email")?.value;
-    const userPicture   = cookieStore.get("li_user_picture")?.value;
-
-    if (accessToken) {
-      console.log("[cron] Token not in DB — using cookie fallback. Saving to DB for future runs.");
-      tokenRecord = {
-        user_id:       "demo-user",
-        access_token:  accessToken,
-        refresh_token: refreshToken,
-        user_sub:      userSub       || "",
-        user_name:     userName      || "",
-        user_email:    userEmail     || "",
-        user_picture:  userPicture   || "",
-        expires_at:    expiryStr ? parseInt(expiryStr) : Date.now() + 60 * 24 * 60 * 60 * 1000,
-        updated_at:    null,
-      } as LinkedInTokenRecord;
-      // Persist to DB so future runs don't need cookie fallback
-      tokenService.save({ ...tokenRecord }).catch(e =>
-        console.warn("[cron] Could not save token to DB:", e?.message)
-      );
-    } else {
-      console.error("[cron] No LinkedIn token in DB or cookies. User must connect LinkedIn.");
-      return NextResponse.json({
-        processed: 0,
-        error: "No LinkedIn token found. Go to Settings and connect LinkedIn.",
-      }, { status: 503 });
-    }
-  }
-
-  // Refresh token if expired or within 5 minutes of expiry
-  let accessToken = tokenRecord.access_token;
-  const fiveMin   = 5 * 60 * 1000;
-  if (tokenRecord.expires_at < Date.now() + fiveMin) {
-    if (tokenRecord.refresh_token) {
-      const refreshed = await refreshAccessToken("demo-user", tokenRecord.refresh_token);
-      if (refreshed) {
-        accessToken = refreshed;
-      } else {
-        return NextResponse.json({
-          processed: 0,
-          error: "Access token expired and refresh failed. User must reconnect LinkedIn.",
-        }, { status: 503 });
-      }
-    } else {
-      return NextResponse.json({
-        processed: 0,
-        error: "Access token expired. No refresh token available. User must reconnect LinkedIn.",
-      }, { status: 503 });
-    }
-  }
-
-  // ── Process each due post ──────────────────────────────────────────────────
+  // ── Process each due post (each may belong to a different user) ────────────
   const results: Array<{ id: string; status: "published" | "failed"; reason?: string }> = [];
 
   for (const post of due) {
     if (!post.id) continue;
+
+    // In-memory lock — prevents duplicate publish if two cron calls overlap
+    if (publishingIds.has(post.id)) {
+      console.log(`[cron] Post ${post.id} already in-flight — skipping.`);
+      continue;
+    }
+    publishingIds.add(post.id);
+
     try {
-      // In-memory lock: if another concurrent cron call already picked up this
-      // post, skip it. The Set persists across requests in the same Node process.
-      if (publishingIds.has(post.id)) {
-        console.log(`[cron] Post ${post.id} already in-flight — skipping duplicate.`);
-        continue;
-      }
-      publishingIds.add(post.id);
-      // Also write "processing" to Firestore so the next server restart won't
-      // re-pick a post that's mid-flight (e.g. if server crashes during upload).
+      // Mark as processing to prevent re-pickup on restart
       await postService.markProcessing(post.id);
 
+      // ── Get LinkedIn token for this post's owner ──────────────────────────
+      const userId = post.user_id;
+      let tokenRecord = await tokenService.get(userId).catch(() => null);
+
+      if (!tokenRecord) {
+        throw new Error(`No LinkedIn token for user ${userId}. User must reconnect LinkedIn in Settings.`);
+      }
+
+      // Refresh token if expired or within 5 minutes of expiry
+      let accessToken = tokenRecord.access_token;
+      const fiveMin = 5 * 60 * 1000;
+      if (tokenRecord.expires_at < Date.now() + fiveMin) {
+        if (tokenRecord.refresh_token) {
+          const refreshed = await refreshAccessToken(userId, tokenRecord.refresh_token);
+          if (refreshed) {
+            accessToken = refreshed;
+          } else {
+            throw new Error("Access token expired and refresh failed. User must reconnect LinkedIn.");
+          }
+        } else {
+          throw new Error("Access token expired. No refresh token. User must reconnect LinkedIn.");
+        }
+      }
+
       // Resolve author URN
-      const userSub   = tokenRecord.user_sub;
       const orgId     = process.env.LINKEDIN_ORGANIZATION_ID;
       const authorUrn = post.segment === "corporate" && orgId
         ? `urn:li:organization:${orgId}`
-        : `urn:li:person:${userSub}`;
+        : `urn:li:person:${tokenRecord.user_sub}`;
 
-      // Use post content (skip placeholder-only posts gracefully)
+      // Use post content
       let content = post.content || "";
       if (content.startsWith("[Pending generation]")) {
-        // Content was never generated — use topic as fallback content
-        console.warn(`[cron] Post ${post.id} has placeholder content — using topic as fallback.`);
         content = post.topic || content;
       }
-
-      if (!content.trim()) {
-        throw new Error("Post content is empty.");
-      }
+      if (!content.trim()) throw new Error("Post content is empty.");
 
       const postId = await postToLinkedIn(accessToken, authorUrn, content, post.image_url || undefined);
-
       await postService.markPublished(post.id, postId, post.image_url || undefined);
-      console.log(`[cron] ✅ Published post ${post.id} → LinkedIn ${postId}`);
+      console.log(`[cron] ✅ Published post ${post.id} (user: ${userId}) → LinkedIn ${postId}`);
 
-      // Save to memory — fire and forget, never blocks publishing
       savePostMemory({
-        content:  content,
+        content,
         topic:    post.topic    || "",
         audience: post.audience || "",
         tone:     post.tone     || "professional",
         segment:  (post.segment as "individual" | "corporate") || "individual",
-        userId:   "demo-user",
+        userId,
       }).catch(() => {});
+
       results.push({ id: post.id, status: "published" });
 
     } catch (err: any) {
@@ -308,7 +271,6 @@ export async function POST(req: NextRequest) {
       await postService.markFailed(post.id).catch(() => {});
       results.push({ id: post.id, status: "failed", reason: err?.message });
     } finally {
-      // Release in-memory lock so a manual retry can pick it up again if needed
       publishingIds.delete(post.id);
     }
   }
@@ -316,32 +278,33 @@ export async function POST(req: NextRequest) {
   const published = results.filter(r => r.status === "published").length;
   const failed    = results.filter(r => r.status === "failed").length;
 
-  // ── Hourly engagement sync for recent published posts ─────────────────────
-  // Only runs once per hour (checks last sync time) to respect LinkedIn rate limits
+  // ── Hourly engagement sync across all users ────────────────────────────────
   try {
-    const oneHourAgo  = Date.now() - 60 * 60 * 1000;
+    const oneHourAgo    = Date.now() - 60 * 60 * 1000;
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const allPublished  = await postService.getPublished("demo-user");
 
-    // Posts published in last 30 days that haven't been synced in the last hour
+    let allPublished: Post[] = [];
+    if (adminDb) {
+      const snap = await adminDb.collection("posts").where("status", "==", "published").get();
+      allPublished = snap.docs.map(d => ({ id: d.id, ...d.data() } as Post));
+    }
+
     const toSync = allPublished.filter(p => {
       if (!p.linkedin_post_id) return false;
       const pubMs = (p.published_at?.seconds || 0) * 1000;
       if (pubMs < thirtyDaysAgo) return false;
       return !p.engagement_synced_at || p.engagement_synced_at < oneHourAgo;
-    }).slice(0, 20); // max 20 per cron run
+    }).slice(0, 20);
 
     if (toSync.length > 0) {
       console.log(`[cron] Syncing engagement for ${toSync.length} post(s)…`);
       const postUrns = toSync.map(p => p.linkedin_post_id!);
-      const engRes = await fetch(
-        new URL("/api/linkedin/engagement", `http://localhost:${process.env.PORT || 3000}`).toString(),
-        {
+      const appUrl   = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+      const engRes = await fetch(`${appUrl}/api/linkedin/engagement`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ postUrns }),
-        }
-      ).catch(() => null);
+        }).catch(() => null);
 
       if (engRes?.ok) {
         const { results: engResults } = await engRes.json();

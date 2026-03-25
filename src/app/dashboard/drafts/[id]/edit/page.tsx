@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { postService, Post } from "@/lib/db/posts";
 import { useSegment } from "@/lib/context/segment";
+import { useAuth } from "@/lib/context/auth";
 import {
   Save, Send, ArrowLeft, CheckCircle, AlertCircle,
   Linkedin, FileText, User, Building2
@@ -15,6 +16,7 @@ export default function DraftEditPage() {
   const params  = useParams();
   const draftId = params.id as string;
 
+  const { user } = useAuth();
   const { segment, isCorporate, isIndividual } = useSegment();
 
   const [draft, setDraft]           = useState<Post | null>(null);
@@ -44,7 +46,7 @@ export default function DraftEditPage() {
     }
 
     // Fallback: load from postService by ID
-    postService.getAll("demo-user").then((all) => {
+    postService.getAll(user!.uid).then((all) => {
       const found = all.find((p) => p.id === draftId);
       if (found) {
         setDraft(found);

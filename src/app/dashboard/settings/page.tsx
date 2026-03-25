@@ -16,7 +16,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { profileService, UserProfile, ProfileSegment } from "@/lib/db/profiles";
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/lib/context/auth";
 import { HelpTooltip, FieldHint } from "@/components/ui/HelpTooltip";
 
 export const DEFAULT_SYSTEM_PROMPT = `You are a world-class marketing copywriter and content strategist.
@@ -51,6 +51,7 @@ const textareaClass = `${inputClass} resize-none leading-relaxed`;
 const labelClass = "block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5";
 
 export default function SettingsPage() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab]   = useState("identity");
   const [profileType, setProfileType] = useState<"individual" | "corporate">("individual");
   const [segments, setSegments] = useState<{ individual: ProfileSegment; corporate: ProfileSegment }>({
@@ -103,7 +104,7 @@ export default function SettingsPage() {
     const left = window.screenX + (window.outerWidth - w) / 2;
     const top  = window.screenY + (window.outerHeight - h) / 2;
     window.open(
-      "/api/auth/linkedin?returnTo=/dashboard/settings",
+      `/api/auth/linkedin?returnTo=/dashboard/settings&uid=${encodeURIComponent(user?.uid || "")}`,
       "linkedin-oauth",
       `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`
     );
@@ -111,7 +112,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const loadSettings = async () => {
-      const userId = auth?.currentUser?.uid || "demo-user";
+      const userId = user!.uid;
       const cloudProfile = await profileService.getProfile(userId);
       if (cloudProfile) {
         setSegments({

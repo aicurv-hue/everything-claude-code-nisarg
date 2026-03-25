@@ -54,10 +54,11 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const error = searchParams.get("error");
 
-  // Parse returnTo from state (format: "randomString|encodedReturnTo")
+  // Parse returnTo + Firebase UID from state (format: "randomString|encodedReturnTo|encodedUid")
   const rawState = searchParams.get("state") || "";
   const stateParts = rawState.split("|");
-  const returnTo = stateParts[1] ? decodeURIComponent(stateParts[1]) : "/dashboard/create/preview";
+  const returnTo    = stateParts[1] ? decodeURIComponent(stateParts[1]) : "/dashboard/create/preview";
+  const firebaseUid = stateParts[2] ? decodeURIComponent(stateParts[2]) : "";
 
   if (error || !code) {
     const reason = searchParams.get("error_description") || error || "Unknown error";
@@ -120,7 +121,7 @@ export async function GET(request: NextRequest) {
 
   // ── Step 3b: Persist tokens to DB so the scheduled-post worker can use them ─
   await tokenService.save({
-    user_id:            "demo-user",
+    user_id:            firebaseUid,
     access_token:       accessToken,
     refresh_token:      refreshToken,
     user_sub:           linkedInSub,

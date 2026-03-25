@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FileText, Clock, ChevronRight, Search, Linkedin, ThumbsUp, MessageCircle } from "lucide-react";
 import { postService, Post } from "@/lib/db/posts";
 import { useSegment } from "@/lib/context/segment";
+import { useAuth } from "@/lib/context/auth";
 
 type StatusFilter = "all" | "published" | "draft" | "failed";
 
@@ -45,6 +46,7 @@ const STATUS_ICON: Record<string, string> = {
 
 export default function HistoryPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { segment, isIndividual, isCorporate } = useSegment();
   const [posts, setPosts]               = useState<Post[]>([]);
   const [isLoading, setIsLoading]       = useState(true);
@@ -59,7 +61,7 @@ export default function HistoryPage() {
     async function loadHistory() {
       setIsLoading(true);
       try {
-        const data = await postService.getAll("demo-user");
+        const data = await postService.getAll(user!.uid);
         setPosts(data.filter((p) => p.segment === segment));
       } catch (error) {
         console.error("Error loading history:", error);

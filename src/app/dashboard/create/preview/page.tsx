@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { postService } from "@/lib/db/posts";
+import { useAuth } from "@/lib/context/auth";
 import {
   CheckCircle, AlertCircle, Linkedin, FileText, Send,
   ImageIcon, RefreshCw, Download, Sparkles, Upload, X,
@@ -17,6 +18,7 @@ import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 type ImageMode = "ai" | "upload" | "none";
 
 export default function PostPreviewPage() {
+  const { user } = useAuth();
   const [postData, setPostData] = useState<any>(null);
   const [imageMode, setImageMode]           = useState<ImageMode>("none");
   const [imageUrl, setImageUrl]             = useState<string | null>(null);
@@ -115,7 +117,7 @@ export default function PostPreviewPage() {
     setIsSaving(true);
     try {
       await postService.createDraft({
-        user_id: "demo-user",
+        user_id: user!.uid,
         account_id: "personal-account",
         content: editedContent,
         topic: postData.metadata.topic,
@@ -156,7 +158,7 @@ export default function PostPreviewPage() {
         setPublishStatus("error");
         setPublishMessage(data.error || "Publishing failed. Please try again.");
         await postService.createDraft({
-          user_id: "demo-user", account_id: "personal-account",
+          user_id: user!.uid, account_id: "personal-account",
           content: editedContent, topic: postData.metadata.topic,
           tone: postData.metadata.tone, audience: postData.metadata.audience,
           length: postData.metadata.length,
@@ -175,11 +177,12 @@ export default function PostPreviewPage() {
           audience: postData.metadata.audience,
           tone:     postData.metadata.tone,
           segment:  postData.metadata.segment || "individual",
+          userId:   user!.uid,
         }).catch(() => {});
 
         await postService.createPublished(
           {
-            user_id: "demo-user", account_id: "personal-account",
+            user_id: user!.uid, account_id: "personal-account",
             content: editedContent, topic: postData.metadata.topic,
             tone: postData.metadata.tone, audience: postData.metadata.audience,
             length: postData.metadata.length,
@@ -225,7 +228,7 @@ export default function PostPreviewPage() {
 
       const saved = await postService.createScheduled(
         {
-          user_id: "demo-user",
+          user_id: user!.uid,
           account_id: "personal-account",
           content: editedContent,
           topic: postData.metadata.topic,
@@ -659,7 +662,7 @@ export default function PostPreviewPage() {
       {showSchedulePicker && (
         <SchedulePicker
           segment={postData?.metadata?.segment || "individual"}
-          userId="demo-user"
+          userId={user!.uid}
           isLoading={isScheduling}
           onCancel={() => setShowSchedulePicker(false)}
           onSchedule={handleSchedule}

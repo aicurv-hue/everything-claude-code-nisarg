@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { postService, Post } from "@/lib/db/posts";
 import { useSegment } from "@/lib/context/segment";
+import { useAuth } from "@/lib/context/auth";
 import { FileText, Clock, Edit3, Trash2, Send, RefreshCw } from "lucide-react";
 
 export default function DraftsPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { segment, isIndividual, isCorporate } = useSegment();
   const [drafts, setDrafts]     = useState<Post[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -21,7 +23,7 @@ export default function DraftsPage() {
   const loadDrafts = useCallback(async () => {
     setLoading(true);
     try {
-      const all = await postService.getDrafts("demo-user");
+      const all = await postService.getDrafts(user!.uid);
       setDrafts(all.filter((p) => p.segment === segment));
     } catch (err) {
       console.error("Error loading drafts:", err);

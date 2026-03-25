@@ -3,7 +3,7 @@ import { postService } from "@/lib/db/posts";
 
 export async function POST(req: NextRequest) {
   try {
-    const { posts, segment = "individual", timezone } = await req.json();
+    const { posts, segment = "individual", timezone, userId } = await req.json();
 
     if (!Array.isArray(posts) || posts.length === 0)
       return NextResponse.json({ error: "No posts provided" }, { status: 400 });
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Maximum 500 posts per upload" }, { status: 400 });
 
     const mapped = posts.map((row: any) => ({
-      user_id:    "demo-user",
+      user_id:    userId || "anonymous",
       account_id: "personal-account",
       // content is optional — if blank, a placeholder is stored and Neel generates at publish time
       content:    row.content || `[Pending generation] ${row.topic}`,

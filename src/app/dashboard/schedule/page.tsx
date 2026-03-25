@@ -7,10 +7,12 @@ import { RefreshCw, Upload, CalendarDays, CheckCircle, AlertCircle, Clock, Info 
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
 import { postService, Post } from "@/lib/db/posts";
 import { useSegment } from "@/lib/context/segment";
+import { useAuth } from "@/lib/context/auth";
 import ContentCalendar from "@/components/schedule/ContentCalendar";
 import PostDetailDrawer from "@/components/schedule/PostDetailDrawer";
 
 export default function SchedulePage() {
+  const { user } = useAuth();
   const { segment, isCorporate } = useSegment();
   const router = useRouter();
 
@@ -26,7 +28,7 @@ export default function SchedulePage() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const all = await postService.getAll("demo-user");
+      const all = await postService.getAll(user!.uid);
       setPosts(all.filter((p) => p.segment === segment));
     } finally {
       setLoading(false);

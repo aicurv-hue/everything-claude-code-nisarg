@@ -1,0 +1,66 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ──────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // ── Posts ─────────────────────────────────────────────────────────────────
+    match /posts/{postId} {
+      allow read, write: if isOwner(resource.data.user_id);
+      allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;
+      // Admins can read all posts (for moderation)
+      allow read: if isAdmin();
+    }
+
+    // ── Profiles ──────────────────────────────────────────────────────────────
+    match /profiles/{userId} {
+      allow read, write: if isOwner(userId);
+      allow read: if isAdmin();
+    }
+
+    // ── Memory (Neel's post memory per user) ─────────────────────────────────
+    match /post_memories/{memoryId} {
+      allow read, write: if isOwner(resource.data.user_id);
+      allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;
+      allow read: if isAdmin();
+    }
+
+    // ── LinkedIn tokens — server-only via Admin SDK ───────────────────────────
+    // Client SDK can never read tokens — only Admin SDK (cron worker) can.
+    match /tokens/{userId} {
+      allow read, write: if false; // Admin SDK bypasses these rules entirely
+    }
+
+    // ── Schedule suggestions ──────────────────────────────────────────────────
+    match /schedule_suggestions/{docId} {
+      allow read, write: if isSignedIn() &&
+        (resource == null || resource.data.user_id == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;
+    }
+
+    // ── Admins collection — managed manually via Firebase Console ────────────
+    match /admins/{userId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only writable from Firebase Console or Admin SDK
+    }
+
+    // ── Feedback ──────────────────────────────────────────────────────────────
+    match /feedback/{docId} {
+      allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;
+      allow read: if isAdmin();
+    }
+  }
+}

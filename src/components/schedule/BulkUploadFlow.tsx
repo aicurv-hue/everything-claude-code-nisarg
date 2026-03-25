@@ -8,6 +8,7 @@ import {
 import { parseCsv, ParsedCsvRow, RowValidation, RowError, CSV_TEMPLATE, VALID_TONES, VALID_LENGTHS } from "@/lib/utils/parseCsv";
 import { postService } from "@/lib/db/posts";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
+import { useAuth } from "@/lib/context/auth";
 
 interface Props {
   segment: "individual" | "corporate";
@@ -39,6 +40,7 @@ function ValidationCell({ value, error }: { value: string; error?: string }) {
 }
 
 export default function BulkUploadFlow({ segment, onComplete, onViewCalendar }: Props) {
+  const { user } = useAuth();
   const isCorp     = segment === "corporate";
   const accent     = isCorp ? "bg-violet-600 hover:bg-violet-700" : "bg-[#0A66C2] hover:bg-[#0854a0]";
   const accentText = isCorp ? "text-violet-600" : "text-[#0A66C2]";
@@ -90,7 +92,7 @@ export default function BulkUploadFlow({ segment, onComplete, onViewCalendar }: 
     setIsSubmitting(true);
     try {
       const postsToSchedule = rows.map((r) => ({
-        user_id:           "demo-user",
+        user_id:           user!.uid,
         account_id:        "personal-account",
         content:           r.content || `[Pending generation] ${r.topic}`,
         topic:             r.topic,
