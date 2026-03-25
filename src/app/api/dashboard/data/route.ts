@@ -22,7 +22,6 @@ export async function GET(req: NextRequest) {
     const postsSnap = await adminDb
       .collection("posts")
       .where("user_id", "==", uid)
-      .orderBy("created_at", "desc")
       .get();
 
     const posts = postsSnap.docs.map((d) => {
@@ -35,7 +34,7 @@ export async function GET(req: NextRequest) {
         published_at: data.published_at?.seconds ? { seconds: data.published_at.seconds } : null,
         scheduled_at: data.scheduled_at?.seconds ? { seconds: data.scheduled_at.seconds } : null,
       };
-    });
+    }).sort((a: any, b: any) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
 
     const segmentedPosts = posts.filter((p: any) => p.segment === segment);
 
