@@ -283,6 +283,68 @@ Key insights (numbered list from research)
 
 ---
 
+## Scheduling & Publishing Pipeline
+
+### How Scheduled Posts Publish
+
+Posts with `status: "scheduled"` are picked up by the cron worker at `/api/cron/publish-due`.
+
+**Two triggers:**
+1. **Vercel Cron** — fires every minute in production (configured in `vercel.json`)
+2. **CronPoller** — client-side component in `DashboardLayout`, polls every 60s in local dev
+
+**Worker flow per due post:**
+```
+1. Re-fetch all posts with status === "scheduled" that are past scheduled_at
+2. Claim each post immediately → status = "processing" (prevents duplicate publish)
+3. In-memory lock (publishingIds Set) — second concurrent call skips in-flight posts
+4. Refresh LinkedIn access token if expired or within 5 min of expiry
+5. Upload image to LinkedIn Images API (if image_url is set and not a data: URL)
+6. POST to LinkedIn /rest/posts
+7. Mark post as "published" + store linkedin_post_id
+8. Fire-and-forget: save to Neel's memory (savePostMemory)
+9. On failure: mark post as "failed"
+```
+
+**Duplicate publish prevention** (two-layer):
+- **In-memory Set** (`publishingIds`) — prevents two concurrent cron calls in the same Node process from publishing the same post twice (local dev protection)
+- **Firestore status `"processing"`** — post disappears from `getScheduled()` results immediately; if server restarts mid-publish, the post stays in `"processing"` and is not re-fetched
+
+**Memory is saved only on confirmed LinkedIn publish** — not on draft save or scheduling. `savePostMemory` is called in the cron worker after LinkedIn confirms success.
+
+### Image Mode in Scheduled Posts
+
+Three modes stored on the post:
+| Mode | Stored as | Worker behaviour |
+|------|-----------|-----------------|
+| `ai` | `image_url = null` initially; AI generates after scheduling | Generates AI image at schedule time if `image_url` is missing |
+| `upload` | `image_url = Firebase Storage HTTPS URL` | User image uploaded to Storage at schedule time (10s timeout); worker uses stored URL |
+| `none` | `image_url = null`, `image_mode = "none"` | Worker posts text-only; no image |
+
+`data:` URL images (local files) are **uploaded to Firebase Storage** at schedule time via `uploadDataUrlToStorage()` so the worker can retrieve them later. A 10s `Promise.race` timeout prevents the scheduling dialog from hanging if Storage is unavailable.
+
+### Engagement Tracking
+
+Likes and comments are synced hourly via the cron worker's engagement sync block.
+
+**Fields added to Post:**
+- `likes_count` — LinkedIn reaction count
+- `comments_count` — LinkedIn comment count
+- `engagement_synced_at` — unix ms timestamp of last sync
+
+**Sync flow:**
+1. After publishing due posts, worker fetches all published posts from last 30 days
+2. Filters those not synced in the last hour (max 20 per run)
+3. Calls `/api/linkedin/engagement` with their `linkedin_post_id` URNs
+4. Updates `likes_count`, `comments_count`, `engagement_synced_at` in Firestore
+
+**Visible in:**
+- `/dashboard/history` — Engagement column (👍 likes · 💬 comments)
+- `/dashboard` — Total Engagement stat card (sum of all likes + comments)
+- PostDetailDrawer — Likes / Comments cards on published posts
+
+---
+
 ## Bugs Found & Fixed During Audit
 
 | # | Bug / Issue | Fix Applied |
@@ -333,6 +395,11 @@ Key insights (numbered list from research)
 | `src/app/dashboard/memory/page.tsx` | Dashboard for Layer C — view Neel's memory bank |
 | `src/lib/context/segment.tsx` | Global segment state (individual/corporate) |
 | `src/lib/ai/openrouter.ts` | OpenRouter client — `DEFAULT_MODEL: google/gemini-2.0-flash` |
+| `src/lib/ai/save-memory.ts` | Shared helper — `savePostMemory()` called after confirmed LinkedIn publish |
+| `src/lib/storage/uploadImage.ts` | Uploads `data:` URL images to Firebase Storage; returns HTTPS URL |
+| `src/app/api/cron/publish-due/route.ts` | Cron worker — finds due posts, claims them, publishes to LinkedIn, syncs engagement |
+| `src/app/api/linkedin/engagement/route.ts` | Fetches likes + comments from LinkedIn `/v2/socialActions/{urn}` |
+| `vercel.json` | Vercel Cron config — triggers `/api/cron/publish-due` every minute in production |
 
 ### How Master_Neel_Prompt.md works
 
@@ -356,4 +423,4 @@ Key insights (numbered list from research)
 
 ---
 
-*Last audited: 2026-03-22 | Pipeline version: 4.0 (Master Prompt File active)*
+*Last audited: 2026-03-25 | Pipeline version: 4.1 (Scheduling + Engagement + Duplicate-publish prevention)*

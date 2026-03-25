@@ -27,6 +27,10 @@ const LI_VERSION  = "202505";
 const TIMEOUT_MS  = 20_000;
 const CRON_SECRET = process.env.CRON_SECRET; // optional guard
 
+// In-memory lock — prevents duplicate publishes when two cron calls overlap
+// (works in local dev where there is one server process)
+const publishingIds = new Set<string>();
+
 function withTimeout(ms: number) {
   const ctrl = new AbortController();
   const id   = setTimeout(() => ctrl.abort(), ms);
@@ -253,6 +257,17 @@ export async function POST(req: NextRequest) {
   for (const post of due) {
     if (!post.id) continue;
     try {
+      // In-memory lock: if another concurrent cron call already picked up this
+      // post, skip it. The Set persists across requests in the same Node process.
+      if (publishingIds.has(post.id)) {
+        console.log(`[cron] Post ${post.id} already in-flight — skipping duplicate.`);
+        continue;
+      }
+      publishingIds.add(post.id);
+      // Also write "processing" to Firestore so the next server restart won't
+      // re-pick a post that's mid-flight (e.g. if server crashes during upload).
+      await postService.markProcessing(post.id);
+
       // Resolve author URN
       const userSub   = tokenRecord.user_sub;
       const orgId     = process.env.LINKEDIN_ORGANIZATION_ID;
@@ -292,6 +307,9 @@ export async function POST(req: NextRequest) {
       console.error(`[cron] ❌ Failed to publish post ${post.id}:`, err?.message || err);
       await postService.markFailed(post.id).catch(() => {});
       results.push({ id: post.id, status: "failed", reason: err?.message });
+    } finally {
+      // Release in-memory lock so a manual retry can pick it up again if needed
+      publishingIds.delete(post.id);
     }
   }
 

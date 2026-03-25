@@ -108,6 +108,8 @@ function CronPoller() {
     const run = async () => {
       try {
         const res = await fetch("/api/cron/publish-due", { method: "POST" });
+        const ct = res.headers.get("content-type") || "";
+        if (!ct.includes("application/json")) return; // server still booting — skip
         const data = await res.json();
         if (!res.ok) {
           console.warn("[CronPoller] Worker error:", data);

@@ -202,5 +202,5 @@ Write the image generation prompt now.
 
 ---
 
-*Last updated: 2026-03-22 | Version: 1.0 — extracted from generate.ts*
+*Last updated: 2026-03-25 | Version: 1.1 — no prompt changes; infrastructure updated (scheduling, engagement, duplicate-publish prevention)*
 *To change Neel's behaviour: edit the sections above. generate.ts reads this file at runtime.*

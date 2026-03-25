@@ -14,7 +14,7 @@ export interface Post {
   user_id: string;
   account_id: string;
   content: string;
-  status: "draft" | "scheduled" | "published" | "failed";
+  status: "draft" | "scheduled" | "processing" | "published" | "failed";
   topic: string;
   tone: string;
   audience: string;
@@ -182,7 +182,14 @@ export const postService = {
 
   async getScheduled(userId: string): Promise<Post[]> {
     const all = await this.getAll(userId);
+    // Exclude "processing" posts — another worker run already claimed them
     return all.filter((p) => p.status === "scheduled");
+  },
+
+  /** Atomically claim a post before publishing — prevents duplicate publishes */
+  async markProcessing(id: string) {
+    if (isMock || !db) { updateMockPost(id, { status: "processing" }); return; }
+    return await updateDoc(doc(db, COLLECTION, id), stripUndefined({ status: "processing", updated_at: serverTimestamp() }));
   },
 
   async getPublished(userId: string): Promise<Post[]> {

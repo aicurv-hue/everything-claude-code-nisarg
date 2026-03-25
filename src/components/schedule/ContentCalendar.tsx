@@ -36,10 +36,13 @@ function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-export default function ContentCalendar({ posts, segment, onPostClick }: Props) {
+export default function ContentCalendar({ posts: allPosts, segment, onPostClick }: Props) {
   const isCorp = segment === "corporate";
   const accent = isCorp ? "text-violet-600" : "text-[#0A66C2]";
   const accentBg = isCorp ? "bg-violet-600" : "bg-[#0A66C2]";
+
+  // Drafts don't belong on the calendar — only show scheduled, published, failed
+  const posts = allPosts.filter(p => p.status !== "draft");
 
   const [view, setView]         = useState<"month" | "list">("month");
   const [current, setCurrent]   = useState(new Date());
