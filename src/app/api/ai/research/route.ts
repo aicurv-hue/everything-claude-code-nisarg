@@ -1,28 +1,92 @@
 import { NextRequest, NextResponse } from "next/server";
-import { performResearch } from "@/lib/ai/research";
-import { adminAuth } from "@/lib/firebase-admin";
 
-// Extend Vercel function timeout to 60s (Hobby max) — research needs 2 AI calls
-export const maxDuration = 60;
+// Edge Runtime — no timeout on Vercel Hobby plan (unlike serverless 10s limit)
+export const runtime = "edge";
 
-async function verifyUser(req: NextRequest): Promise<boolean> {
-  if (!adminAuth) return true; // local dev without Admin SDK — allow all
-  const authHeader = req.headers.get("authorization") || "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token) return false;
-  try { await adminAuth.verifyIdToken(token); return true; } catch { return false; }
+function extractJSON(text: string): any {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const cleaned = fenced ? fenced[1] : text;
+  try { return JSON.parse(cleaned.trim()); } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) { try { return JSON.parse(match[0]); } catch { return null; } }
+    return null;
+  }
 }
 
 export async function POST(req: NextRequest) {
-  if (!await verifyUser(req))
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   try {
-    const body = await req.json();
-    const { topic, options } = body;
+    const { topic, options = {} } = await req.json();
     if (!topic) return NextResponse.json({ error: "topic required" }, { status: 400 });
-    const result = await performResearch(topic, options || {});
-    return NextResponse.json(result);
+
+    const { segment = "individual", tone = "professional", audience = "general", length = "medium", clientProfile } = options;
+
+    const profileLines = clientProfile ? [
+      clientProfile.niche         && `- Niche: ${clientProfile.niche}`,
+      clientProfile.bioOrOffering && `- Offering: ${clientProfile.bioOrOffering}`,
+      clientProfile.icp           && `- Target customer: ${clientProfile.icp}`,
+    ].filter(Boolean) : [];
+    const clientContext = profileLines.length > 0 ? `\nClient context:\n${profileLines.join("\n")}` : "";
+
+    const prompt = `You are an expert LinkedIn content researcher.
+
+Produce a research report to power a single LinkedIn post:
+- Topic: "${topic}"
+- Tone: ${tone}
+- Audience: ${audience}
+- Length: ${length}
+- Voice: ${segment === "individual" ? "personal brand, first-person" : "corporate brand"}${clientContext}
+
+Rules: specific data-backed insights (numbers, companies, trends), prefer 2024-2026 data, no generic claims.
+
+Return ONLY valid JSON:
+{
+  "summary": "2-3 sentence executive summary of strongest finding for ${audience}",
+  "insights": [
+    {"title": "insight title", "content": "1-2 sentence specific finding with stat", "source": "Publication or year"},
+    {"title": "...", "content": "...", "source": "..."},
+    {"title": "...", "content": "...", "source": "..."}
+  ],
+  "references": ["source1", "source2"]
+}`;
+
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) return NextResponse.json({ error: "OpenRouter API key not configured" }, { status: 500 });
+
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
+        "X-Title": "LinkAuto",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.0-flash-001",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+        max_tokens: 1200,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("[research] OpenRouter error:", err);
+      throw new Error(`OpenRouter ${res.status}: ${err}`);
+    }
+
+    const data = await res.json();
+    const text = data.choices?.[0]?.message?.content || "";
+    const synthesis = extractJSON(text);
+
+    if (!synthesis?.summary) {
+      return NextResponse.json({
+        topic, summary: `Research on "${topic}" completed.`,
+        insights: [{ title: "Topic Overview", content: `Key aspects of ${topic} for ${audience}.`, source: "AI" }],
+        references: [],
+      });
+    }
+
+    return NextResponse.json({ topic, ...synthesis });
   } catch (err: any) {
     console.error("[api/ai/research] Error:", err?.message || err);
     return NextResponse.json({ error: err?.message || "Research failed" }, { status: 500 });

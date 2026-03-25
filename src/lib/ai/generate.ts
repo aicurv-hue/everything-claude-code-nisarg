@@ -1,11 +1,8 @@
-"use server";
-
-import fs from "fs";
-import path from "path";
-import { ResearchResult } from "./research";
+import type { ResearchResult } from "./research";
 import type { ProfileSegment } from "../db/profiles";
 import type { PostMemory } from "../db/memory";
 import { openRouter, DEFAULT_MODEL, FALLBACK_MODEL } from "./openrouter";
+import { NEEL_SECTIONS } from "./neel-prompt-sections";
 
 export interface GenerateResult {
   post: string;
@@ -33,41 +30,11 @@ const LENGTH_SPEC: Record<string, { words: string; paragraphs: string }> = {
   long:   { words: "350–450 words", paragraphs: "8–12 short paragraphs" },
 };
 
-// ─── Prompt file loader ────────────────────────────────────────────────────────
+// ─── Prompt section accessor ───────────────────────────────────────────────────
 
-const PROMPT_FILE_PATH = path.join(process.cwd(), "Master_Neel_Prompt.md");
-
-/**
- * Reads and parses Master_Neel_Prompt.md into a section map.
- * In development, re-reads on every call so edits to the file take effect immediately.
- * In production, the file is read once and cached.
- */
-let _sectionCache: Record<string, string> | null = null;
-
-function getPromptSections(): Record<string, string> {
-  const isDev = process.env.NODE_ENV === "development";
-  if (!isDev && _sectionCache) return _sectionCache;
-
-  const raw = fs.readFileSync(PROMPT_FILE_PATH, "utf-8");
-  const sections: Record<string, string> = {};
-
-  // Split on `\n---\n` then extract ## SECTION_NAME header + body
-  const chunks = raw.split(/\n---\n/);
-  for (const chunk of chunks) {
-    const match = chunk.match(/^##\s+([A-Z0-9_]+)\n([\s\S]*)/m);
-    if (match) {
-      sections[match[1]] = match[2].trim();
-    }
-  }
-
-  _sectionCache = sections;
-  return sections;
-}
-
-/** Returns a section from the prompt file, with optional placeholder substitution. */
+/** Returns a section from neel-prompt-sections.ts, with optional placeholder substitution. */
 function section(name: string, replacements?: Record<string, string>): string {
-  const sections = getPromptSections();
-  let text = sections[name] ?? `[MISSING SECTION: ${name}]`;
+  let text = NEEL_SECTIONS[name] ?? `[MISSING SECTION: ${name}]`;
   if (replacements) {
     for (const [key, val] of Object.entries(replacements)) {
       text = text.replaceAll(`{{${key}}}`, val);
