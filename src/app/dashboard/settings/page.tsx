@@ -100,14 +100,8 @@ export default function SettingsPage() {
   }, []);
 
   const handleReconnect = () => {
-    const w = 600; const h = 700;
-    const left = window.screenX + (window.outerWidth - w) / 2;
-    const top  = window.screenY + (window.outerHeight - h) / 2;
-    window.open(
-      `/api/auth/linkedin?returnTo=/dashboard/settings&uid=${encodeURIComponent(user?.uid || "")}`,
-      "linkedin-oauth",
-      `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`
-    );
+    // Full-page redirect — LinkedIn blocks popups/iframes
+    window.location.href = `/api/auth/linkedin?returnTo=/dashboard/settings&uid=${encodeURIComponent(user?.uid || "")}`;
   };
 
   useEffect(() => {
