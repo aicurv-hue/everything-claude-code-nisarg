@@ -126,8 +126,9 @@ function Sidebar() {
 
 function CronPoller() {
   useEffect(() => {
-    // Only poll in local dev — Vercel Cron (every minute) handles production
-    if (process.env.NODE_ENV !== "development") return;
+    // Polls every 60s so scheduled posts go live in near real-time when
+    // the dashboard is open. Vercel Cron (6 AM IST daily) is the safety net
+    // for posts that fire while the dashboard is closed.
     const run = async () => {
       try {
         const res = await fetch("/api/cron/publish-due", { method: "POST" });
