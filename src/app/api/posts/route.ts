@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
+
+/** Convert an ISO string or existing Timestamp-like object to a Firestore Timestamp */
+function toFirestoreTimestamp(val: any): Timestamp | undefined {
+  if (!val) return undefined;
+  if (val instanceof Timestamp) return val;
+  if (typeof val === "string") return Timestamp.fromDate(new Date(val));
+  if (val.seconds) return new Timestamp(val.seconds, val.nanoseconds || 0);
+  return undefined;
+}
 
 function convertTimestamp(ts: any) {
   if (!ts) return null;
@@ -64,6 +73,9 @@ export async function POST(req: NextRequest) {
       ...post,
       user_id: uid,
       created_at: FieldValue.serverTimestamp(),
+      // Convert scheduled_at ISO string to Firestore Timestamp so cron can compare correctly
+      ...(post.scheduled_at ? { scheduled_at: toFirestoreTimestamp(post.scheduled_at) } : {}),
+      ...(post.published_at ? { published_at: toFirestoreTimestamp(post.published_at) } : {}),
     };
 
     const ref = await adminDb.collection("posts").add(postData);
@@ -89,7 +101,10 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Not found or unauthorized" }, { status: 404 });
     }
 
-    await docRef.update({ ...updates, updated_at: FieldValue.serverTimestamp() });
+    const sanitized = { ...updates };
+    if (sanitized.scheduled_at) sanitized.scheduled_at = toFirestoreTimestamp(sanitized.scheduled_at);
+    if (sanitized.published_at) sanitized.published_at = toFirestoreTimestamp(sanitized.published_at);
+    await docRef.update({ ...sanitized, updated_at: FieldValue.serverTimestamp() });
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error("[/api/posts PATCH]", err);

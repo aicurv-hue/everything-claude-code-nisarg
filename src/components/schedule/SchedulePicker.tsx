@@ -13,15 +13,21 @@ interface Props {
   initialDate?: Date;
 }
 
-function toLocalDateString(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
+const IST_OFFSET_MS = 330 * 60 * 1000; // UTC+5:30 in milliseconds
+
+function toISTDateString(d: Date): string {
+  // Convert UTC date to IST by adding 5:30 offset, then format as YYYY-MM-DD
+  const ist = new Date(d.getTime() + IST_OFFSET_MS);
+  const y = ist.getUTCFullYear();
+  const m = String(ist.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(ist.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${dd}`;
 }
 
-function toLocalTimeString(d: Date): string {
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+function toISTTimeString(d: Date): string {
+  // Convert UTC date to IST by adding 5:30 offset, then format as HH:MM
+  const ist = new Date(d.getTime() + IST_OFFSET_MS);
+  return `${String(ist.getUTCHours()).padStart(2, "0")}:${String(ist.getUTCMinutes()).padStart(2, "0")}`;
 }
 
 export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId = "demo-user", segment = "individual", initialDate }: Props) {
@@ -30,9 +36,9 @@ export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId
   const focusRing   = isCorporate ? "focus:ring-violet-500/20 focus:border-violet-500" : "focus:ring-[#0A66C2]/20 focus:border-[#0A66C2]";
 
   const init     = initialDate || new Date(Date.now() + 24 * 3600 * 1000);
-  const [date, setDate]             = useState(toLocalDateString(init));
+  const [date, setDate]             = useState(toISTDateString(init));
   const [time, setTime]             = useState("09:00");
-  const [timezone]                  = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const timezone = "Asia/Kolkata";
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [aiLoading, setAiLoading]   = useState(true);
   const [bestApplied, setBestApplied] = useState(false);
@@ -54,8 +60,8 @@ export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId
 
   const handleApplySuggestion = (slot: string) => {
     const d = new Date(slot);
-    setDate(toLocalDateString(d));
-    setTime(toLocalTimeString(d));
+    setDate(toISTDateString(d));
+    setTime(toISTTimeString(d));
     setBestApplied(true);
   };
 
@@ -75,14 +81,14 @@ export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId
 
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const minDate = toLocalDateString(new Date());
+  const minDate = toISTDateString(new Date());
 
-  // isValid: just needs to be a parseable datetime
-  const selectedDt = new Date(`${date}T${time}`);
+  // isValid: just needs to be a parseable datetime (parsed as IST with +05:30 suffix)
+  const selectedDt = new Date(`${date}T${time}:00+05:30`);
   const isValid = !isNaN(selectedDt.getTime());
 
   const handleSubmit = () => {
-    const dt = new Date(`${date}T${time}`);
+    const dt = new Date(`${date}T${time}:00+05:30`);
     if (isNaN(dt.getTime())) {
       setSubmitError("Please enter a valid date and time.");
       return;

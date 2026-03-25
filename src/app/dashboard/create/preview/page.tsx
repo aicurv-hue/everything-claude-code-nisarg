@@ -276,7 +276,7 @@ export default function PostPreviewPage() {
 
       // Close modal and show success immediately
       setScheduleStatus("success");
-      const label = scheduledAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      const label = scheduledAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
       const imageStatusMsg = imageMode === "ai" && !immediateImageUrl
         ? " · Generating image in background…"
         : immediateImageUrl ? " · Image attached" : "";

@@ -15,7 +15,11 @@ interface Props {
 
 function fmtDate(seconds?: number) {
   if (!seconds) return "—";
-  return new Date(seconds * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(seconds * 1000).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "numeric", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit", hour12: true,
+  });
 }
 
 const STATUS_STYLE: Record<string, string> = {

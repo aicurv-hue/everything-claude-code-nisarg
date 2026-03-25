@@ -32,8 +32,16 @@ function getPostDate(post: Post): Date | null {
   return secs ? new Date(secs * 1000) : null;
 }
 
+const IST_OFFSET_MS = 330 * 60 * 1000; // UTC+5:30
+
+function toISTMidnight(d: Date): string {
+  // Returns "YYYY-MM-DD" string in IST for date comparison
+  const ist = new Date(d.getTime() + IST_OFFSET_MS);
+  return `${ist.getUTCFullYear()}-${ist.getUTCMonth()}-${ist.getUTCDate()}`;
+}
+
 function isSameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  return toISTMidnight(a) === toISTMidnight(b);
 }
 
 export default function ContentCalendar({ posts: allPosts, segment, onPostClick }: Props) {
@@ -47,24 +55,27 @@ export default function ContentCalendar({ posts: allPosts, segment, onPostClick 
   const [view, setView]         = useState<"month" | "list">("month");
   const [current, setCurrent]   = useState(new Date());
 
-  const year  = current.getFullYear();
-  const month = current.getMonth();
+  // Derive year/month in IST so the calendar header reflects the IST date
+  const nowIST = new Date(current.getTime() + IST_OFFSET_MS);
+  const year  = nowIST.getUTCFullYear();
+  const month = nowIST.getUTCMonth();
 
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(Date.UTC(year, month, 1)).getUTCDay();
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   const today = new Date();
 
   const cells: (Date | null)[] = [
     ...Array(firstDay).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1)),
+    // Build cells as UTC dates representing midnight IST for each calendar day
+    ...Array.from({ length: daysInMonth }, (_, i) => new Date(Date.UTC(year, month, i + 1))),
   ];
   while (cells.length % 7 !== 0) cells.push(null);
 
   const postsOnDay = (day: Date) =>
     posts.filter((p) => { const d = getPostDate(p); return d && isSameDay(d, day); });
 
-  const prev = () => setCurrent(new Date(year, month - 1, 1));
-  const next = () => setCurrent(new Date(year, month + 1, 1));
+  const prev = () => setCurrent(new Date(Date.UTC(year, month - 1, 1)));
+  const next = () => setCurrent(new Date(Date.UTC(year, month + 1, 1)));
 
   // List view — sorted by date
   const sortedPosts = [...posts].sort((a, b) => {
@@ -153,7 +164,7 @@ export default function ContentCalendar({ posts: allPosts, segment, onPostClick 
                     <span className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full ${
                       isToday ? `${accentBg} text-white` : "text-slate-500"
                     }`}>
-                      {day.getDate()}
+                      {day.getUTCDate()}
                     </span>
                   </div>
 
@@ -204,10 +215,10 @@ export default function ContentCalendar({ posts: allPosts, segment, onPostClick 
                 {/* Date */}
                 <div className="w-24 shrink-0">
                   <p className="text-xs font-semibold text-slate-700">
-                    {d ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "—"}
+                    {d ? d.toLocaleDateString("en-GB", { timeZone: "Asia/Kolkata", day: "numeric", month: "short" }) : "—"}
                   </p>
                   <p className="text-[11px] text-slate-400">
-                    {d ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
+                    {d ? d.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" }) : ""}
                   </p>
                 </div>
 

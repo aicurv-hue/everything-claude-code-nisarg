@@ -173,7 +173,9 @@ export async function POST(req: NextRequest) {
         .get();
       const allScheduled = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Post));
       due = allScheduled.filter(p => {
-        const secs = p.scheduled_at?.seconds ?? (p.scheduled_at instanceof Date ? p.scheduled_at.getTime() / 1000 : null);
+        const secs = p.scheduled_at?.seconds
+          ?? (p.scheduled_at instanceof Date ? p.scheduled_at.getTime() / 1000 : null)
+          ?? (typeof p.scheduled_at === "string" ? new Date(p.scheduled_at).getTime() / 1000 : null);
         if (!secs) return false;
         return secs * 1000 <= now.getTime();
       });
@@ -181,7 +183,9 @@ export async function POST(req: NextRequest) {
       // Fallback — local dev without Admin SDK (uses mock/client-side Firestore)
       const allScheduled = await postService.getScheduled("local-dev");
       due = allScheduled.filter(p => {
-        const secs = p.scheduled_at?.seconds ?? (p.scheduled_at instanceof Date ? p.scheduled_at.getTime() / 1000 : null);
+        const secs = p.scheduled_at?.seconds
+          ?? (p.scheduled_at instanceof Date ? p.scheduled_at.getTime() / 1000 : null)
+          ?? (typeof p.scheduled_at === "string" ? new Date(p.scheduled_at).getTime() / 1000 : null);
         if (!secs) return false;
         return secs * 1000 <= now.getTime();
       });

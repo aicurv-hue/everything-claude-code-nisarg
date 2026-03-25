@@ -7,11 +7,20 @@ const MODEL          = process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash"
 
 function nextOccurrence(dayOfWeek: number, hour: number, minute = 0): string {
   const now = new Date();
-  const result = new Date(now);
-  result.setHours(hour, minute, 0, 0);
-  const diff = (dayOfWeek - now.getDay() + 7) % 7 || (result <= now ? 7 : 0);
-  result.setDate(result.getDate() + diff);
-  return result.toISOString();
+  // Convert current UTC time to IST to calculate "today in IST"
+  const nowIST = new Date(now.getTime() + 330 * 60 * 1000);
+
+  // Build the target datetime in IST then convert to UTC
+  const result = new Date(nowIST);
+  result.setUTCHours(hour, minute, 0, 0);
+
+  // Adjust day of week (in IST)
+  const istDay = nowIST.getUTCDay();
+  const diff = (dayOfWeek - istDay + 7) % 7 || (result.getTime() <= nowIST.getTime() ? 7 : 0);
+  result.setUTCDate(result.getUTCDate() + diff);
+
+  // result is currently "IST time stored as if UTC" — convert back to real UTC
+  return new Date(result.getTime() - 330 * 60 * 1000).toISOString();
 }
 
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
