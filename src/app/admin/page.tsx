@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Users, FileText, Calendar, Linkedin, Trash2, Ban, CheckCircle } from "lucide-react";
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/lib/context/auth";
 
 interface AdminUser {
   uid: string;
@@ -24,6 +24,7 @@ interface AdminStats {
 }
 
 export default function AdminPage() {
+  const { user } = useAuth();
   const [users, setUsers]       = useState<AdminUser[]>([]);
   const [stats, setStats]       = useState<AdminStats | null>(null);
   const [loading, setLoading]   = useState(true);
@@ -33,7 +34,8 @@ export default function AdminPage() {
   useEffect(() => { loadData(); }, []);
 
   async function adminFetch(url: string, options: RequestInit = {}) {
-    const token = await auth.currentUser?.getIdToken();
+    const { auth: firebaseAuth } = await import("@/lib/firebase");
+    const token = await firebaseAuth?.currentUser?.getIdToken();
     return fetch(url, {
       ...options,
       headers: { ...(options.headers || {}), Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

@@ -126,7 +126,7 @@ export default function SettingsPage() {
   }, []);
 
   const handleSave = async () => {
-    const userId = auth?.currentUser?.uid || "demo-user";
+    const userId = user!.uid;
     const data: UserProfile = {
       lastActiveSegment: profileType,
       individual: segments.individual,

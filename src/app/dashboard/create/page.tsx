@@ -68,7 +68,7 @@ export default function CreatePostPage() {
     if (!topic.trim()) return;
     setIsGenerating(true);
 
-    const userId = auth?.currentUser?.uid || "demo-user";
+    const userId = user!.uid;
     const activeProfile: ProfileSegment | undefined = userProfile ? userProfile[segment] : undefined;
     const selectedModel = activeProfile?.model || "google/gemini-2.0-flash";
 
