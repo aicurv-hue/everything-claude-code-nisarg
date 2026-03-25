@@ -106,6 +106,7 @@ export default function DashboardHomePage() {
   const [allPosts, setAllPosts]   = useState<Post[]>([]);
   const [profile, setProfile]     = useState<UserProfile | null>(null);
   const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<number>(0);
 
@@ -113,32 +114,40 @@ export default function DashboardHomePage() {
   const accentBg    = isCorporate ? "bg-violet-50 border-violet-200" : "bg-blue-50 border-blue-200";
 
   const loadAll = useCallback(async (silent = false) => {
+    if (!user) return;
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const [postStats, serverStats, userProfile] = await Promise.all([
-        postService.getStats(user!.uid, segment),
-        fetch("/api/dashboard/stats").then((r) => r.json()),
-        profileService.getProfile(user!.uid),
-      ]);
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Dashboard load timed out. Check your Firebase connection.")), 15_000)
+      );
+      const [postStats, serverStats, userProfile] = await Promise.race([
+        Promise.all([
+          postService.getStats(user.uid, segment),
+          fetch("/api/dashboard/stats").then((r) => r.json()),
+          profileService.getProfile(user.uid),
+        ]),
+        timeout,
+      ]) as [any, any, any];
       setStats(postStats);
       setSystem(serverStats.system);
       setLinkedIn(serverStats.linkedin);
       setLastUpdated(serverStats.timestamp);
       setProfile(userProfile);
-      const all = await postService.getAll(user!.uid);
+      const all = await postService.getAll(user.uid);
       const segmented = all.filter((p) => p.segment === segment);
       setAllPosts(segmented);
       setRecent(segmented.slice(0, 6));
-    } catch (err) {
+    } catch (err: any) {
       console.error("Dashboard load failed:", err);
+      setError(err?.message || "Failed to load dashboard.");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [segment]);
+  }, [user, segment]);
 
-  useEffect(() => { loadAll(); }, [segment, loadAll]);
+  useEffect(() => { if (user) loadAll(); }, [user, segment, loadAll]);
   useEffect(() => {
     const interval = setInterval(() => loadAll(true), 30_000);
     return () => clearInterval(interval);
@@ -181,6 +190,26 @@ export default function DashboardHomePage() {
         <div className="flex flex-col items-center gap-3 text-slate-400">
           <Activity className="w-7 h-7 animate-pulse" />
           <p className="text-sm">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <div className="flex flex-col items-center gap-4 text-center max-w-md px-6">
+          <AlertTriangle className="w-8 h-8 text-red-500" />
+          <div>
+            <p className="text-sm font-semibold text-slate-800 mb-1">Dashboard failed to load</p>
+            <p className="text-xs text-slate-500">{error}</p>
+          </div>
+          <button
+            onClick={() => { setError(""); setLoading(true); loadAll(); }}
+            className="px-4 py-2 bg-[#0A66C2] text-white text-sm font-medium rounded-lg hover:bg-[#0854a0] transition-all"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
