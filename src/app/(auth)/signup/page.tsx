@@ -24,7 +24,10 @@ export default function SignupPage() {
     setLoading(true);
     try {
       await signUp(email, password, name.trim());
-      router.replace("/dashboard");
+      // Check beta access before sending to dashboard
+      const res = await fetch(`/api/beta/check?email=${encodeURIComponent(email.toLowerCase().trim())}`);
+      const { approved } = await res.json();
+      router.replace(approved ? "/dashboard" : "/waitlist");
     } catch (err: any) {
       setError(friendlyError(err.code));
     } finally {

@@ -2,13 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { performResearch } from "@/lib/ai/research";
-import { generatePost } from "@/lib/ai/generate";
-import { profileService, UserProfile, ProfileSegment } from "@/lib/db/profiles";
+import type { ProfileSegment } from "@/lib/db/profiles";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
-import { memoryService } from "@/lib/db/memory";
-import { Zap, Search, Brain, SlidersHorizontal, ChevronDown, ChevronUp, User, Building2, Sparkles, Info } from "lucide-react";
+import { getIdToken } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { Zap, Search, Brain, SlidersHorizontal, ChevronDown, ChevronUp, User, Building2, Sparkles } from "lucide-react";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
 
 const TONES = [
@@ -39,7 +38,7 @@ export default function CreatePostPage() {
   const { user } = useAuth();
   const { segment, isIndividual, isCorporate } = useSegment();
 
-  const [userProfile, setUserProfile]       = useState<UserProfile | null>(null);
+  const [userProfile, setUserProfile]       = useState<{ [key: string]: ProfileSegment } | null>(null);
   const [isGenerating, setIsGenerating]     = useState(false);
   const [generatingStep, setGeneratingStep] = useState<"research" | "memory" | "writing" | null>(null);
   const [customInstructions, setCustomInstructions] = useState("");
@@ -52,57 +51,81 @@ export default function CreatePostPage() {
   const accentBtn   = isCorporate ? "bg-violet-600 hover:bg-violet-700" : "bg-[#0A66C2] hover:bg-[#0854a0]";
 
   useEffect(() => {
+    if (!user) return;
     const loadProfile = async () => {
-      const userId = user!.uid;
-      const [profile, memories] = await Promise.all([
-        profileService.getProfile(userId),
-        memoryService.getAll(userId, segment),
-      ]);
-      if (profile) setUserProfile(profile);
-      setMemoryCount(memories.length);
+      try {
+        const token = await getIdToken(auth.currentUser!);
+        const [profileRes, memoryRes] = await Promise.all([
+          fetch("/api/profiles", { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`/api/memory?segment=${segment}&limit=100`, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        if (profileRes.ok) {
+          const data = await profileRes.json();
+          if (data.profile) setUserProfile(data.profile);
+        }
+        if (memoryRes.ok) {
+          const data = await memoryRes.json();
+          setMemoryCount(Array.isArray(data.memories) ? data.memories.length : 0);
+        } else {
+          setMemoryCount(0);
+        }
+      } catch {
+        setMemoryCount(0);
+      }
     };
     loadProfile();
-  }, [segment]);
+  }, [segment, user]);
 
   const handleGenerate = async () => {
     if (!topic.trim()) return;
     setIsGenerating(true);
 
-    const userId = user!.uid;
     const activeProfile: ProfileSegment | undefined = userProfile ? userProfile[segment] : undefined;
     const selectedModel = activeProfile?.model || "google/gemini-2.0-flash";
 
     try {
+      // ── Stage 1: Research (via API route — supports 60s timeout) ────────────
       setGeneratingStep("research");
-      const research = await performResearch(topic, {
-        segment, model: selectedModel, tone, audience, length, clientProfile: activeProfile,
+      const researchRes = await fetch("/api/ai/research", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic, options: { segment, model: selectedModel, tone, audience, length, clientProfile: activeProfile } }),
       });
+      if (!researchRes.ok) throw new Error(`Research failed: ${await researchRes.text()}`);
+      const research = await researchRes.json();
 
+      // ── Stage 2: Load memory via API route ───────────────────────────────────
       setGeneratingStep("memory");
-      const memoryContext = await memoryService.getRelevant(
-        userId, segment as "individual" | "corporate", topic, audience, tone, 5
-      ).catch(() => []);
+      let memoryContext: any[] = [];
+      try {
+        if (auth.currentUser) {
+          const token = await getIdToken(auth.currentUser);
+          const memRes = await fetch(`/api/memory?segment=${segment}&topic=${encodeURIComponent(topic)}&limit=5`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (memRes.ok) {
+            const memData = await memRes.json();
+            memoryContext = memData.memories || [];
+          }
+        }
+      } catch { /* memory is non-critical */ }
 
+      // ── Stage 3: Generate post (via API route — supports 60s timeout) ────────
       setGeneratingStep("writing");
-
-      // Serialize memory objects to plain JS before passing to the Server Action.
-      // Firestore Timestamps have a .toJSON() method which Next.js rejects when
-      // crossing the client→server boundary via Server Actions.
-      const serializedMemory = memoryContext.map((m) => ({
-        ...m,
-        created_at: m.created_at?.seconds != null
-          ? { seconds: m.created_at.seconds, nanoseconds: m.created_at.nanoseconds ?? 0 }
-          : null,
-      }));
-
-      const { post: content, imagePrompt } = await generatePost({
-        topic, tone, audience, length, segment, research,
-        model: selectedModel,
-        systemPrompt: activeProfile?.systemPrompt || undefined,
-        clientProfile: activeProfile,
-        customInstructions: customInstructions.trim() || undefined,
-        memoryContext: serializedMemory.length > 0 ? serializedMemory : undefined,
+      const generateRes = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic, tone, audience, length, segment, research,
+          model: selectedModel,
+          systemPrompt: activeProfile?.systemPrompt || undefined,
+          clientProfile: activeProfile,
+          customInstructions: customInstructions.trim() || undefined,
+          memoryContext: memoryContext.length > 0 ? memoryContext : undefined,
+        }),
       });
+      if (!generateRes.ok) throw new Error(`Generation failed: ${await generateRes.text()}`);
+      const { post: content, imagePrompt } = await generateRes.json();
 
       localStorage.setItem("latest_post", JSON.stringify({
         content, imagePrompt, research,
@@ -110,9 +133,9 @@ export default function CreatePostPage() {
       }));
 
       router.push("/dashboard/create/preview");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to generate post:", error);
-      alert("Something went wrong during generation. Please try again.");
+      alert(error?.message || "Something went wrong during generation. Please try again.");
     } finally {
       setIsGenerating(false);
       setGeneratingStep(null);

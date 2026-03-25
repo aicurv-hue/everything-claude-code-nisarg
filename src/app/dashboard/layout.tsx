@@ -7,6 +7,19 @@ import { BarChart3, Settings, Building2, User, Brain, PenSquare, FileText, Clock
 import { SegmentProvider, useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 
+function BetaSignOutButton() {
+  const { logOut } = useAuth();
+  const router = useRouter();
+  return (
+    <button
+      onClick={async () => { await logOut(); router.replace("/login"); }}
+      className="text-slate-500 hover:text-white text-sm transition-colors"
+    >
+      Sign out
+    </button>
+  );
+}
+
 function Sidebar() {
   const { setSegment, isIndividual, isCorporate } = useSegment();
   const { user, logOut } = useAuth();
@@ -151,6 +164,8 @@ function CronPoller() {
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [betaChecking, setBetaChecking] = React.useState(false);
+  const [betaApproved, setBetaApproved] = React.useState<boolean | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -158,7 +173,17 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, router]);
 
-  if (loading) {
+  useEffect(() => {
+    if (!user) return;
+    setBetaChecking(true);
+    fetch(`/api/beta/check?email=${encodeURIComponent(user.email || "")}`)
+      .then(r => r.json())
+      .then(data => setBetaApproved(data.approved === true))
+      .catch(() => setBetaApproved(false))
+      .finally(() => setBetaChecking(false));
+  }, [user]);
+
+  if (loading || betaChecking) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-[#0A66C2] border-t-transparent rounded-full animate-spin" />
@@ -167,6 +192,29 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return null;
+
+  if (betaApproved === false) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-slate-900 border border-white/[0.07] rounded-2xl p-8 text-center">
+          <div className="w-14 h-14 rounded-full bg-[#0A66C2]/10 flex items-center justify-center mx-auto mb-5">
+            <svg className="w-7 h-7 text-[#0A66C2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h1 className="text-white text-xl font-bold mb-2">Beta Access Required</h1>
+          <p className="text-slate-400 text-sm leading-relaxed mb-6">
+            LinkAuto is currently in closed beta. Your account (<span className="text-slate-300">{user.email}</span>) is not yet on the approved list.
+          </p>
+          <p className="text-slate-500 text-sm mb-6">
+            Contact <span className="text-[#0A66C2]">nisarg2526@gmail.com</span> to request access.
+          </p>
+          <BetaSignOutButton />
+        </div>
+      </div>
+    );
+  }
+
   return <>{children}</>;
 }
 
