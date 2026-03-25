@@ -334,6 +334,37 @@ export default function CreatePostPage() {
               )}
             </div>
 
+            {/* Progress steps — visible while generating */}
+            {isGenerating && (
+              <div className="card p-4 space-y-3">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Generating your post…</p>
+                {[
+                  { step: "research", label: "Deep-researching your topic",    icon: "🔍" },
+                  { step: "memory",   label: "Reading your past posts for style", icon: "🧠" },
+                  { step: "writing",  label: "Writing your LinkedIn post",      icon: "✍️" },
+                ].map(({ step, label, icon }) => {
+                  const steps = ["research", "memory", "writing"];
+                  const currentIdx = steps.indexOf(generatingStep || "research");
+                  const thisIdx = steps.indexOf(step);
+                  const isDone    = thisIdx < currentIdx;
+                  const isActive  = step === generatingStep;
+                  return (
+                    <div key={step} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                      isActive ? (isCorporate ? "bg-violet-50 border border-violet-200" : "bg-blue-50 border border-blue-200")
+                      : isDone  ? "bg-green-50 border border-green-200"
+                      : "bg-slate-50 border border-slate-200 opacity-40"
+                    }`}>
+                      <span className="text-base">{isDone ? "✅" : icon}</span>
+                      <p className={`text-sm font-medium flex-1 ${isActive ? (isCorporate ? "text-violet-700" : "text-[#0A66C2]") : isDone ? "text-green-700" : "text-slate-400"}`}>
+                        {label}
+                      </p>
+                      {isActive && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin opacity-70" />}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Generate Button */}
             <button
               onClick={handleGenerate}
@@ -342,17 +373,17 @@ export default function CreatePostPage() {
                 !topic.trim()
                   ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                   : isGenerating
-                  ? "bg-slate-300 cursor-wait text-slate-500"
+                  ? (isCorporate ? "bg-violet-100 cursor-wait text-violet-400" : "bg-blue-100 cursor-wait text-[#0A66C2]/50")
                   : `${accentBtn} text-white shadow-sm active:scale-[0.99]`
               }`}
             >
               {isGenerating ? (
                 <>
                   <Zap className="w-4 h-4 animate-pulse" />
-                  {generatingStep === "research" && "Stage 1 — Deep-researching your topic..."}
-                  {generatingStep === "memory"   && "Stage 2 — Reading past posts for style..."}
-                  {generatingStep === "writing"  && "Stage 3 — Writing your post..."}
-                  {!generatingStep               && "Starting..."}
+                  {generatingStep === "research" && "Stage 1 — Researching…"}
+                  {generatingStep === "memory"   && "Stage 2 — Loading memory…"}
+                  {generatingStep === "writing"  && "Stage 3 — Writing post…"}
+                  {!generatingStep               && "Starting…"}
                 </>
               ) : (
                 <>
