@@ -132,26 +132,36 @@ export async function GET(request: NextRequest) {
   cookieStore.set("li_user_picture", linkedInPicture, COOKIE_OPTS_PUBLIC(refreshExpiresIn));
   cookieStore.set("li_user_email",   linkedInEmail,   COOKIE_OPTS_PUBLIC(refreshExpiresIn));
 
-  // ── Step 3b: Persist tokens to DB via internal Node.js route (fire-and-forget) ─
-  // Edge Runtime cannot reliably use Firebase client SDK — delegate to /api/tokens/save
-  // which runs on Node.js and uses Admin SDK. Never awaited so redirect is instant.
+  // ── Step 3b: Persist tokens to DB via internal Node.js route ─────────────────
+  // Edge Runtime cannot use Firebase client SDK reliably — delegate to /api/tokens/save
+  // (Node.js runtime + Admin SDK). MUST be awaited — Edge terminates on response,
+  // so fire-and-forget gets killed before the Firestore write completes.
   if (firebaseUid) {
     const appUrl = (request.headers.get("origin") || request.url.split("/api/")[0]);
-    fetch(`${appUrl}/api/tokens/save`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        user_id:            firebaseUid,
-        access_token:       accessToken,
-        refresh_token:      refreshToken ?? null,
-        user_sub:           linkedInSub,
-        user_name:          linkedInName,
-        user_email:         linkedInEmail,
-        user_picture:       linkedInPicture,
-        expires_at:         Date.now() + expiresIn * 1000,
-        refresh_expires_at: refreshToken ? Date.now() + refreshExpiresIn * 1000 : null,
-      }),
-    }).catch(err => console.warn("[linkedin/callback] Token DB save failed:", err));
+    try {
+      const saveRes = await fetch(`${appUrl}/api/tokens/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id:            firebaseUid,
+          access_token:       accessToken,
+          refresh_token:      refreshToken ?? null,
+          user_sub:           linkedInSub,
+          user_name:          linkedInName,
+          user_email:         linkedInEmail,
+          user_picture:       linkedInPicture,
+          expires_at:         Date.now() + expiresIn * 1000,
+          refresh_expires_at: refreshToken ? Date.now() + refreshExpiresIn * 1000 : null,
+        }),
+      });
+      if (!saveRes.ok) {
+        console.error("[linkedin/callback] Token DB save returned", saveRes.status, await saveRes.text());
+      } else {
+        console.log(`[linkedin/callback] Token saved for user ${firebaseUid}`);
+      }
+    } catch (err) {
+      console.error("[linkedin/callback] Token DB save failed:", err);
+    }
   } else {
     console.warn("[linkedin/callback] No Firebase UID in state — token not persisted. User must include uid= in OAuth link.");
   }

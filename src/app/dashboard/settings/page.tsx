@@ -104,7 +104,11 @@ export default function SettingsPage() {
   }, []);
 
   const handleReconnect = () => {
-    window.location.href = `/api/auth/linkedin?returnTo=/dashboard/settings&uid=${encodeURIComponent(user?.uid || "")}`;
+    if (!user?.uid) {
+      alert("Still loading your account — please wait a moment and try again.");
+      return;
+    }
+    window.location.href = `/api/auth/linkedin?returnTo=/dashboard/settings&uid=${encodeURIComponent(user.uid)}`;
   };
 
   const handleDisconnect = async () => {
