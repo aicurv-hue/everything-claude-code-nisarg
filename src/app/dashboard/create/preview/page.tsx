@@ -388,6 +388,7 @@ export default function PostPreviewPage() {
         length: postData.metadata.length,
         custom_instructions: postData.metadata.customInstructions || undefined,
         segment: postData.metadata.segment || "individual",
+        organization_id: organizationId || undefined,
         research_data: postData.research,
         image_url: immediateImageUrl,
         scheduled_at: scheduledAt.toISOString(),

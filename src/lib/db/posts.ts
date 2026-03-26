@@ -33,6 +33,7 @@ export interface Post {
   engagement_synced_at?: number; // unix ms — when engagement was last fetched
   failed_reason?: string;        // set by cron worker when publishing fails
   image_mode?: "ai" | "upload" | "none";
+  organization_id?: string;  // per-user org ID for corporate posts
   created_at: any;
   updated_at?: any;
 }

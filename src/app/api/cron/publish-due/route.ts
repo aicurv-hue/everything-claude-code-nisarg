@@ -252,7 +252,7 @@ export async function POST(req: NextRequest) {
       // Refresh token if expired or within 5 minutes of expiry
       let accessToken = tokenRecord.access_token;
       const fiveMin = 5 * 60 * 1000;
-      if (tokenRecord.expires_at < Date.now() + fiveMin) {
+      if (!tokenRecord.expires_at || tokenRecord.expires_at < Date.now() + fiveMin) {
         if (tokenRecord.refresh_token) {
           const refreshed = await refreshAccessToken(userId, tokenRecord.refresh_token);
           if (refreshed) {
@@ -265,12 +265,15 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Resolve author URN — org ID comes from the user's profile, not a global env var
+      // Resolve author URN — org ID: post record first, then user profile, then env fallback
       let authorUrn = `urn:li:person:${tokenRecord.user_sub}`;
       if (post.segment === "corporate") {
-        const profileSnap = await adminDb!.collection("profiles").doc(userId).get();
-        const orgId = profileSnap.data()?.corporate?.linkedinOrganizationId
-          || process.env.LINKEDIN_ORGANIZATION_ID; // fallback for legacy
+        let orgId = (post as any).organization_id;
+        if (!orgId) {
+          const profileSnap = await adminDb!.collection("profiles").doc(userId).get();
+          orgId = profileSnap.data()?.corporate?.linkedinOrganizationId
+            || process.env.LINKEDIN_ORGANIZATION_ID;
+        }
         if (!orgId) throw new Error("No LinkedIn Organization ID set. Add it in Settings → Identity (Corporate).");
         authorUrn = `urn:li:organization:${orgId}`;
       }
@@ -338,28 +341,39 @@ export async function POST(req: NextRequest) {
 
     if (toSync.length > 0) {
       console.log(`[cron] Syncing engagement for ${toSync.length} post(s)…`);
-      const postUrns = toSync.map(p => p.linkedin_post_id!);
-      const appUrl   = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
-      const engRes = await fetch(`${appUrl}/api/linkedin/engagement`, {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+
+      // Group posts by user so each engagement call uses the correct token
+      const byUser = new Map<string, Post[]>();
+      for (const p of toSync) {
+        const uid = p.user_id || "unknown";
+        if (!byUser.has(uid)) byUser.set(uid, []);
+        byUser.get(uid)!.push(p);
+      }
+
+      for (const [uid, userPosts] of byUser) {
+        const postUrns = userPosts.map(p => p.linkedin_post_id!);
+        const engRes = await fetch(`${appUrl}/api/linkedin/engagement`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ postUrns }),
+          body: JSON.stringify({ postUrns, userId: uid }),
         }).catch(() => null);
 
-      if (engRes?.ok) {
-        const { results: engResults } = await engRes.json();
-        for (const { urn, likes, comments } of engResults) {
-          const post = toSync.find(p => p.linkedin_post_id === urn);
-          if (post?.id && adminDb) {
-            await adminDb.collection("posts").doc(post.id).update({
-              likes_count: likes,
-              comments_count: comments,
-              engagement_synced_at: Date.now(),
-              updated_at: FieldValue.serverTimestamp(),
-            }).catch(() => {});
+        if (engRes?.ok) {
+          const { results: engResults } = await engRes.json();
+          for (const { urn, likes, comments } of engResults) {
+            const post = userPosts.find(p => p.linkedin_post_id === urn);
+            if (post?.id && adminDb) {
+              await adminDb.collection("posts").doc(post.id).update({
+                likes_count: likes,
+                comments_count: comments,
+                engagement_synced_at: Date.now(),
+                updated_at: FieldValue.serverTimestamp(),
+              }).catch(() => {});
+            }
           }
+          console.log(`[cron] Engagement synced for user ${uid}: ${engResults.length} post(s).`);
         }
-        console.log(`[cron] Engagement synced for ${engResults.length} post(s).`);
       }
     }
   } catch (engErr: any) {

@@ -17,9 +17,10 @@ async function verifyToken(req: NextRequest): Promise<string | null> {
 export async function POST(req: NextRequest) {
   try {
     const uid = await verifyToken(req);
+    if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const body = await req.json();
     const { posts, segment = "individual", timezone } = body;
-    const userId = uid || "anonymous";
+    const userId = uid;
 
     if (!Array.isArray(posts) || posts.length === 0)
       return NextResponse.json({ error: "No posts provided" }, { status: 400 });

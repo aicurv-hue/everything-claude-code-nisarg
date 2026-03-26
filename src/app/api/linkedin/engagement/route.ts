@@ -9,7 +9,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { tokenService } from "@/lib/db/tokens";
+import { adminDb } from "@/lib/firebase-admin";
 
 const LI_VERSION = "202505";
 const TIMEOUT_MS = 10_000;
@@ -52,13 +52,21 @@ async function fetchEngagement(
 }
 
 export async function POST(req: NextRequest) {
-  // Get access token — DB first, cookie fallback
+  const { postUrns, userId } = await req.json() as { postUrns: string[]; userId?: string };
+  if (!Array.isArray(postUrns) || postUrns.length === 0) {
+    return NextResponse.json({ results: [] });
+  }
+
+  // Get access token — prefer per-user DB lookup over cookies
   let accessToken: string | null = null;
 
-  const tokenRecord = await tokenService.get("demo-user").catch(() => null);
-  if (tokenRecord?.access_token) {
-    accessToken = tokenRecord.access_token;
-  } else {
+  if (userId && adminDb) {
+    const tokenSnap = await adminDb.collection("tokens").doc(userId).get().catch(() => null);
+    const tokenRecord = tokenSnap?.exists ? tokenSnap.data() : null;
+    if (tokenRecord?.access_token) accessToken = tokenRecord.access_token;
+  }
+
+  if (!accessToken) {
     const cookieStore = await cookies();
     accessToken = cookieStore.get("li_access_token")?.value || null;
   }
@@ -67,14 +75,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No LinkedIn token" }, { status: 401 });
   }
 
-  const { postUrns } = await req.json() as { postUrns: string[] };
-  if (!Array.isArray(postUrns) || postUrns.length === 0) {
-    return NextResponse.json({ results: [] });
-  }
-
   // Fetch engagement for each URN (sequential to respect rate limits)
   const results: Array<{ urn: string; likes: number; comments: number }> = [];
-  for (const urn of postUrns.slice(0, 20)) { // cap at 20 per call
+  for (const urn of postUrns.slice(0, 20)) {
     const data = await fetchEngagement(accessToken, urn);
     if (data) results.push({ urn, ...data });
   }
