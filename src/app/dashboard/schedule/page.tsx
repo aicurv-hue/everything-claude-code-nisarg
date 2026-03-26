@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { getAuthToken } from "@/lib/utils/getAuthToken";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { RefreshCw, Upload, CalendarDays, CheckCircle, AlertCircle, Clock, Info } from "lucide-react";
@@ -28,14 +29,7 @@ export default function SchedulePage() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const { auth: firebaseAuth } = await import("@/lib/firebase");
-      // Wait briefly for Firebase Auth to hydrate on first load
-      const currentUser = firebaseAuth?.currentUser ?? await new Promise<typeof firebaseAuth.currentUser>(resolve => {
-        const unsub = firebaseAuth?.onAuthStateChanged(u => { unsub?.(); resolve(u); });
-        if (!unsub) resolve(null);
-      });
-      if (!currentUser) { setPosts([]); return; }
-      const token = await currentUser.getIdToken();
+      const token = await getAuthToken();
       if (!token) { setPosts([]); return; }
       const res = await fetch(`/api/posts?segment=${segment}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -51,8 +45,7 @@ export default function SchedulePage() {
   useEffect(() => { load(); }, [load]);
 
   const handleReschedule = async (postId: string, newDate: Date, tz: string) => {
-    const { auth: firebaseAuth } = await import("@/lib/firebase");
-    const token = await firebaseAuth?.currentUser?.getIdToken();
+    const token = await getAuthToken();
     if (!token) return;
     await fetch("/api/posts", {
       method: "PATCH",
@@ -64,8 +57,7 @@ export default function SchedulePage() {
   };
 
   const handleDelete = async (postId: string) => {
-    const { auth: firebaseAuth } = await import("@/lib/firebase");
-    const token = await firebaseAuth?.currentUser?.getIdToken();
+    const token = await getAuthToken();
     if (!token) return;
     await fetch("/api/posts", {
       method: "DELETE",

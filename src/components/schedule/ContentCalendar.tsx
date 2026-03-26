@@ -37,7 +37,9 @@ const IST_OFFSET_MS = 330 * 60 * 1000; // UTC+5:30
 function toISTMidnight(d: Date): string {
   // Returns "YYYY-MM-DD" string in IST for date comparison
   const ist = new Date(d.getTime() + IST_OFFSET_MS);
-  return `${ist.getUTCFullYear()}-${ist.getUTCMonth()}-${ist.getUTCDate()}`;
+  const mm  = String(ist.getUTCMonth() + 1).padStart(2, "0"); // getUTCMonth() is 0-indexed
+  const dd  = String(ist.getUTCDate()).padStart(2, "0");
+  return `${ist.getUTCFullYear()}-${mm}-${dd}`;
 }
 
 function isSameDay(a: Date, b: Date) {

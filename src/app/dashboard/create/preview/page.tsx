@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { getAuthToken } from "@/lib/utils/getAuthToken";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Post } from "@/lib/db/posts";
@@ -55,8 +56,7 @@ export default function PostPreviewPage() {
   const router = useRouter();
 
   const createPost = async (post: Omit<Post, "id">): Promise<{ id?: string }> => {
-    const { auth: firebaseAuth } = await import("@/lib/firebase");
-    const token = await firebaseAuth?.currentUser?.getIdToken();
+    const token = await getAuthToken();
     if (!token) throw new Error("Not authenticated");
     const res = await fetch("/api/posts", {
       method: "POST",
@@ -68,8 +68,7 @@ export default function PostPreviewPage() {
   };
 
   const updatePost = async (id: string, updates: Partial<Post>): Promise<void> => {
-    const { auth: firebaseAuth } = await import("@/lib/firebase");
-    const token = await firebaseAuth?.currentUser?.getIdToken();
+    const token = await getAuthToken();
     if (!token) return;
     await fetch("/api/posts", {
       method: "PATCH",

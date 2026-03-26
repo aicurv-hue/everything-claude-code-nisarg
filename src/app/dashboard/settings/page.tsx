@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getAuthToken } from "@/lib/utils/getAuthToken";
 import {
   AlertTriangle,
   Save,
@@ -121,8 +122,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const { auth: firebaseAuth } = await import("@/lib/firebase");
-        const token = await firebaseAuth?.currentUser?.getIdToken();
+        const token = await getAuthToken();
         if (!token) return;
         const res = await fetch("/api/profiles", {
           headers: { Authorization: `Bearer ${token}` },
@@ -141,7 +141,7 @@ export default function SettingsPage() {
       }
     };
     loadSettings();
-  }, []);
+  }, [user]);
 
   const handleSave = async () => {
     const profile: UserProfile = {
@@ -149,8 +149,7 @@ export default function SettingsPage() {
       individual: segments.individual,
       corporate:  segments.corporate
     };
-    const { auth: firebaseAuth } = await import("@/lib/firebase");
-    const token = await firebaseAuth?.currentUser?.getIdToken();
+    const token = await getAuthToken();
     if (token) {
       await fetch("/api/profiles", {
         method: "POST",

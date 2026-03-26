@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { getAuthToken } from "@/lib/utils/getAuthToken";
 import { useRouter } from "next/navigation";
 import { FileText, Clock, ChevronRight, Search, Linkedin, ThumbsUp, MessageCircle } from "lucide-react";
 import { Post } from "@/lib/db/posts";
@@ -61,13 +62,7 @@ export default function HistoryPage() {
     async function loadHistory() {
       setIsLoading(true);
       try {
-        const { auth: firebaseAuth } = await import("@/lib/firebase");
-        const currentUser = firebaseAuth?.currentUser ?? await new Promise<typeof firebaseAuth.currentUser>(resolve => {
-          const unsub = firebaseAuth?.onAuthStateChanged(u => { unsub?.(); resolve(u); });
-          if (!unsub) resolve(null);
-        });
-        if (!currentUser) { setPosts([]); return; }
-        const token = await currentUser.getIdToken();
+        const token = await getAuthToken();
         if (!token) { setPosts([]); return; }
         const res = await fetch(`/api/posts?segment=${segment}`, {
           headers: { Authorization: `Bearer ${token}` },

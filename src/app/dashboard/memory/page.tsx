@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { getAuthToken } from "@/lib/utils/getAuthToken";
 import Link from "next/link";
 import { Brain, RefreshCw, Zap, Tag, Clock, TrendingUp, FileText, Sparkles, Trash2 } from "lucide-react";
 import { PostMemory } from "@/lib/db/memory";
@@ -61,14 +62,8 @@ export default function MemoryPage() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const { auth: firebaseAuth } = await import("@/lib/firebase");
-      const currentUser = firebaseAuth?.currentUser ?? await new Promise<typeof firebaseAuth.currentUser>(resolve => {
-        const unsub = firebaseAuth?.onAuthStateChanged(u => { unsub?.(); resolve(u); });
-        if (!unsub) resolve(null);
-      });
-      if (!currentUser) { setMemories([]); return; }
-      const token = await currentUser.getIdToken();
-      if (!token) return;
+      const token = await getAuthToken();
+      if (!token) { setMemories([]); return; }
       const res = await fetch(`/api/memory?segment=${segment}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -110,8 +105,7 @@ export default function MemoryPage() {
     if (!confirm("Remove this memory entry? Neel will no longer reference it.")) return;
     setDeletingId(id);
     try {
-      const { auth: firebaseAuth } = await import("@/lib/firebase");
-      const token = await firebaseAuth?.currentUser?.getIdToken();
+      const token = await getAuthToken();
       if (token) {
         await fetch("/api/memory", {
           method: "DELETE",

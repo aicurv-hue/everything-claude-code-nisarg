@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { BarChart3, Settings, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut } from "lucide-react";
 import { SegmentProvider, useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
+import { getAuthToken } from "@/lib/utils/getAuthToken";
 
 function BetaSignOutButton() {
   const { logOut } = useAuth();
@@ -146,11 +147,7 @@ function CronPoller() {
     // for posts that fire while the dashboard is closed.
     const run = async () => {
       try {
-        const { getIdToken } = await import("firebase/auth");
-        const { auth: firebaseAuth } = await import("@/lib/firebase");
-        const token = firebaseAuth.currentUser
-          ? await getIdToken(firebaseAuth.currentUser)
-          : null;
+        const token = await getAuthToken();
         const res = await fetch("/api/cron/publish-due", {
           method: "POST",
           headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -165,7 +162,7 @@ function CronPoller() {
       }
     };
     run();
-    const id = setInterval(run, 5 * 60_000); // 5-minute interval — Vercel Cron is the real scheduler
+    const id = setInterval(run, 60_000); // 60s interval — checks every minute for due posts
     return () => clearInterval(id);
   }, [user]);
   return null;
