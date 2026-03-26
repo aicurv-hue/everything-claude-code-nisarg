@@ -194,6 +194,19 @@ export async function POST(request: NextRequest) {
   if (!res.ok) {
     const errText = await res.text();
     console.error(`[linkedin/publish] Post failed (${segment}):`, errText);
+
+    // 422 on corporate = missing w_organization_social scope (requires LinkedIn Partner approval)
+    if (res.status === 422 && segment === "corporate") {
+      return NextResponse.json(
+        {
+          error: "Company page posting requires LinkedIn Partner approval. LinkedIn has not yet granted this app the w_organization_social permission. Apply at the LinkedIn Marketing Developer Platform, then reconnect LinkedIn once approved.",
+          details: errText,
+          code: "PARTNER_APPROVAL_REQUIRED",
+        },
+        { status: 422 }
+      );
+    }
+
     return NextResponse.json(
       { error: `LinkedIn API error: ${res.status}`, details: errText },
       { status: res.status }

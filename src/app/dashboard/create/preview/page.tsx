@@ -500,6 +500,19 @@ export default function PostPreviewPage() {
             </div>
           )}
 
+          {/* Corporate publishing restriction notice */}
+          {isCorp && (
+            <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+              <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-amber-800">Company page publishing requires LinkedIn Partner approval</p>
+                <p className="text-[11px] text-amber-700 mt-0.5">
+                  LinkedIn restricts the <code className="bg-amber-100 px-1 rounded">w_organization_social</code> scope to approved Marketing Developer Platform partners. Until approved, use <strong>Schedule</strong> — once the token is approved, scheduled posts will publish automatically. Scheduling works today.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Status banners */}
           {publishStatus === "success" && (
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-green-50 border border-green-200">
