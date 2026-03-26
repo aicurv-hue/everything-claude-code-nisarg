@@ -20,7 +20,8 @@ export interface LinkedInTokenRecord {
   updated_at:          any;
 }
 
-const COLLECTION  = "linkedin_tokens";
+// Must match the collection the cron worker reads from
+const COLLECTION  = "tokens";
 const MOCK_KEY    = "mock_linkedin_tokens";
 
 function getMockTokens(): LinkedInTokenRecord[] {

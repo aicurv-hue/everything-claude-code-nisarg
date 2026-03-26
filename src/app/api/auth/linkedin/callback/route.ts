@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { tokenService } from "@/lib/db/tokens";
 
+// Edge Runtime — no timeout limit on Vercel Hobby plan
+export const runtime = "edge";
+
 const COOKIE_OPTS_PRIVATE = (maxAge: number) => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",

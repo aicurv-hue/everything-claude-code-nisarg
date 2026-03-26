@@ -14,6 +14,7 @@ import {
   Linkedin,
   RefreshCw,
   CheckCircle2,
+  LogOut,
 } from "lucide-react";
 import { UserProfile, ProfileSegment } from "@/lib/db/profiles";
 import { useAuth } from "@/lib/context/auth";
@@ -64,6 +65,8 @@ export default function SettingsPage() {
   const [liName, setLiName]           = useState("");
   const [liEmail, setLiEmail]         = useState("");
   const [liExpiry, setLiExpiry]       = useState<number | null>(null);
+  const [liDisconnecting, setLiDisconnecting] = useState(false);
+  const [liJustDisconnected, setLiJustDisconnected] = useState(false);
 
   useEffect(() => {
     fetch("/api/linkedin/status")
@@ -100,8 +103,19 @@ export default function SettingsPage() {
   }, []);
 
   const handleReconnect = () => {
-    // Full-page redirect — LinkedIn blocks popups/iframes
     window.location.href = `/api/auth/linkedin?returnTo=/dashboard/settings&uid=${encodeURIComponent(user?.uid || "")}`;
+  };
+
+  const handleDisconnect = async () => {
+    setLiDisconnecting(true);
+    await fetch("/api/auth/linkedin/disconnect", { method: "POST" }).catch(() => {});
+    setLiConnected(false);
+    setLiName("");
+    setLiEmail("");
+    setLiExpiry(null);
+    setLiJustDisconnected(true);
+    setLiDisconnecting(false);
+    setTimeout(() => setLiJustDisconnected(false), 4000);
   };
 
   useEffect(() => {
@@ -192,6 +206,14 @@ export default function SettingsPage() {
         </button>
       </div>
 
+      {/* Disconnected banner */}
+      {liJustDisconnected && (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+          <p className="text-sm text-amber-700">LinkedIn disconnected. Click <strong>Connect LinkedIn</strong> to reconnect.</p>
+        </div>
+      )}
+
       {/* LinkedIn Connection Card */}
       <div className="card p-5 flex items-center gap-4">
         <div className="w-10 h-10 rounded-xl bg-[#0A66C2] flex items-center justify-center shrink-0">
@@ -219,13 +241,25 @@ export default function SettingsPage() {
             <p className="text-xs text-slate-400 mt-0.5">Connect LinkedIn to enable publishing and engagement tracking.</p>
           )}
         </div>
-        <button
-          onClick={handleReconnect}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0A66C2] hover:bg-[#0854a0] text-white text-xs font-semibold transition-all shrink-0"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          {liConnected ? "Reconnect LinkedIn" : "Connect LinkedIn"}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {liConnected && (
+            <button
+              onClick={handleDisconnect}
+              disabled={liDisconnecting}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 text-xs font-semibold transition-all disabled:opacity-50"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              {liDisconnecting ? "Disconnecting..." : "Disconnect"}
+            </button>
+          )}
+          <button
+            onClick={handleReconnect}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0A66C2] hover:bg-[#0854a0] text-white text-xs font-semibold transition-all shrink-0"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            {liConnected ? "Reconnect" : "Connect LinkedIn"}
+          </button>
+        </div>
       </div>
 
       {/* Tab bar */}
