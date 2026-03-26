@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import SchedulePicker from "@/components/schedule/SchedulePicker";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
-import { savePostMemory } from "@/lib/ai/save-memory";
+// Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
 import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 
 type ImageMode = "ai" | "upload" | "none";
@@ -324,13 +324,18 @@ export default function PostPreviewPage() {
         setPublishStatus("success");
         setPublishMessage("Post published successfully to LinkedIn! 🎉");
 
-        savePostMemory({
-          content:  editedContent,
-          topic:    postData.metadata.topic,
-          audience: postData.metadata.audience,
-          tone:     postData.metadata.tone,
-          segment:  postData.metadata.segment || "individual",
-          userId:   user!.uid,
+        // Save memory via server-side endpoint (Admin SDK — works in production)
+        fetch("/api/memory/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content:  editedContent,
+            topic:    postData.metadata.topic,
+            audience: postData.metadata.audience,
+            tone:     postData.metadata.tone,
+            segment:  postData.metadata.segment || "individual",
+            userId:   user!.uid,
+          }),
         }).catch(() => {});
 
         await createPost({

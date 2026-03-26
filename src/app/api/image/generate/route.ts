@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateImageFromPrompt } from "@/lib/ai/image";
 
+// Edge Runtime — no 10s timeout on Vercel Hobby (fal.ai can take >10s)
+export const runtime = "edge";
+
 export async function POST(req: NextRequest) {
   try {
     const { prompt } = await req.json();

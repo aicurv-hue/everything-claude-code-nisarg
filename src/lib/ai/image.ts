@@ -1,5 +1,3 @@
-"use server";
-
 export interface ImageResult {
   url: string;
   prompt: string;
