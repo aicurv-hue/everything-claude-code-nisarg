@@ -31,6 +31,8 @@ export interface Post {
   likes_count?: number;
   comments_count?: number;
   engagement_synced_at?: number; // unix ms — when engagement was last fetched
+  failed_reason?: string;        // set by cron worker when publishing fails
+  image_mode?: "ai" | "upload" | "none";
   created_at: any;
   updated_at?: any;
 }

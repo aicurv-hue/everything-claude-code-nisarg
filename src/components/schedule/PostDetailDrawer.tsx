@@ -142,9 +142,15 @@ export default function PostDetailDrawer({ post, onClose, onReschedule, onDelete
 
           {/* Failed notice */}
           {post.status === "failed" && (
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-50 border border-red-200">
-              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-              <p className="text-xs text-red-600">This post failed to publish. Reschedule to try again.</p>
+            <div className="flex flex-col gap-1.5 px-3 py-2.5 rounded-xl bg-red-50 border border-red-200">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                <p className="text-xs font-semibold text-red-600">Failed to publish</p>
+              </div>
+              {(post as any).failed_reason && (
+                <p className="text-[11px] text-red-500 pl-6 leading-snug">{(post as any).failed_reason}</p>
+              )}
+              <p className="text-[11px] text-red-400 pl-6">Use Reschedule below to retry after fixing the issue.</p>
             </div>
           )}
 

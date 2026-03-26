@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
 import { useRouter } from "next/navigation";
-import { FileText, Clock, ChevronRight, Search, Linkedin, ThumbsUp, MessageCircle } from "lucide-react";
+import { FileText, Clock, ChevronRight, Search, Linkedin, ThumbsUp, MessageCircle, RefreshCw, AlertTriangle } from "lucide-react";
 import { Post } from "@/lib/db/posts";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
@@ -53,6 +53,7 @@ export default function HistoryPage() {
   const [isLoading, setIsLoading]       = useState(true);
   const [searchTerm, setSearchTerm]     = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [retrying, setRetrying]         = useState<string | null>(null);
 
   const accentTab = isCorporate
     ? "bg-violet-50 border-violet-300 text-violet-700"
@@ -85,6 +86,28 @@ export default function HistoryPage() {
     const matchesStatus = statusFilter === "all" || p.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const handleRetry = async (post: Post) => {
+    if (!post.id || retrying) return;
+    setRetrying(post.id);
+    try {
+      const token = await getAuthToken();
+      if (!token) return;
+      // Reset to scheduled with publish time = 1 minute from now
+      const newTime = new Date(Date.now() + 60_000).toISOString();
+      await fetch("/api/posts", {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ id: post.id, status: "scheduled", scheduled_at: newTime, failed_reason: null }),
+      });
+      setPosts(prev => prev.map(p => p.id === post.id
+        ? { ...p, status: "scheduled", failed_reason: undefined }
+        : p
+      ));
+    } finally {
+      setRetrying(null);
+    }
+  };
 
   const counts = {
     all:       posts.length,
@@ -203,6 +226,12 @@ export default function HistoryPage() {
                     <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full border capitalize ${STATUS_BADGE[post.status] || STATUS_BADGE.draft}`}>
                       {post.status}
                     </span>
+                    {post.status === "failed" && post.failed_reason && (
+                      <div className="flex items-start gap-1 mt-1.5 max-w-[200px]">
+                        <AlertTriangle className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
+                        <p className="text-[10px] text-red-500 leading-tight">{post.failed_reason}</p>
+                      </div>
+                    )}
                   </td>
 
                   {/* Created */}
@@ -257,6 +286,17 @@ export default function HistoryPage() {
                         title="Edit draft"
                       >
                         <ChevronRight className="w-4 h-4" />
+                      </button>
+                    )}
+                    {post.status === "failed" && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleRetry(post); }}
+                        disabled={retrying === post.id}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 text-[11px] font-semibold transition-all disabled:opacity-50 ml-auto"
+                        title="Reset to scheduled and retry publishing"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${retrying === post.id ? "animate-spin" : ""}`} />
+                        {retrying === post.id ? "Retrying…" : "Retry"}
                       </button>
                     )}
                   </td>
