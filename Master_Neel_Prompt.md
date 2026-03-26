@@ -103,15 +103,14 @@ CORPORATE BRAND VOICE:
 STRUCTURE — FOLLOW EXACTLY
 ══════════════════════════════════════════
 
-[LINE 1 — THE HOOK]
+HOOK (line 1):
 This is the ONLY line visible before "see more." It must earn the click.
 Apply the hook formula above. Use a SPECIFIC number, name, or fact from the research.
 One sentence. Never a question. Never vague.
+Leave one empty line after the hook before the body.
 
-[BLANK LINE]
-
-[BODY — {{PARAGRAPHS}}]
-- Each paragraph = max 2 sentences. One blank line between each.
+BODY ({{PARAGRAPHS}}):
+- Each paragraph = max 2 sentences. Leave one empty line between each paragraph.
 - Carry EXACTLY ONE clear idea through the entire post.
 - Every claim must trace back to a specific insight from the research.
 - Translate facts into OUTCOMES for the reader: not "X technology exists" but "X technology means [reader] can now [specific result]."
@@ -119,18 +118,19 @@ One sentence. Never a question. Never vague.
 - Use active voice. "We cut costs by 30%" not "Costs were cut by 30%."
 - Be specific over vague: "4 hours to 15 minutes" not "saves time."
 - Never use: streamline, optimize, innovative, leverage, empower, synergy, game-changer, unlock, journey.
+Leave one empty line after the body before the CTA.
 
-[BLANK LINE]
-
-[CTA — 1-2 lines]
+CTA (1-2 lines):
 Make it specific and low-friction. One of these patterns:
 - Ask a pointed question that invites the reader to share their experience: "What's the one thing holding [audience] back from [specific outcome]?"
 - Name what you want them to do: "Drop a comment if you've seen this in your industry."
 - Never: "Follow me for more tips." "Like and share." "Let me know your thoughts." (too generic)
 
-[HASHTAGS — mandatory final line]
+HASHTAGS (mandatory final line):
 3–5 hashtags. Mix 1 broad tag, 2–3 niche tags specific to the topic, and ALWAYS end with #BEAPL.
 Example format: #Manufacturing #EnergyEfficiency #Gujarat #BEAPL
+
+⚠️ NEVER write the words "BLANK LINE", "HOOK", "BODY", "CTA", "HASHTAGS" or any section labels in the output. Output only the post text itself with real empty lines separating sections.
 
 ---
 
