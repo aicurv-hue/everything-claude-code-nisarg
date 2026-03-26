@@ -4,10 +4,10 @@ import { cookies } from "next/headers";
 const LI_VERSION = "202505"; // LinkedIn API version header (YYYYMM)
 const TIMEOUT_MS  = 15_000;
 
-function resolveAuthorUrn(segment: string, userSub: string): string {
+function resolveAuthorUrn(segment: string, userSub: string, organizationId?: string): string {
   if (segment === "corporate") {
-    const orgId = process.env.LINKEDIN_ORGANIZATION_ID;
-    if (!orgId) throw new Error("LINKEDIN_ORGANIZATION_ID is not set.");
+    const orgId = organizationId || process.env.LINKEDIN_ORGANIZATION_ID;
+    if (!orgId) throw new Error("No LinkedIn Organization ID. Add it in Settings → Identity (Corporate).");
     return `urn:li:organization:${orgId}`;
   }
   return `urn:li:person:${userSub}`;
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { content, imageUrl, segment = "individual" } = await request.json();
+  const { content, imageUrl, segment = "individual", organizationId } = await request.json();
 
   if (!content?.trim()) {
     return NextResponse.json({ error: "Post content is empty." }, { status: 400 });
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
 
   let authorUrn: string;
   try {
-    authorUrn = resolveAuthorUrn(segment, userSub);
+    authorUrn = resolveAuthorUrn(segment, userSub, organizationId);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

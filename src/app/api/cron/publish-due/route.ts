@@ -265,11 +265,15 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Resolve author URN
-      const orgId     = process.env.LINKEDIN_ORGANIZATION_ID;
-      const authorUrn = post.segment === "corporate" && orgId
-        ? `urn:li:organization:${orgId}`
-        : `urn:li:person:${tokenRecord.user_sub}`;
+      // Resolve author URN — org ID comes from the user's profile, not a global env var
+      let authorUrn = `urn:li:person:${tokenRecord.user_sub}`;
+      if (post.segment === "corporate") {
+        const profileSnap = await adminDb!.collection("profiles").doc(userId).get();
+        const orgId = profileSnap.data()?.corporate?.linkedinOrganizationId
+          || process.env.LINKEDIN_ORGANIZATION_ID; // fallback for legacy
+        if (!orgId) throw new Error("No LinkedIn Organization ID set. Add it in Settings → Identity (Corporate).");
+        authorUrn = `urn:li:organization:${orgId}`;
+      }
 
       // Use post content
       let content = post.content || "";

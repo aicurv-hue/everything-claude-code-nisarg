@@ -41,6 +41,7 @@ export default function PostPreviewPage() {
   const [scheduleMessage, setScheduleMessage] = useState("");
   const [linkedInConnected, setLinkedInConnected] = useState<boolean | null>(null);
   const [linkedInUser, setLinkedInUser]     = useState<{ name: string; picture: string; email: string } | null>(null);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
 
   // ── Regeneration state ──────────────────────────────────────────────────────
   const [isRegeneratingPost, setIsRegeneratingPost]   = useState(false);
@@ -92,6 +93,20 @@ export default function PostPreviewPage() {
         if (d.connected) setLinkedInUser({ name: d.name, picture: d.picture, email: d.email });
       })
       .catch(() => setLinkedInConnected(false));
+
+    // Load organization ID from user profile (for corporate publishing)
+    if (parsed.metadata?.segment === "corporate") {
+      getAuthToken().then(token => {
+        if (!token) return;
+        fetch("/api/user/profile", { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json())
+          .then(p => {
+            const orgId = p?.corporate?.linkedinOrganizationId;
+            if (orgId) setOrganizationId(orgId);
+          })
+          .catch(() => {});
+      });
+    }
   }, [router]);
 
   /* ── Regenerate post ── */
@@ -285,6 +300,7 @@ export default function PostPreviewPage() {
           content: editedContent,
           imageUrl: finalImageUrl || null,
           segment: postData.metadata.segment || "individual",
+          organizationId: organizationId || undefined,
         }),
       });
 

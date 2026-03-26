@@ -31,6 +31,9 @@ export interface ProfileSegment {
   // AI Config
   model?: string;
   systemPrompt?: string;
+
+  // LinkedIn (corporate only)
+  linkedinOrganizationId?: string;
 }
 
 export interface UserProfile {

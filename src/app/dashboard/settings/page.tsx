@@ -346,6 +346,18 @@ export default function SettingsPage() {
                 />
                 <FieldHint>Neel will stay inside this lane — every post reinforces your authority in this exact space.</FieldHint>
               </div>
+              {profileType === "corporate" && (
+                <div className="col-span-2">
+                  <label className={labelClass}>LinkedIn Organization ID</label>
+                  <input
+                    value={currentProfile.linkedinOrganizationId || ""}
+                    onChange={e => handleFieldChange("linkedinOrganizationId", e.target.value)}
+                    placeholder="e.g. 109408305"
+                    className={inputClass}
+                  />
+                  <FieldHint>Found in your LinkedIn Company Page URL: linkedin.com/company/<strong>109408305</strong>/admin. Required for scheduled publishing to your company page.</FieldHint>
+                </div>
+              )}
               <div className="col-span-2">
                 <label className={labelClass}>{profileType === "individual" ? "Personal Bio" : "Company Overview"}</label>
                 <textarea value={currentProfile.bioOrOffering} onChange={e => handleFieldChange("bioOrOffering", e.target.value)} rows={4} className={textareaClass}
