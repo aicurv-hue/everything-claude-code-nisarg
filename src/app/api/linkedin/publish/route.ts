@@ -6,9 +6,12 @@ const TIMEOUT_MS  = 15_000;
 
 function resolveAuthorUrn(segment: string, userSub: string, organizationId?: string): string {
   if (segment === "corporate") {
-    const orgId = organizationId || process.env.LINKEDIN_ORGANIZATION_ID;
-    if (!orgId) throw new Error("No LinkedIn Organization ID. Add it in Settings → Identity (Corporate).");
-    return `urn:li:organization:${orgId}`;
+    // MUST come from the user's own profile — never fall back to global env var
+    // (env var is Nisarg's org; using it for another user causes 400 "not an admin")
+    if (!organizationId) {
+      throw new Error("LinkedIn Organization ID not set. Go to Settings → Corporate → Identity tab and enter your LinkedIn Organization ID.");
+    }
+    return `urn:li:organization:${organizationId}`;
   }
   return `urn:li:person:${userSub}`;
 }
@@ -207,8 +210,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Parse LinkedIn error for a readable message
+    let liError = errText;
+    try {
+      const parsed = JSON.parse(errText);
+      liError = parsed.message || parsed.error_description || parsed.error || errText;
+    } catch {}
+
     return NextResponse.json(
-      { error: `LinkedIn API error: ${res.status}`, details: errText },
+      { error: `LinkedIn API error: ${res.status} — ${liError}`, details: errText },
       { status: res.status }
     );
   }
