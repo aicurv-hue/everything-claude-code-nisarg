@@ -355,10 +355,19 @@ Likes and comments are synced hourly via the cron worker's engagement sync block
 | 4 | Dynamic Tailwind class purged at build time | Replaced with static conditional strings |
 | 5 | Dashboard stats didn't refresh on segment switch | Fixed `loadAll()` dependency array |
 | 6 | Create page used disconnected local segment state | Replaced with `useSegment()` context |
-| 7 | **Hallucination** — Neel invented family members, locations, personal stories not in the profile. Root cause: `segmentVoice` said "draw on personal experience" with no grounding facts. | Added explicit `⛔ NO FABRICATION` rule: never invent family, locations, named clients, or personal events not in the profile or research. If no personal story available, use industry-level observation or a researched example instead. |
-| 8 | **Always-different-angle** — memory continuity rule #1 forced Neel to always pivot to a new angle, even when deepening the same thread was the right call. Resulted in jarring topic jumps. | Replaced binary "always different" rule with nuanced logic: if topic is same, decide whether to deepen (Part 2) or add a new dimension — don't always pivot. Style consistency takes priority over angle diversity. |
-| 9 | **Voice drift** — memory only stored topic angles, not HOW the user writes. After several posts, Neel's style drifted away from the user's natural voice. | Added `style_notes` field to `PostMemory` and `MemoryExtract`. Memory extraction now captures 1-sentence style fingerprint (sentence rhythm, vocabulary, data usage). Neel mirrors this in all future posts. |
-| 10 | **No memory delete** — users couldn't remove bad/hallucinated entries from memory. Once stored, a wrong entry kept influencing future posts. | Added `memoryService.delete(id)` method + hover-to-reveal trash button on every memory entry in `/dashboard/memory`. |
+| 7 | **Hallucination** — Neel invented family members, locations, personal stories not in the profile. | Added `⛔ NO FABRICATION` rule: never invent family, locations, named clients, or events not in profile/research. |
+| 8 | **Always-different-angle** — memory rule forced pivot every time, even when deepening same topic was right. | Replaced with nuanced logic: deepen (Part 2) or new dimension — don't always pivot. |
+| 9 | **Voice drift** — memory stored angles but not HOW the user writes. | Added `style_notes` field — 1-sentence style fingerprint extracted per post and injected next generation. |
+| 10 | **No memory delete** — bad entries poisoned future posts with no way to remove them. | Added `memoryService.delete(id)` + hover-reveal trash button on `/dashboard/memory`. |
+| 11 | **`[BLANK LINE]` appearing literally in posts** — AI treated bracket labels as output content. | Rewrote STRUCTURE section with plain English instructions. Added rule: never write section label words in output. |
+| 12 | **Cliché image prompts** (gears, circuits, glowing orbs) — IMAGE_PROMPT_SYSTEM had no visual direction. | Rewrote IMAGE_PROMPT_SYSTEM: bans gears/circuits/holograms, requires human-centered scenes, cinematic editorial style, hero/emotional-tension framing. |
+| 13 | **`fs.readFileSync` crashes on Edge Runtime** — generate.ts read `Master_Neel_Prompt.md` from disk. | Inlined all sections as TS constants in `src/lib/ai/neel-prompt-sections.ts`. `Master_Neel_Prompt.md` stays as human-editable source of truth. |
+| 14 | **FUNCTION_INVOCATION_TIMEOUT** on `/api/ai/generate` and `/api/ai/research` — Vercel Hobby 10s limit. | Converted both routes to `export const runtime = "edge"` — no timeout on Vercel Edge Runtime. |
+| 15 | **OAuth callback 504 GATEWAY_TIMEOUT** — `await tokenService.save()` + token exchange + profile fetch exceeded 10s. | Made DB save fire-and-forget. Reduced profile fetch timeout 8s → 4s. Converted callback to Edge Runtime. |
+| 16 | **Scheduled posts always failing** — tokens saved to `linkedin_tokens` collection but cron reads from `tokens`. | Fixed `COLLECTION = "tokens"` in `src/lib/db/tokens.ts`. Users must reconnect LinkedIn once after this fix. |
+| 17 | **No LinkedIn disconnect button** — only reconnect existed. | Added red Disconnect button to Settings. `POST /api/auth/linkedin/disconnect` clears all `li_*` cookies. |
+| 18 | **Dashboard FAILED_PRECONDITION** — `orderBy("created_at")` + `where("segment")` required composite Firestore index that didn't exist. | Removed `orderBy` from Firestore query; sort done in JS after fetch. |
+| 19 | **OpenRouter 400 error** — `google/gemini-2.0-flash` is not a valid model ID. | Changed to `google/gemini-2.0-flash-001` across all routes, settings defaults, and `openrouter.ts`. |
 
 ---
 
@@ -384,26 +393,38 @@ Likes and comments are synced hourly via the cron worker's engagement sync block
 
 | File | Role |
 |---|---|
-| `Master_Neel_Prompt.md` | **Single source of truth for all of Neel's prompt text** — edit here to change behaviour, no code changes needed |
+| `Master_Neel_Prompt.md` | **Human-editable source of truth** for all Neel prompt text — edit here; code reads from `neel-prompt-sections.ts` |
+| `src/lib/ai/neel-prompt-sections.ts` | **Inlined TS constants** for every prompt section — Edge Runtime compatible replacement for file reads |
 | `src/app/dashboard/create/page.tsx` | Collects Layers A, E — triggers full pipeline |
-| `src/lib/ai/research.ts` | Runs Layer B — research pipeline |
+| `src/app/dashboard/create/preview/page.tsx` | Editable post preview — image picker, schedule button, **Regenerate Post**, **Regenerate Image** |
+| `src/lib/ai/research.ts` | Runs Layer B — Edge Runtime, 2-stage research pipeline |
+| `src/lib/ai/generate.ts` | Assembles prompt from `neel-prompt-sections.ts`, calls Neel via OpenRouter. Exports `generateImagePrompt()` |
 | `src/lib/db/memory.ts` | Stores + retrieves Layer C — memory |
 | `src/lib/ai/memory-extract.ts` | Extracts Layer G — post-generation memory indexing |
-| `src/lib/ai/generate.ts` | Reads `Master_Neel_Prompt.md`, assembles prompt, calls Neel |
 | `src/lib/db/profiles.ts` | Stores Layer D — brand profile |
-| `src/app/dashboard/settings/page.tsx` | UI for Layers D + F |
-| `src/app/dashboard/memory/page.tsx` | Dashboard for Layer C — view Neel's memory bank |
+| `src/app/dashboard/settings/page.tsx` | UI for Layers D + F + LinkedIn connect/disconnect |
+| `src/app/dashboard/memory/page.tsx` | Dashboard for Layer C — view + delete Neel's memory entries |
 | `src/lib/context/segment.tsx` | Global segment state (individual/corporate) |
-| `src/lib/ai/openrouter.ts` | OpenRouter client — `DEFAULT_MODEL: google/gemini-2.0-flash` |
-| `src/lib/ai/save-memory.ts` | Shared helper — `savePostMemory()` called after confirmed LinkedIn publish |
+| `src/lib/ai/openrouter.ts` | OpenRouter client — `DEFAULT_MODEL: google/gemini-2.0-flash-001` |
+| `src/lib/ai/save-memory.ts` | `savePostMemory()` — called after confirmed LinkedIn publish |
 | `src/lib/storage/uploadImage.ts` | Uploads `data:` URL images to Firebase Storage; returns HTTPS URL |
-| `src/app/api/cron/publish-due/route.ts` | Cron worker — finds due posts, claims them, publishes to LinkedIn, syncs engagement |
-| `src/app/api/linkedin/engagement/route.ts` | Fetches likes + comments from LinkedIn `/v2/socialActions/{urn}` |
-| `vercel.json` | Vercel Cron config — triggers `/api/cron/publish-due` every minute in production |
+| `src/lib/db/tokens.ts` | LinkedIn token CRUD — saves to `tokens` collection (matches cron reader) |
+| `src/app/api/ai/generate/route.ts` | Edge Runtime — POST generates post via Neel |
+| `src/app/api/ai/research/route.ts` | Edge Runtime — POST runs 2-stage research |
+| `src/app/api/ai/image-prompt/route.ts` | Edge Runtime — POST regenerates image prompt standalone |
+| `src/app/api/auth/linkedin/callback/route.ts` | Edge Runtime — OAuth callback; exchanges code, sets cookies, fire-and-forget DB save |
+| `src/app/api/auth/linkedin/disconnect/route.ts` | POST clears all `li_*` cookies (disconnect); GET redirects to settings |
+| `src/app/api/cron/publish-due/route.ts` | Cron worker — claims posts, refreshes tokens, publishes to LinkedIn, syncs engagement |
+| `src/app/api/dashboard/stats/route.ts` | Edge Runtime — returns stat counts from cookies |
+| `src/app/api/linkedin/engagement/route.ts` | Fetches likes + comments from LinkedIn API |
+| `vercel.json` | Vercel Cron config — triggers `/api/cron/publish-due` daily |
+| `push-all.sh` | **Always use this to push** — sends to `linkedin/main` (Vercel), `linkedin/linkedin-main`, `origin/linkedin-main` |
 
-### How Master_Neel_Prompt.md works
+### How neel-prompt-sections.ts works
 
-`generate.ts` reads this file at runtime and parses it into named sections separated by `---`. Each section has a `## SECTION_NAME` header. Dynamic values use `{{PLACEHOLDER}}` syntax and are substituted at call time.
+`generate.ts` imports `NEEL_SECTIONS` from `neel-prompt-sections.ts` — a TypeScript constant containing all prompt sections. Dynamic values use `{{PLACEHOLDER}}` syntax substituted at call time.
+
+`Master_Neel_Prompt.md` is the human-readable copy. When you edit it, manually sync the changed section into `neel-prompt-sections.ts` to apply in production.
 
 | Section | Controls |
 |---|---|
@@ -423,4 +444,4 @@ Likes and comments are synced hourly via the cron worker's engagement sync block
 
 ---
 
-*Last audited: 2026-03-25 | Pipeline version: 4.1 (Scheduling + Engagement + Duplicate-publish prevention)*
+*Last audited: 2026-03-26 | Pipeline version: 4.2 (Edge Runtime + Token fix + Regenerate + Disconnect)*
