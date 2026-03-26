@@ -203,7 +203,7 @@ export default function DraftEditPage() {
 
             {liConnected === false ? (
               <a
-                href="/api/auth/linkedin?returnTo=/dashboard/drafts"
+                href={`/api/auth/linkedin?returnTo=/dashboard/drafts&uid=${encodeURIComponent(user?.uid || "")}`}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0A66C2] hover:bg-[#0854a0] text-sm font-medium text-white transition-all"
               >
                 <Linkedin className="w-4 h-4" />

@@ -314,7 +314,7 @@ export default function DashboardHomePage() {
                 </div>
               ) : (
                 <a
-                  href="/api/auth/linkedin?returnTo=/dashboard"
+                  href={`/api/auth/linkedin?returnTo=/dashboard&uid=${encodeURIComponent(user?.uid || "")}`}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                     isCorporate
                       ? "bg-violet-100 border-violet-300 text-violet-700 hover:bg-violet-200"
@@ -481,7 +481,7 @@ export default function DashboardHomePage() {
 
           {system?.linkedin === "disconnected" && (
             <a
-              href="/api/auth/linkedin?returnTo=/dashboard"
+              href={`/api/auth/linkedin?returnTo=/dashboard&uid=${encodeURIComponent(user?.uid || "")}`}
               className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-[#0A66C2]/10 hover:bg-[#0A66C2]/15 text-[#0A66C2] text-xs font-medium transition-all border border-[#0A66C2]/20"
             >
               <Linkedin className="w-3.5 h-3.5" />

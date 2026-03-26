@@ -446,7 +446,7 @@ export default function PostPreviewPage() {
 
               {linkedInConnected === false ? (
                 <a
-                  href="/api/auth/linkedin?returnTo=/dashboard/create/preview"
+                  href={`/api/auth/linkedin?returnTo=/dashboard/create/preview&uid=${encodeURIComponent(user?.uid || "")}`}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0A66C2] hover:bg-[#0958A8] text-sm font-semibold text-white transition-all"
                 >
                   <Linkedin className="w-4 h-4" />

@@ -302,6 +302,7 @@ export async function POST(req: NextRequest) {
       console.error(`[cron] ❌ Failed to publish post ${post.id}:`, err?.message || err);
       await adminDb!.collection("posts").doc(post.id).update({
         status: "failed",
+        failed_reason: err?.message || "Unknown error",
         updated_at: FieldValue.serverTimestamp(),
       }).catch(() => {});
       results.push({ id: post.id, status: "failed", reason: err?.message });
