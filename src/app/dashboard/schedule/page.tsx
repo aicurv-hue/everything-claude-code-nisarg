@@ -29,8 +29,14 @@ export default function SchedulePage() {
     else setRefreshing(true);
     try {
       const { auth: firebaseAuth } = await import("@/lib/firebase");
-      const token = await firebaseAuth?.currentUser?.getIdToken();
-      if (!token) return;
+      // Wait briefly for Firebase Auth to hydrate on first load
+      const currentUser = firebaseAuth?.currentUser ?? await new Promise<typeof firebaseAuth.currentUser>(resolve => {
+        const unsub = firebaseAuth?.onAuthStateChanged(u => { unsub?.(); resolve(u); });
+        if (!unsub) resolve(null);
+      });
+      if (!currentUser) { setPosts([]); return; }
+      const token = await currentUser.getIdToken();
+      if (!token) { setPosts([]); return; }
       const res = await fetch(`/api/posts?segment=${segment}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -40,7 +46,7 @@ export default function SchedulePage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [segment]);
+  }, [segment, user]);
 
   useEffect(() => { load(); }, [load]);
 

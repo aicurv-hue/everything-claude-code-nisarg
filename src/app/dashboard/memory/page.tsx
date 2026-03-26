@@ -62,7 +62,12 @@ export default function MemoryPage() {
     else setRefreshing(true);
     try {
       const { auth: firebaseAuth } = await import("@/lib/firebase");
-      const token = await firebaseAuth?.currentUser?.getIdToken();
+      const currentUser = firebaseAuth?.currentUser ?? await new Promise<typeof firebaseAuth.currentUser>(resolve => {
+        const unsub = firebaseAuth?.onAuthStateChanged(u => { unsub?.(); resolve(u); });
+        if (!unsub) resolve(null);
+      });
+      if (!currentUser) { setMemories([]); return; }
+      const token = await currentUser.getIdToken();
       if (!token) return;
       const res = await fetch(`/api/memory?segment=${segment}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -99,7 +104,7 @@ export default function MemoryPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [segment]);
+  }, [segment, user]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Remove this memory entry? Neel will no longer reference it.")) return;
