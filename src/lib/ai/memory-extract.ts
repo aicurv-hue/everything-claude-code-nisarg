@@ -1,5 +1,3 @@
-"use server";
-
 /**
  * Memory Extraction — Post-generation summarisation pipeline
  *
