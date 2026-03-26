@@ -23,8 +23,7 @@ export async function GET(req: NextRequest) {
         .collection("posts")
         .where("user_id", "==", uid)
         .where("segment", "==", segment)
-        .orderBy("created_at", "desc")
-        .limit(50)
+        .limit(100)
         .get(),
       adminDb.collection("profiles").doc(uid).get(),
     ]);
@@ -38,7 +37,7 @@ export async function GET(req: NextRequest) {
         published_at: data.published_at?.seconds ? { seconds: data.published_at.seconds } : null,
         scheduled_at: data.scheduled_at?.seconds ? { seconds: data.scheduled_at.seconds } : null,
       };
-    });
+    }).sort((a: any, b: any) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
 
     const stats = {
       total:     posts.length,
