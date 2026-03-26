@@ -11,6 +11,8 @@ import { Post } from "@/lib/db/posts";
 import { UserProfile } from "@/lib/db/profiles";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
+import { auth as firebaseAuth } from "@/lib/firebase";
+import { getIdToken } from "firebase/auth";
 
 interface SystemStatus {
   aiEngine: "ready" | "degraded";
@@ -118,8 +120,7 @@ export default function DashboardHomePage() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const { auth: firebaseAuth } = await import("@/lib/firebase");
-      const token = await firebaseAuth?.currentUser?.getIdToken();
+      const token = firebaseAuth?.currentUser ? await getIdToken(firebaseAuth.currentUser) : null;
 
       const [dashData, serverStats] = await Promise.all([
         fetch(`/api/dashboard/data?segment=${segment}`, {
@@ -147,10 +148,6 @@ export default function DashboardHomePage() {
   }, [user, segment]);
 
   useEffect(() => { if (user) loadAll(); }, [user, segment, loadAll]);
-  useEffect(() => {
-    const interval = setInterval(() => loadAll(true), 30_000);
-    return () => clearInterval(interval);
-  }, [loadAll]);
 
   const totalLikes    = allPosts.reduce((s, p) => s + (p.likes_count    ?? 0), 0);
   const totalComments = allPosts.reduce((s, p) => s + (p.comments_count ?? 0), 0);

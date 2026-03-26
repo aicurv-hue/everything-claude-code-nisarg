@@ -165,7 +165,7 @@ function CronPoller() {
       }
     };
     run();
-    const id = setInterval(run, 60_000);
+    const id = setInterval(run, 5 * 60_000); // 5-minute interval — Vercel Cron is the real scheduler
     return () => clearInterval(id);
   }, [user]);
   return null;
