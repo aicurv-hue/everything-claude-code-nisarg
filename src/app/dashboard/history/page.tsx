@@ -54,6 +54,7 @@ export default function HistoryPage() {
   const [searchTerm, setSearchTerm]     = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [retrying, setRetrying]         = useState<string | null>(null);
+  const [retryingAll, setRetryingAll]   = useState(false);
 
   const accentTab = isCorporate
     ? "bg-violet-50 border-violet-300 text-violet-700"
@@ -109,6 +110,29 @@ export default function HistoryPage() {
     }
   };
 
+  const handleRetryAll = async () => {
+    const failedPosts = posts.filter(p => p.status === "failed");
+    if (!failedPosts.length || retryingAll) return;
+    setRetryingAll(true);
+    try {
+      const token = await getAuthToken();
+      if (!token) return;
+      const newTime = new Date(Date.now() + 60_000).toISOString();
+      await Promise.all(failedPosts.map(p =>
+        fetch("/api/posts", {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ id: p.id, status: "scheduled", scheduled_at: newTime }),
+        })
+      ));
+      setPosts(prev => prev.map(p =>
+        p.status === "failed" ? { ...p, status: "scheduled", failed_reason: undefined } : p
+      ));
+    } finally {
+      setRetryingAll(false);
+    }
+  };
+
   const counts = {
     all:       posts.length,
     published: posts.filter((p) => p.status === "published").length,
@@ -118,6 +142,27 @@ export default function HistoryPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-8 space-y-6 animate-fade-in">
+
+      {/* Retry All banner */}
+      {counts.failed > 0 && (
+        <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+            <p className="text-sm text-red-700 font-medium">
+              {counts.failed} post{counts.failed > 1 ? "s" : ""} failed to publish.
+              <span className="font-normal text-red-500 ml-1">Make sure LinkedIn is reconnected in Settings, then retry.</span>
+            </p>
+          </div>
+          <button
+            onClick={handleRetryAll}
+            disabled={retryingAll}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-all disabled:opacity-50 shrink-0"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${retryingAll ? "animate-spin" : ""}`} />
+            {retryingAll ? "Retrying…" : `Retry All (${counts.failed})`}
+          </button>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
