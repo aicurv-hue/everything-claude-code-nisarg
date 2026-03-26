@@ -307,3 +307,42 @@ Start directly with the hook line. Output nothing else.`;
     );
   }
 }
+
+/**
+ * Standalone image prompt regeneration — skips post generation entirely.
+ * Used when the user wants a new image prompt without rewriting the post.
+ */
+export async function generateImagePrompt(topic: string, segment: string, post: string): Promise<string> {
+  const imageSystemPrompt = section("IMAGE_PROMPT_SYSTEM");
+  const imageUserPrompt = section("IMAGE_PROMPT_USER", {
+    TOPIC:   topic,
+    SEGMENT: segment,
+    POST:    post,
+  });
+
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY not set");
+
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
+      "X-Title": "LinkAuto",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.0-flash-001",
+      messages: [
+        { role: "system", content: imageSystemPrompt },
+        { role: "user",   content: imageUserPrompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 200,
+    }),
+  });
+
+  if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
+  const data = await res.json();
+  return (data.choices?.[0]?.message?.content || "").trim();
+}

@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/context/auth";
 import {
   CheckCircle, AlertCircle, Linkedin, FileText, Send,
   ImageIcon, RefreshCw, Download, Sparkles, Upload, X,
-  ArrowLeft, CalendarDays
+  ArrowLeft, CalendarDays, RotateCcw, Wand2
 } from "lucide-react";
 import SchedulePicker from "@/components/schedule/SchedulePicker";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
@@ -40,6 +40,18 @@ export default function PostPreviewPage() {
   const [scheduleMessage, setScheduleMessage] = useState("");
   const [linkedInConnected, setLinkedInConnected] = useState<boolean | null>(null);
   const [linkedInUser, setLinkedInUser]     = useState<{ name: string; picture: string; email: string } | null>(null);
+
+  // ── Regeneration state ──────────────────────────────────────────────────────
+  const [isRegeneratingPost, setIsRegeneratingPost]   = useState(false);
+  const [isRegeneratingImage, setIsRegeneratingImage] = useState(false);
+  const [regenHint, setRegenHint]                     = useState("");
+  const [showRegenHint, setShowRegenHint]             = useState(false);
+  const [regenError, setRegenError]                   = useState<string | null>(null);
+  const [regenImageError, setRegenImageError]         = useState<string | null>(null);
+  // Single-level undo for both post and image prompt
+  const [previousContent, setPreviousContent]         = useState<string | null>(null);
+  const [previousImagePrompt, setPreviousImagePrompt] = useState<string | null>(null);
+
   const router = useRouter();
 
   const createPost = async (post: Omit<Post, "id">): Promise<{ id?: string }> => {
@@ -82,6 +94,105 @@ export default function PostPreviewPage() {
       })
       .catch(() => setLinkedInConnected(false));
   }, [router]);
+
+  /* ── Regenerate post ── */
+  const handleRegeneratePost = async () => {
+    if (!postData || isRegeneratingPost) return;
+    setRegenError(null);
+    setIsRegeneratingPost(true);
+    setPreviousContent(editedContent);
+
+    const effectiveInstructions = [
+      regenHint.trim() ? `Direction for this version: ${regenHint.trim()}` : null,
+      postData.metadata.customInstructions || null,
+    ].filter(Boolean).join("\n") || undefined;
+
+    try {
+      const res = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic:              postData.metadata.topic,
+          tone:               postData.metadata.tone,
+          audience:           postData.metadata.audience,
+          length:             postData.metadata.length,
+          segment:            postData.metadata.segment,
+          research:           postData.research,
+          customInstructions: effectiveInstructions,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Regeneration failed");
+
+      setEditedContent(data.post);
+      setImagePrompt(data.imagePrompt);
+      setImageUrl(null); // clear old generated image — prompt changed
+      setShowRegenHint(false);
+      setRegenHint("");
+
+      // Keep localStorage in sync
+      localStorage.setItem("latest_post", JSON.stringify({
+        ...postData,
+        content: data.post,
+        imagePrompt: data.imagePrompt,
+      }));
+    } catch (err: any) {
+      setRegenError(err.message || "Post regeneration failed. Try again.");
+      setPreviousContent(null); // revert undo state since nothing changed
+    } finally {
+      setIsRegeneratingPost(false);
+    }
+  };
+
+  /* ── Regenerate image prompt only ── */
+  const handleRegenerateImagePrompt = async () => {
+    if (isRegeneratingImage) return;
+    setRegenImageError(null);
+    setIsRegeneratingImage(true);
+    setPreviousImagePrompt(imagePrompt);
+
+    try {
+      const res = await fetch("/api/ai/image-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic:   postData.metadata.topic,
+          segment: postData.metadata.segment,
+          post:    editedContent,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Image prompt generation failed");
+
+      setImagePrompt(data.imagePrompt);
+      setImageUrl(null); // clear old image so user regenerates with new prompt
+      localStorage.setItem("latest_post", JSON.stringify({
+        ...postData,
+        imagePrompt: data.imagePrompt,
+      }));
+    } catch (err: any) {
+      setRegenImageError(err.message || "Image prompt regeneration failed.");
+      setPreviousImagePrompt(null);
+    } finally {
+      setIsRegeneratingImage(false);
+    }
+  };
+
+  /* ── Undo handlers ── */
+  const handleUndoPost = () => {
+    if (!previousContent) return;
+    const current = editedContent;
+    setEditedContent(previousContent);
+    setPreviousContent(current); // allows re-undo (toggle)
+  };
+
+  const handleUndoImagePrompt = () => {
+    if (!previousImagePrompt) return;
+    const current = imagePrompt;
+    setImagePrompt(previousImagePrompt);
+    setPreviousImagePrompt(current);
+    setImageUrl(null);
+  };
 
   /* ── Image helpers ── */
   const generateImage = async (prompt: string) => {
@@ -198,7 +309,6 @@ export default function PostPreviewPage() {
         setPublishStatus("success");
         setPublishMessage("Post published successfully to LinkedIn! 🎉");
 
-        // Save to memory — only for posts confirmed live on LinkedIn
         savePostMemory({
           content:  editedContent,
           topic:    postData.metadata.topic,
@@ -236,8 +346,6 @@ export default function PostPreviewPage() {
     setIsScheduling(true);
     setScheduleStatus("idle");
     try {
-      // Resolve image URL — upload to Firebase Storage if it's a local data: URL
-      // Use a 10s timeout so a slow upload never freezes the schedule button
       let immediateImageUrl: string | undefined = undefined;
       if (finalImageUrl) {
         if (finalImageUrl.startsWith("data:")) {
@@ -246,7 +354,6 @@ export default function PostPreviewPage() {
             const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000));
             const uploaded = await Promise.race([uploadPromise, timeoutPromise]);
             immediateImageUrl = uploaded || undefined;
-            if (!uploaded) console.warn("[Schedule] Image upload timed out or failed — scheduling without image.");
           } catch (uploadErr) {
             console.warn("[Schedule] Image upload error — scheduling without image:", uploadErr);
           }
@@ -274,17 +381,12 @@ export default function PostPreviewPage() {
         created_at: null,
       });
 
-      // Close modal and show success immediately
       setScheduleStatus("success");
       const label = scheduledAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
-      const imageStatusMsg = imageMode === "ai" && !immediateImageUrl
-        ? " · Generating image in background…"
-        : immediateImageUrl ? " · Image attached" : "";
+      const imageStatusMsg = imageMode === "ai" && !immediateImageUrl ? " · Generating image in background…" : immediateImageUrl ? " · Image attached" : "";
       setScheduleMessage(`Scheduled for ${label} (${timezone})${imageStatusMsg}`);
       setShowSchedulePicker(false);
 
-      // Only auto-generate image if user explicitly chose "AI Generate" mode
-      // and no image has been generated yet (e.g. they scheduled without clicking Generate first)
       if (imageMode === "ai" && !immediateImageUrl && imagePrompt && saved?.id) {
         fetch("/api/image/generate", {
           method: "POST",
@@ -294,22 +396,15 @@ export default function PostPreviewPage() {
           .then((r) => r.ok ? r.json() : null)
           .then((d) => {
             if (d?.url && saved.id) {
-              saved.id && updatePost(saved.id, { image_url: d.url }).catch(() => {});
+              updatePost(saved.id, { image_url: d.url }).catch(() => {});
               setScheduleMessage(`Scheduled for ${label} (${timezone}) · AI image attached`);
-            } else {
-              setScheduleMessage(`Scheduled for ${label} (${timezone}) · Image generation failed — post will publish without image`);
             }
           })
-          .catch(() => {
-            setScheduleMessage(`Scheduled for ${label} (${timezone}) · Image generation failed — post will publish without image`);
-          });
-      } else {
-        setScheduleMessage(`Scheduled for ${label} (${timezone})${immediateImageUrl ? " · Image attached" : ""}`);
+          .catch(() => {});
       }
     } catch (err: any) {
-      console.error("[Schedule] Failed:", err);
       setScheduleStatus("error");
-      setScheduleMessage(`Failed to schedule: ${err?.message || "Unknown error"}. Check the browser console for details.`);
+      setScheduleMessage(`Failed to schedule: ${err?.message || "Unknown error"}.`);
     } finally {
       setIsScheduling(false);
     }
@@ -318,6 +413,7 @@ export default function PostPreviewPage() {
   if (!postData) return null;
 
   const isCorp = postData?.metadata?.segment === "corporate";
+  const accentColor = isCorp ? "#7C3AED" : "#0A66C2";
 
   return (
     <div className="flex h-full bg-slate-50">
@@ -405,7 +501,7 @@ export default function PostPreviewPage() {
             </div>
           )}
 
-          {/* Publish status feedback */}
+          {/* Status banners */}
           {publishStatus === "success" && (
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-green-50 border border-green-200">
               <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
@@ -418,7 +514,6 @@ export default function PostPreviewPage() {
               <p className="text-sm text-red-600 font-medium">{publishMessage}</p>
             </div>
           )}
-
           {scheduleStatus === "success" && (
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
               <CalendarDays className="w-5 h-5 text-amber-600 shrink-0" />
@@ -438,9 +533,99 @@ export default function PostPreviewPage() {
             </div>
           )}
 
+          {/* ── Post Editor ── */}
+          <div className="card overflow-hidden">
+            {/* Card header with Regenerate controls */}
+            <div className="px-5 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+              <span className="text-xs font-medium text-slate-500">LinkedIn Post · Edit before publishing</span>
+              <div className="flex items-center gap-2">
+                {previousContent && (
+                  <button
+                    onClick={handleUndoPost}
+                    className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-700 transition-colors"
+                    title="Undo last regeneration"
+                  >
+                    <RotateCcw className="w-3 h-3" /> Undo
+                  </button>
+                )}
+                <button
+                  onClick={() => { setShowRegenHint(!showRegenHint); setRegenError(null); }}
+                  disabled={isRegeneratingPost}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                    showRegenHint
+                      ? "bg-slate-800 text-white border-slate-800"
+                      : "bg-white hover:bg-slate-50 text-slate-600 border-slate-200"
+                  }`}
+                >
+                  <RefreshCw className={`w-3 h-3 ${isRegeneratingPost ? "animate-spin" : ""}`} />
+                  {isRegeneratingPost ? "Regenerating..." : "Regenerate Post"}
+                </button>
+              </div>
+            </div>
+
+            {/* Hint panel — expands when Regenerate is clicked */}
+            {showRegenHint && !isRegeneratingPost && (
+              <div className="px-5 py-3 border-b border-slate-100 bg-slate-50 space-y-2">
+                <p className="text-[11px] text-slate-500">
+                  Give Neel a direction hint (optional) — e.g. <span className="italic">"make it shorter"</span>, <span className="italic">"more storytelling"</span>, <span className="italic">"less salesy"</span>
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={regenHint}
+                    onChange={(e) => setRegenHint(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleRegeneratePost(); }}
+                    placeholder="Direction hint (optional)..."
+                    className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-slate-400 text-slate-700 placeholder-slate-400"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleRegeneratePost}
+                    className="px-4 py-2 rounded-lg text-xs font-semibold text-white transition-all"
+                    style={{ background: accentColor }}
+                  >
+                    Regenerate Now →
+                  </button>
+                  <button
+                    onClick={() => { setShowRegenHint(false); setRegenHint(""); }}
+                    className="px-3 py-2 rounded-lg text-xs text-slate-500 hover:text-slate-700 border border-slate-200 bg-white"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {regenError && (
+                  <p className="text-[11px] text-red-500 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {regenError}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Textarea with loading overlay */}
+            <div className="relative">
+              {isRegeneratingPost && (
+                <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-10 gap-3">
+                  <div className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: `${accentColor}40`, borderTopColor: accentColor }} />
+                  <p className="text-sm text-slate-500 font-medium">Writing a new version...</p>
+                  {regenHint && <p className="text-xs text-slate-400 italic">"{regenHint}"</p>}
+                </div>
+              )}
+              <textarea
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                disabled={isRegeneratingPost}
+                className="w-full h-[500px] p-6 bg-white text-slate-800 leading-relaxed text-base focus:outline-none resize-none disabled:opacity-60"
+                spellCheck={false}
+              />
+            </div>
+            <div className="px-6 pb-4 flex justify-between items-center border-t border-slate-100 pt-3">
+              <span className="text-[11px] text-slate-400">{editedContent.length} characters</span>
+              <span className="text-[11px] text-slate-400">{editedContent.split(/\s+/).filter(Boolean).length} words</span>
+            </div>
+          </div>
+
           {/* ── Image Section ── */}
           <div className="card overflow-hidden">
-            {/* Card header */}
             <div className="px-5 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ImageIcon className="w-4 h-4 text-[#0A66C2]" />
@@ -451,24 +636,62 @@ export default function PostPreviewPage() {
                   </span>
                 )}
               </div>
-              {/* Download + Regenerate for AI mode */}
-              {imageMode === "ai" && imageUrl && !isGeneratingImage && (
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                {/* Undo image prompt */}
+                {previousImagePrompt && (
                   <button
-                    onClick={handleDownloadImage}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-xs text-slate-600 transition-all border border-slate-200"
+                    onClick={handleUndoImagePrompt}
+                    className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-700 transition-colors"
+                    title="Undo last prompt regeneration"
                   >
-                    <Download className="w-3 h-3" /> Download
+                    <RotateCcw className="w-3 h-3" /> Undo
                   </button>
+                )}
+                {/* Rethink prompt button — always visible in AI mode */}
+                {imageMode === "ai" && (
                   <button
-                    onClick={() => generateImage(imagePrompt)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-xs text-slate-600 transition-all border border-slate-200"
+                    onClick={handleRegenerateImagePrompt}
+                    disabled={isRegeneratingImage}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-xs text-slate-600 transition-all border border-slate-200 disabled:opacity-50"
+                    title="Generate a new image prompt based on the current post content"
                   >
-                    <RefreshCw className="w-3 h-3" /> Regenerate
+                    <Wand2 className={`w-3 h-3 ${isRegeneratingImage ? "animate-spin" : ""}`} />
+                    {isRegeneratingImage ? "Rethinking..." : "New Prompt"}
                   </button>
-                </div>
-              )}
+                )}
+                {/* Download + Regenerate pixel image */}
+                {imageMode === "ai" && imageUrl && !isGeneratingImage && (
+                  <>
+                    <button
+                      onClick={handleDownloadImage}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-xs text-slate-600 transition-all border border-slate-200"
+                    >
+                      <Download className="w-3 h-3" /> Download
+                    </button>
+                    <button
+                      onClick={() => generateImage(imagePrompt)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-xs text-slate-600 transition-all border border-slate-200"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Regenerate
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
+
+            {/* Image prompt preview + error */}
+            {imageMode === "ai" && imagePrompt && (
+              <div className="px-5 py-2.5 border-b border-slate-100 bg-slate-50/50 flex items-start gap-2">
+                <Sparkles className="w-3 h-3 text-slate-400 mt-0.5 shrink-0" />
+                <p className="text-[11px] text-slate-400 italic leading-relaxed flex-1 line-clamp-2">{imagePrompt}</p>
+              </div>
+            )}
+            {regenImageError && imageMode === "ai" && (
+              <div className="px-5 py-2 border-b border-red-100 bg-red-50 flex items-center gap-2">
+                <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />
+                <p className="text-[11px] text-red-500">{regenImageError}</p>
+              </div>
+            )}
 
             {/* Mode picker */}
             <div className="px-5 py-4 border-b border-slate-100">
@@ -482,14 +705,10 @@ export default function PostPreviewPage() {
                 />
               </div>
               <div className="grid grid-cols-3 gap-3">
-
-                {/* Option 1 — AI Generate */}
                 <button
                   onClick={() => handleModeChange("ai")}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
-                    imageMode === "ai"
-                      ? "border-[#0A66C2] bg-blue-50"
-                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    imageMode === "ai" ? "border-[#0A66C2] bg-blue-50" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                   }`}
                 >
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "ai" ? "bg-[#0A66C2]" : "bg-slate-100"}`}>
@@ -501,13 +720,10 @@ export default function PostPreviewPage() {
                   </div>
                 </button>
 
-                {/* Option 2 — Upload */}
                 <button
                   onClick={() => { handleModeChange("upload"); fileInputRef.current?.click(); }}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
-                    imageMode === "upload"
-                      ? "border-[#0A66C2] bg-blue-50"
-                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    imageMode === "upload" ? "border-[#0A66C2] bg-blue-50" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                   }`}
                 >
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "upload" ? "bg-[#0A66C2]" : "bg-slate-100"}`}>
@@ -519,13 +735,10 @@ export default function PostPreviewPage() {
                   </div>
                 </button>
 
-                {/* Option 3 — No Image */}
                 <button
                   onClick={() => handleModeChange("none")}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
-                    imageMode === "none"
-                      ? "border-slate-400 bg-slate-50"
-                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    imageMode === "none" ? "border-slate-400 bg-slate-50" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                   }`}
                 >
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "none" ? "bg-slate-200" : "bg-slate-100"}`}>
@@ -536,23 +749,13 @@ export default function PostPreviewPage() {
                     <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">Text-only post</p>
                   </div>
                 </button>
-
               </div>
 
-              {/* Hidden file input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-              />
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
             </div>
 
             {/* Image display area */}
             <div className="p-6 min-h-[160px] flex items-center justify-center bg-white">
-
-              {/* AI mode — idle (not yet generated) */}
               {imageMode === "ai" && !isGeneratingImage && !imageUrl && !imageError && (
                 <div className="flex flex-col items-center gap-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center">
@@ -564,7 +767,7 @@ export default function PostPreviewPage() {
                   </div>
                   <button
                     onClick={() => generateImage(imagePrompt)}
-                    disabled={!imagePrompt}
+                    disabled={!imagePrompt || isRegeneratingImage}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#0A66C2] hover:bg-[#0958A8] text-sm font-medium text-white transition-all disabled:opacity-40"
                   >
                     <Sparkles className="w-4 h-4" />
@@ -576,7 +779,6 @@ export default function PostPreviewPage() {
                 </div>
               )}
 
-              {/* AI mode — loading */}
               {imageMode === "ai" && isGeneratingImage && (
                 <div className="flex flex-col items-center gap-3 text-slate-400">
                   <div className="w-7 h-7 border-2 border-[#0A66C2]/30 border-t-[#0A66C2] rounded-full animate-spin" />
@@ -584,37 +786,20 @@ export default function PostPreviewPage() {
                 </div>
               )}
 
-              {/* AI mode — error */}
               {imageMode === "ai" && !isGeneratingImage && imageError && (
                 <div className="flex flex-col items-center gap-3 text-center">
                   <AlertCircle className="w-6 h-6 text-red-400" />
                   <p className="text-sm text-red-500">{imageError}</p>
-                  <button
-                    onClick={() => generateImage(imagePrompt)}
-                    className="text-xs text-[#0A66C2] hover:underline"
-                  >
-                    Try again
-                  </button>
+                  <button onClick={() => generateImage(imagePrompt)} className="text-xs text-[#0A66C2] hover:underline">Try again</button>
                 </div>
               )}
 
-              {/* AI mode — success */}
               {imageMode === "ai" && !isGeneratingImage && imageUrl && !imageError && (
                 <div className="w-full">
-                  <img
-                    src={imageUrl}
-                    alt="AI generated LinkedIn image"
-                    className="w-full rounded-xl object-cover max-h-[400px]"
-                  />
-                  {imagePrompt && (
-                    <p className="mt-3 text-[11px] text-slate-400 italic leading-relaxed line-clamp-2">
-                      Prompt: {imagePrompt}
-                    </p>
-                  )}
+                  <img src={imageUrl} alt="AI generated LinkedIn image" className="w-full rounded-xl object-cover max-h-[400px]" />
                 </div>
               )}
 
-              {/* Upload mode — waiting for file */}
               {imageMode === "upload" && !uploadedPreview && (
                 <div className="flex flex-col items-center gap-4 text-center">
                   <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center">
@@ -633,15 +818,10 @@ export default function PostPreviewPage() {
                 </div>
               )}
 
-              {/* Upload mode — preview */}
               {imageMode === "upload" && uploadedPreview && (
                 <div className="w-full">
                   <div className="relative">
-                    <img
-                      src={uploadedPreview}
-                      alt="Uploaded image"
-                      className="w-full rounded-xl object-cover max-h-[400px]"
-                    />
+                    <img src={uploadedPreview} alt="Uploaded image" className="w-full rounded-xl object-cover max-h-[400px]" />
                     <button
                       onClick={() => { setUploadedFile(null); setUploadedPreview(null); fileInputRef.current?.click(); }}
                       className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-all"
@@ -650,37 +830,16 @@ export default function PostPreviewPage() {
                       <RefreshCw className="w-3 h-3 text-slate-500" />
                     </button>
                   </div>
-                  <p className="mt-2 text-[11px] text-slate-400 truncate">
-                    {uploadedFile?.name}
-                  </p>
+                  <p className="mt-2 text-[11px] text-slate-400 truncate">{uploadedFile?.name}</p>
                 </div>
               )}
 
-              {/* No image mode */}
               {imageMode === "none" && (
                 <div className="flex flex-col items-center gap-3 text-center text-slate-400">
                   <ImageIcon className="w-8 h-8 text-slate-200" />
                   <p className="text-xs">This post will be published as text only.</p>
                 </div>
               )}
-
-            </div>
-          </div>
-
-          {/* Post Editor */}
-          <div className="card overflow-hidden">
-            <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
-              <span className="text-xs font-medium text-slate-500">LinkedIn Post · Edit before publishing</span>
-            </div>
-            <textarea
-              value={editedContent}
-              onChange={(e) => setEditedContent(e.target.value)}
-              className="w-full h-[500px] p-6 bg-white text-slate-800 leading-relaxed text-base focus:outline-none resize-none"
-              spellCheck={false}
-            />
-            <div className="px-6 pb-4 flex justify-between items-center border-t border-slate-100 pt-3">
-              <span className="text-[11px] text-slate-400">{editedContent.length} characters</span>
-              <span className="text-[11px] text-slate-400">{editedContent.split(/\s+/).filter(Boolean).length} words</span>
             </div>
           </div>
 
@@ -728,12 +887,7 @@ export default function PostPreviewPage() {
             <ul className="space-y-2">
               {postData.research.references.map((ref: string, i: number) => (
                 <li key={i}>
-                  <a
-                    href={ref}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-[#0A66C2] hover:underline block truncate"
-                  >
+                  <a href={ref} target="_blank" rel="noreferrer" className="text-xs text-[#0A66C2] hover:underline block truncate">
                     {ref}
                   </a>
                 </li>
