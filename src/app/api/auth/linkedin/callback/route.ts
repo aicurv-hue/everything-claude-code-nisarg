@@ -22,7 +22,7 @@ const COOKIE_OPTS_PUBLIC = (maxAge: number) => ({
  */
 async function fetchLinkedInProfile(accessToken: string) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
+  const timeout = setTimeout(() => controller.abort(), 4000); // 4s timeout
 
   try {
     const res = await fetch("https://api.linkedin.com/v2/userinfo", {
@@ -130,8 +130,10 @@ export async function GET(request: NextRequest) {
   cookieStore.set("li_user_picture", linkedInPicture, COOKIE_OPTS_PUBLIC(refreshExpiresIn));
   cookieStore.set("li_user_email",   linkedInEmail,   COOKIE_OPTS_PUBLIC(refreshExpiresIn));
 
-  // ── Step 3b: Persist tokens to DB so the scheduled-post worker can use them ─
-  await tokenService.save({
+  // ── Step 3b: Persist tokens to DB (fire-and-forget — never block the redirect) ─
+  // Cookies are set above so the user can use the app immediately.
+  // The DB write is only needed for scheduled-post publishing (background worker).
+  tokenService.save({
     user_id:            firebaseUid,
     access_token:       accessToken,
     refresh_token:      refreshToken,
@@ -141,7 +143,7 @@ export async function GET(request: NextRequest) {
     user_picture:       linkedInPicture,
     expires_at:         Date.now() + expiresIn * 1000,
     refresh_expires_at: refreshToken ? Date.now() + refreshExpiresIn * 1000 : undefined,
-  }).catch(err => console.warn("[linkedin/callback] Token DB save failed (non-critical):", err));
+  }).catch(err => console.warn("[linkedin/callback] Token DB save failed:", err));
 
   // ── Step 4: Redirect back to where they came from ─────────────────────────
   const destination = returnTo.startsWith("/") ? returnTo : "/dashboard/create/preview";
