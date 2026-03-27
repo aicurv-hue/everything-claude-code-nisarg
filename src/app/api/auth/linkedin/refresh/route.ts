@@ -1,21 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { adminDb, adminAuth } from "@/lib/firebase-admin";
 
 /**
  * POST /api/auth/linkedin/refresh
  *
  * Silently exchanges the refresh_token for a new access_token.
- * Called automatically by the status check when the token is near expiry.
- * Users never see this — it happens in the background.
+ * Reads refresh_token from Firestore (tokens/{firebaseUid}) — never cookies.
+ * Requires Authorization: Bearer <firebase-id-token> header.
  */
-export async function POST(_req: NextRequest) {
-  const cookieStore = await cookies();
-  const refreshToken = cookieStore.get("li_refresh_token")?.value;
+export async function POST(req: NextRequest) {
+  // ── Resolve Firebase UID ────────────────────────────────────────────────
+  const authHeader = req.headers.get("authorization") || "";
+  if (!authHeader.startsWith("Bearer ") || !adminAuth) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let firebaseUid: string;
+  try {
+    const decoded = await adminAuth.verifyIdToken(authHeader.slice(7));
+    firebaseUid = decoded.uid;
+  } catch {
+    return NextResponse.json({ error: "Invalid auth token" }, { status: 401 });
+  }
+
+  if (!adminDb) {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+
+  // ── Get refresh token from Firestore ────────────────────────────────────
+  const snap = await adminDb.collection("tokens").doc(firebaseUid).get().catch(() => null);
+  const tokenRecord = snap?.exists ? snap.data() : null;
+  const refreshToken = tokenRecord?.refresh_token;
 
   if (!refreshToken) {
     return NextResponse.json({ error: "No refresh token found. User must re-authenticate." }, { status: 401 });
   }
 
+  // ── Exchange with LinkedIn ───────────────────────────────────────────────
   const tokenRes = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -30,10 +51,8 @@ export async function POST(_req: NextRequest) {
   if (!tokenRes.ok) {
     const errText = await tokenRes.text();
     console.error("[linkedin/refresh] Token refresh failed:", errText);
-    // Clear stale cookies so the UI shows "disconnected"
-    cookieStore.delete("li_access_token");
-    cookieStore.delete("li_refresh_token");
-    cookieStore.delete("li_token_expiry");
+    // Clear stale Firestore token so UI shows "disconnected"
+    await adminDb.collection("tokens").doc(firebaseUid).update({ access_token: null, refresh_token: null }).catch(() => {});
     return NextResponse.json({ error: "Token refresh failed. Please reconnect LinkedIn." }, { status: 401 });
   }
 
@@ -43,22 +62,17 @@ export async function POST(_req: NextRequest) {
   const newRefreshToken: string | undefined = tokenData.refresh_token;
   const refreshExpiresIn: number = tokenData.refresh_token_expires_in || 31536000;
 
-  const cookieOpts = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    sameSite: "lax" as const,
+  // ── Save updated tokens to Firestore ────────────────────────────────────
+  const updates: Record<string, any> = {
+    access_token: newAccessToken,
+    expires_at: Date.now() + expiresIn * 1000,
   };
-
-  cookieStore.set("li_access_token", newAccessToken, { ...cookieOpts, maxAge: expiresIn });
-  cookieStore.set("li_token_expiry", String(Date.now() + expiresIn * 1000), {
-    httpOnly: false, maxAge: expiresIn, path: "/", sameSite: "lax",
-  });
-
   if (newRefreshToken) {
-    cookieStore.set("li_refresh_token", newRefreshToken, { ...cookieOpts, maxAge: refreshExpiresIn });
+    updates.refresh_token = newRefreshToken;
+    updates.refresh_expires_at = Date.now() + refreshExpiresIn * 1000;
   }
+  await adminDb.collection("tokens").doc(firebaseUid).update(updates);
 
-  console.log("[linkedin/refresh] Token refreshed successfully.");
+  console.log(`[linkedin/refresh] Token refreshed for ${firebaseUid}`);
   return NextResponse.json({ success: true, expiresIn });
 }

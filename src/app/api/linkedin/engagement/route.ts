@@ -8,7 +8,6 @@
  * Returns: { likeCount, commentCount }
  */
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { adminDb } from "@/lib/firebase-admin";
 
 const LI_VERSION = "202505";
@@ -52,23 +51,25 @@ async function fetchEngagement(
 }
 
 export async function POST(req: NextRequest) {
-  const { postUrns, userId } = await req.json() as { postUrns: string[]; userId?: string };
+  const { postUrns } = await req.json() as { postUrns: string[]; userId?: string };
   if (!Array.isArray(postUrns) || postUrns.length === 0) {
     return NextResponse.json({ results: [] });
   }
 
-  // Get access token — prefer per-user DB lookup over cookies
+  // Get access token — Firestore only (keyed by Firebase UID from auth header)
   let accessToken: string | null = null;
 
-  if (userId && adminDb) {
-    const tokenSnap = await adminDb.collection("tokens").doc(userId).get().catch(() => null);
-    const tokenRecord = tokenSnap?.exists ? tokenSnap.data() : null;
-    if (tokenRecord?.access_token) accessToken = tokenRecord.access_token;
-  }
-
-  if (!accessToken) {
-    const cookieStore = await cookies();
-    accessToken = cookieStore.get("li_access_token")?.value || null;
+  const authHeader = req.headers.get("authorization") || "";
+  if (authHeader.startsWith("Bearer ") && adminDb) {
+    try {
+      const { adminAuth } = await import("@/lib/firebase-admin");
+      if (adminAuth) {
+        const decoded = await adminAuth.verifyIdToken(authHeader.slice(7));
+        const tokenSnap = await adminDb.collection("tokens").doc(decoded.uid).get().catch(() => null);
+        const tokenRecord = tokenSnap?.exists ? tokenSnap.data() : null;
+        if (tokenRecord?.access_token) accessToken = tokenRecord.access_token;
+      }
+    } catch {}
   }
 
   if (!accessToken) {

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 
 const LI_VERSION = "202505"; // LinkedIn API version header (YYYYMM)
@@ -139,16 +138,6 @@ export async function POST(request: NextRequest) {
       }
     } catch (e) {
       console.warn("[linkedin/publish] Firebase token verify failed, falling back to cookies:", e);
-    }
-  }
-
-  // ── Step 2: Fall back to cookies (legacy / direct browser sessions) ───────
-  if (!accessToken || !userSub) {
-    const cookieStore = await cookies();
-    accessToken = cookieStore.get("li_access_token")?.value;
-    userSub     = cookieStore.get("li_user_sub")?.value;
-    if (accessToken) {
-      console.log("[linkedin/publish] Using cookie token (fallback)");
     }
   }
 
