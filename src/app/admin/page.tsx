@@ -1,48 +1,277 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Users, FileText, Calendar, Linkedin, Trash2, Ban, CheckCircle } from "lucide-react";
-import { useAuth } from "@/lib/context/auth";
+import { useEffect, useState, useCallback } from "react";
+import {
+  Users, FileText, Calendar, Linkedin, Trash2, Ban, CheckCircle,
+  RefreshCw, AlertTriangle, TrendingUp, Activity, X, ChevronRight,
+  Clock, Star, BarChart2, ShieldAlert, Copy, ExternalLink, Zap,
+} from "lucide-react";
 
-interface AdminUser {
-  uid: string;
-  email: string;
-  displayName: string;
-  createdAt: string;
-  lastSignIn: string;
-  disabled: boolean;
-  postCount: number;
-  linkedInConnected: boolean;
-}
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface AdminStats {
-  totalUsers: number;
-  totalPosts: number;
-  scheduledPosts: number;
-  publishedPosts: number;
-  linkedInConnected: number;
+  totalUsers: number; newUsersLast7d: number; newUsersLast30d: number;
+  activatedUsers: number; activationRate: number;
+  linkedInConnected: number; linkedInConnectionRate: number;
+  tokenExpiredCount: number; tokenExpiringIn24h: number; tokenExpiringIn48h: number;
+  totalPosts: number; drafts: number; scheduledPosts: number;
+  publishedPosts: number; failedPosts: number;
+  individualPosts: number; corporatePosts: number;
+  postsLast7d: number; postsLast30d: number;
+  totalLikes: number; totalComments: number;
+  failedPostsLast24h: number;
 }
 
+interface AdminUser {
+  uid: string; email: string; displayName: string; photoURL: string;
+  createdAt: string; lastSignIn: string; disabled: boolean;
+  postCount: number; draftCount: number; scheduledCount: number;
+  publishedCount: number; failedCount: number; lastPostAt: string | null;
+  segment: "individual" | "corporate" | "both" | "none";
+  totalLikes: number; totalComments: number;
+  linkedInConnected: boolean; tokenExpiresAt: number | null;
+  tokenExpired: boolean; linkedInName: string | null; linkedInEmail: string | null;
+}
+
+interface UserDetail {
+  profile: { name: string | null; industry: string | null; role: string | null; website: string | null };
+  recentPosts: Array<{
+    id: string; topic: string; status: string; segment: string;
+    createdAt: string | null; scheduledAt: string | null; publishedAt: string | null;
+    failedReason: string | null; likes: number; comments: number; linkedInPostId: string | null;
+  }>;
+  memory: { entryCount: number };
+  token: { connected: boolean; expiresAt: number | null; expired: boolean; linkedInName: string | null; linkedInEmail: string | null };
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const fmt = (n: number) => n.toLocaleString();
+
+function timeAgo(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const diff = Date.now() - new Date(iso).getTime();
+  const d = Math.floor(diff / 86400000);
+  if (d === 0) return "Today";
+  if (d === 1) return "Yesterday";
+  if (d < 30) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function lastActiveColor(iso: string | null | undefined): string {
+  if (!iso) return "text-slate-500";
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (d <= 7)  return "text-green-400";
+  if (d <= 14) return "text-amber-400";
+  return "text-red-400";
+}
+
+function statusBadge(status: string) {
+  const map: Record<string, string> = {
+    published: "bg-green-500/15 text-green-400 border-green-500/30",
+    scheduled:  "bg-blue-500/15  text-blue-400  border-blue-500/30",
+    draft:      "bg-slate-500/15 text-slate-400 border-slate-500/30",
+    failed:     "bg-red-500/15   text-red-400   border-red-500/30",
+    processing: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  };
+  return map[status] || "bg-slate-500/15 text-slate-400 border-slate-500/30";
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function KpiCard({ label, value, sub, icon, accent = "text-blue-400", alert = false }: {
+  label: string; value: string | number; sub?: string;
+  icon: React.ReactNode; accent?: string; alert?: boolean;
+}) {
+  return (
+    <div className={`rounded-xl p-5 border ${alert ? "bg-red-500/5 border-red-500/30" : "bg-slate-900 border-white/[0.07]"}`}>
+      <div className={`${alert ? "text-red-400" : accent} mb-3`}>{icon}</div>
+      <p className={`text-2xl font-bold ${alert ? "text-red-400" : "text-white"}`}>{fmt(Number(value))}</p>
+      <p className="text-slate-400 text-sm mt-0.5">{label}</p>
+      {sub && <p className="text-slate-500 text-xs mt-1">{sub}</p>}
+    </div>
+  );
+}
+
+function UserDetailDrawer({ user, onClose, adminFetch }: {
+  user: AdminUser; onClose: () => void; adminFetch: (url: string, opts?: RequestInit) => Promise<Response>;
+}) {
+  const [detail, setDetail] = useState<UserDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    adminFetch(`/api/admin/users/${user.uid}`)
+      .then(r => r.json())
+      .then(setDetail)
+      .finally(() => setLoading(false));
+  }, [user.uid]);
+
+  const copyUid = () => { navigator.clipboard.writeText(user.uid); };
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg bg-slate-950 border-l border-white/[0.07] h-full overflow-y-auto flex flex-col shadow-2xl">
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-white/[0.07] flex items-start justify-between sticky top-0 bg-slate-950 z-10">
+          <div>
+            <p className="font-semibold text-white text-lg">{user.displayName || user.email}</p>
+            <p className="text-slate-400 text-sm">{user.email}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors mt-0.5">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-[#0A66C2] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : !detail ? (
+          <div className="p-6 text-red-400 text-sm">Failed to load user detail.</div>
+        ) : (
+          <div className="p-6 space-y-6">
+            {/* Stats strip */}
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                { label: "Published", value: user.publishedCount, color: "text-green-400" },
+                { label: "Scheduled", value: user.scheduledCount, color: "text-blue-400" },
+                { label: "Drafts",    value: user.draftCount,     color: "text-slate-300" },
+                { label: "Failed",    value: user.failedCount,    color: user.failedCount > 0 ? "text-red-400" : "text-slate-500" },
+              ].map(s => (
+                <div key={s.label} className="bg-slate-900 rounded-lg p-3 text-center border border-white/[0.06]">
+                  <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
+                  <p className="text-slate-500 text-[11px] mt-0.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Profile */}
+            {(detail.profile.name || detail.profile.industry || detail.profile.role) && (
+              <div className="bg-slate-900 rounded-xl p-4 border border-white/[0.06]">
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Profile</p>
+                <div className="space-y-1.5 text-sm">
+                  {detail.profile.name     && <p className="text-white">{detail.profile.name}</p>}
+                  {detail.profile.role     && <p className="text-slate-400">{detail.profile.role}</p>}
+                  {detail.profile.industry && <p className="text-slate-500">{detail.profile.industry}</p>}
+                </div>
+              </div>
+            )}
+
+            {/* LinkedIn token */}
+            <div className="bg-slate-900 rounded-xl p-4 border border-white/[0.06]">
+              <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">LinkedIn</p>
+              {detail.token.connected ? (
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-400" />
+                    <span className="text-green-400 font-medium">Connected</span>
+                    {detail.token.expired && (
+                      <span className="bg-red-500/15 text-red-400 text-xs px-2 py-0.5 rounded-full border border-red-500/30">Expired</span>
+                    )}
+                  </div>
+                  {detail.token.linkedInName  && <p className="text-white">{detail.token.linkedInName}</p>}
+                  {detail.token.linkedInEmail && <p className="text-slate-400">{detail.token.linkedInEmail}</p>}
+                  {detail.token.expiresAt && (
+                    <p className="text-slate-500 text-xs">
+                      Token expires: {new Date(detail.token.expiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-slate-500 text-sm">Not connected to LinkedIn</p>
+              )}
+            </div>
+
+            {/* Memory */}
+            <div className="bg-slate-900 rounded-xl p-4 border border-white/[0.06] flex items-center justify-between">
+              <p className="text-xs text-slate-500 uppercase tracking-wider">Memory Entries</p>
+              <p className="text-white font-semibold">{detail.memory.entryCount}</p>
+            </div>
+
+            {/* Recent posts */}
+            <div>
+              <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Recent Posts</p>
+              {detail.recentPosts.length === 0 ? (
+                <p className="text-slate-500 text-sm">No posts yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {detail.recentPosts.map(p => (
+                    <div key={p.id} className="bg-slate-900 rounded-lg p-3 border border-white/[0.06]">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm text-slate-200 flex-1 leading-snug">{p.topic || "—"}</p>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full border whitespace-nowrap ${statusBadge(p.status)}`}>
+                          {p.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-500">
+                        <span>{p.publishedAt ? timeAgo(p.publishedAt) : p.scheduledAt ? `Sched: ${timeAgo(p.scheduledAt)}` : timeAgo(p.createdAt)}</span>
+                        {p.likes > 0 && <span>👍 {p.likes}</span>}
+                        {p.comments > 0 && <span>💬 {p.comments}</span>}
+                        {p.linkedInPostId && (
+                          <a
+                            href={`https://www.linkedin.com/feed/update/${p.linkedInPostId}/`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="text-[#0A66C2] hover:underline flex items-center gap-0.5"
+                          >
+                            View <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        )}
+                      </div>
+                      {p.failedReason && (
+                        <p className="text-red-400 text-[11px] mt-1.5 bg-red-500/5 rounded px-2 py-1 border border-red-500/15">
+                          ✗ {p.failedReason}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer actions */}
+            <div className="pt-2 border-t border-white/[0.07] flex flex-wrap gap-2">
+              <button
+                onClick={copyUid}
+                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white border border-white/[0.08] rounded-lg px-3 py-2 transition-colors"
+              >
+                <Copy className="w-3 h-3" /> Copy UID
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
+type Tab = "overview" | "users" | "system";
+type SortKey = "lastSignIn" | "postCount" | "failedCount" | "createdAt";
+
 export default function AdminPage() {
-  const { user } = useAuth();
-  const [users, setUsers]       = useState<AdminUser[]>([]);
-  const [stats, setStats]       = useState<AdminStats | null>(null);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState("");
-  const [actionId, setActionId] = useState<string | null>(null);
+  const [tab,        setTab]        = useState<Tab>("overview");
+  const [users,      setUsers]      = useState<AdminUser[]>([]);
+  const [stats,      setStats]      = useState<AdminStats | null>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState("");
+  const [actionId,   setActionId]   = useState<string | null>(null);
+  const [search,     setSearch]     = useState("");
+  const [sortKey,    setSortKey]    = useState<SortKey>("lastSignIn");
+  const [detailUser, setDetailUser] = useState<AdminUser | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  useEffect(() => { loadData(); }, []);
-
-  async function adminFetch(url: string, options: RequestInit = {}) {
+  const adminFetch = useCallback(async (url: string, options: RequestInit = {}) => {
     const { auth: firebaseAuth } = await import("@/lib/firebase");
     const token = await firebaseAuth?.currentUser?.getIdToken();
     return fetch(url, {
       ...options,
       headers: { ...(options.headers || {}), Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     });
-  }
+  }, []);
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -54,154 +283,461 @@ export default function AdminPage() {
       const [usersData, statsData] = await Promise.all([usersRes.json(), statsRes.json()]);
       setUsers(usersData.users || []);
       setStats(statsData);
+      setLastRefresh(new Date());
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }
+  }, [adminFetch]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   async function toggleDisable(uid: string, disabled: boolean) {
     setActionId(uid);
     try {
-      await adminFetch("/api/admin/users", {
-        method: "PATCH",
-        body: JSON.stringify({ uid, disabled: !disabled }),
-      });
+      await adminFetch("/api/admin/users", { method: "PATCH", body: JSON.stringify({ uid, disabled: !disabled }) });
       setUsers(prev => prev.map(u => u.uid === uid ? { ...u, disabled: !disabled } : u));
-    } finally {
-      setActionId(null);
-    }
+    } finally { setActionId(null); }
   }
 
   async function deleteUser(uid: string, email: string) {
-    if (!confirm(`Permanently delete user ${email}? This cannot be undone.`)) return;
+    if (!confirm(`Permanently delete ${email} and all their data? This cannot be undone.`)) return;
     setActionId(uid);
     try {
-      await adminFetch("/api/admin/users", {
-        method: "DELETE",
-        body: JSON.stringify({ uid }),
-      });
+      await adminFetch("/api/admin/users", { method: "DELETE", body: JSON.stringify({ uid }) });
       setUsers(prev => prev.filter(u => u.uid !== uid));
-    } finally {
-      setActionId(null);
-    }
+      if (detailUser?.uid === uid) setDetailUser(null);
+    } finally { setActionId(null); }
   }
 
-  const statCards = stats ? [
-    { label: "Total Users",        value: stats.totalUsers,        icon: <Users className="w-5 h-5" />,    color: "text-blue-400" },
-    { label: "Total Posts",        value: stats.totalPosts,        icon: <FileText className="w-5 h-5" />, color: "text-purple-400" },
-    { label: "Scheduled",          value: stats.scheduledPosts,    icon: <Calendar className="w-5 h-5" />, color: "text-amber-400" },
-    { label: "LinkedIn Connected", value: stats.linkedInConnected, icon: <Linkedin className="w-5 h-5" />, color: "text-green-400" },
-  ] : [];
+  // ── Filtered + sorted user list ──
+  const filteredUsers = users
+    .filter(u => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return u.email.toLowerCase().includes(q) || u.displayName.toLowerCase().includes(q);
+    })
+    .sort((a, b) => {
+      if (sortKey === "lastSignIn")  return new Date(b.lastSignIn || 0).getTime() - new Date(a.lastSignIn || 0).getTime();
+      if (sortKey === "postCount")   return b.postCount   - a.postCount;
+      if (sortKey === "failedCount") return b.failedCount - a.failedCount;
+      if (sortKey === "createdAt")   return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      return 0;
+    });
+
+  const TABS: Array<{ key: Tab; label: string }> = [
+    { key: "overview", label: "Overview" },
+    { key: "users",    label: `Users (${users.length})` },
+    { key: "system",   label: "System" },
+  ];
+
+  // ── System tab data ──
+  const failedUsers   = users.filter(u => u.failedCount > 0).sort((a, b) => b.failedCount - a.failedCount);
+  const expiringUsers = users.filter(u => {
+    if (!u.tokenExpiresAt) return false;
+    return u.tokenExpiresAt < Date.now() + 48 * 3600_000;
+  }).sort((a, b) => (a.tokenExpiresAt ?? 0) - (b.tokenExpiresAt ?? 0));
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-white mb-1">Admin Dashboard</h1>
-        <p className="text-slate-400 text-sm">Manage beta users and monitor platform activity.</p>
+    <div className="space-y-6">
+      {/* Page header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+          <p className="text-slate-400 text-sm mt-0.5">
+            {lastRefresh ? `Last updated ${lastRefresh.toLocaleTimeString()}` : "Loading…"}
+          </p>
+        </div>
+        <button
+          onClick={loadData}
+          disabled={loading}
+          className="flex items-center gap-2 text-sm text-slate-400 hover:text-white border border-white/[0.08] rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </button>
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-5 py-3 text-red-400 text-sm">
-          {error}
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-5 py-3 text-red-400 text-sm flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" /> {error}
         </div>
       )}
 
-      {/* Stats */}
-      {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {statCards.map(({ label, value, icon, color }) => (
-            <div key={label} className="bg-slate-900 border border-white/[0.07] rounded-xl p-5">
-              <div className={`${color} mb-3`}>{icon}</div>
-              <p className="text-2xl font-bold text-white">{value}</p>
-              <p className="text-slate-400 text-sm mt-0.5">{label}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Users table */}
-      <div className="bg-slate-900 border border-white/[0.07] rounded-xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/[0.07] flex items-center justify-between">
-          <h2 className="font-semibold text-white">Beta Users</h2>
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-white/[0.07]">
+        {TABS.map(t => (
           <button
-            onClick={loadData}
-            className="text-slate-400 hover:text-white text-sm transition-colors"
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              tab === t.key
+                ? "border-[#0A66C2] text-white"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
           >
-            Refresh
+            {t.label}
           </button>
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="w-6 h-6 border-2 border-[#0A66C2] border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : users.length === 0 ? (
-          <div className="py-16 text-center text-slate-500 text-sm">No users yet.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/[0.07] text-slate-400 text-left">
-                  <th className="px-6 py-3 font-medium">User</th>
-                  <th className="px-6 py-3 font-medium">Joined</th>
-                  <th className="px-6 py-3 font-medium">Posts</th>
-                  <th className="px-6 py-3 font-medium">LinkedIn</th>
-                  <th className="px-6 py-3 font-medium">Status</th>
-                  <th className="px-6 py-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.04]">
-                {users.map(u => (
-                  <tr key={u.uid} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="px-6 py-4">
-                      <p className="text-white font-medium">{u.displayName || "—"}</p>
-                      <p className="text-slate-500 text-xs mt-0.5">{u.email}</p>
-                    </td>
-                    <td className="px-6 py-4 text-slate-400">
-                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}
-                    </td>
-                    <td className="px-6 py-4 text-slate-300">{u.postCount}</td>
-                    <td className="px-6 py-4">
-                      {u.linkedInConnected
-                        ? <span className="text-green-400 text-xs font-medium">Connected</span>
-                        : <span className="text-slate-500 text-xs">Not connected</span>
-                      }
-                    </td>
-                    <td className="px-6 py-4">
-                      {u.disabled
-                        ? <span className="bg-red-500/10 text-red-400 text-xs px-2 py-0.5 rounded-full border border-red-500/20">Disabled</span>
-                        : <span className="bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-500/20">Active</span>
-                      }
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => toggleDisable(u.uid, u.disabled)}
-                          disabled={actionId === u.uid}
-                          title={u.disabled ? "Enable user" : "Disable user"}
-                          className="text-slate-400 hover:text-amber-400 transition-colors disabled:opacity-40"
-                        >
-                          {u.disabled ? <CheckCircle className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
-                        </button>
-                        <button
-                          onClick={() => deleteUser(u.uid, u.email)}
-                          disabled={actionId === u.uid}
-                          title="Delete user"
-                          className="text-slate-400 hover:text-red-400 transition-colors disabled:opacity-40"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        ))}
       </div>
+
+      {/* ── OVERVIEW TAB ── */}
+      {tab === "overview" && stats && (
+        <div className="space-y-6">
+          {/* Alert banner — only shown when there's something actionable */}
+          {(stats.failedPostsLast24h > 0 || stats.tokenExpiringIn48h > 0) && (
+            <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl px-5 py-4 flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1 text-sm">
+                {stats.failedPostsLast24h > 0 && (
+                  <p className="text-amber-300">
+                    <strong>{stats.failedPostsLast24h}</strong> post{stats.failedPostsLast24h > 1 ? "s" : ""} failed in the last 24h — check System tab.
+                  </p>
+                )}
+                {stats.tokenExpiringIn48h > 0 && (
+                  <p className="text-amber-300">
+                    <strong>{stats.tokenExpiringIn48h}</strong> LinkedIn token{stats.tokenExpiringIn48h > 1 ? "s" : ""} expiring within 48h — those users' scheduled posts will fail.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Row 1 — Growth & Activation */}
+          <div>
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Growth & Activation</p>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <KpiCard label="Total Users"     value={stats.totalUsers}     icon={<Users className="w-5 h-5" />}      accent="text-blue-400"   sub={`+${stats.newUsersLast7d} this week`} />
+              <KpiCard label="Activated Users" value={stats.activatedUsers} icon={<Zap className="w-5 h-5" />}        accent="text-purple-400" sub={`${stats.activationRate}% activation rate`} />
+              <KpiCard label="LinkedIn Connected" value={stats.linkedInConnected} icon={<Linkedin className="w-5 h-5" />} accent="text-green-400" sub={`${stats.linkedInConnectionRate}% of users`} />
+              <KpiCard label="Posts This Week" value={stats.postsLast7d}    icon={<TrendingUp className="w-5 h-5" />} accent="text-cyan-400"   sub={`${stats.postsLast30d} this month`} />
+            </div>
+          </div>
+
+          {/* Row 2 — Content Health */}
+          <div>
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Content Pipeline</p>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <KpiCard label="Total Posts"    value={stats.totalPosts}     icon={<FileText className="w-5 h-5" />}  accent="text-slate-300" />
+              <KpiCard label="Scheduled"      value={stats.scheduledPosts} icon={<Calendar className="w-5 h-5" />} accent="text-blue-400"   sub="in the queue" />
+              <KpiCard label="Published"      value={stats.publishedPosts} icon={<CheckCircle className="w-5 h-5" />} accent="text-green-400" />
+              <KpiCard label="Failed Posts"   value={stats.failedPosts}    icon={<AlertTriangle className="w-5 h-5" />} accent="text-red-400" alert={stats.failedPosts > 0} />
+            </div>
+          </div>
+
+          {/* Row 3 — Engagement & Segments */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Engagement */}
+            <div className="bg-slate-900 border border-white/[0.07] rounded-xl p-5">
+              <p className="text-xs text-slate-500 uppercase tracking-wider mb-4">Total Engagement</p>
+              <div className="flex items-center gap-8">
+                <div>
+                  <p className="text-3xl font-bold text-white">{fmt(stats.totalLikes)}</p>
+                  <p className="text-slate-400 text-sm mt-0.5">👍 Likes</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-white">{fmt(stats.totalComments)}</p>
+                  <p className="text-slate-400 text-sm mt-0.5">💬 Comments</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-white">
+                    {stats.publishedPosts > 0 ? ((stats.totalLikes + stats.totalComments) / stats.publishedPosts).toFixed(1) : "0"}
+                  </p>
+                  <p className="text-slate-400 text-sm mt-0.5">Avg per post</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Segment split */}
+            <div className="bg-slate-900 border border-white/[0.07] rounded-xl p-5">
+              <p className="text-xs text-slate-500 uppercase tracking-wider mb-4">Segment Split</p>
+              {stats.totalPosts === 0 ? (
+                <p className="text-slate-500 text-sm">No posts yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {[
+                    { label: "Individual", count: stats.individualPosts, color: "bg-blue-500" },
+                    { label: "Corporate",  count: stats.corporatePosts,  color: "bg-purple-500" },
+                  ].map(s => (
+                    <div key={s.label}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-slate-300">{s.label}</span>
+                        <span className="text-slate-400">{fmt(s.count)} posts ({stats.totalPosts > 0 ? Math.round(s.count / stats.totalPosts * 100) : 0}%)</span>
+                      </div>
+                      <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                        <div className={`h-full ${s.color} rounded-full transition-all`} style={{ width: `${stats.totalPosts > 0 ? s.count / stats.totalPosts * 100 : 0}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* New users this month */}
+          <div className="bg-slate-900 border border-white/[0.07] rounded-xl p-5">
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Growth</p>
+            <div className="flex items-center gap-8 text-sm">
+              <div>
+                <p className="text-2xl font-bold text-white">+{stats.newUsersLast7d}</p>
+                <p className="text-slate-400 mt-0.5">New users last 7d</p>
+              </div>
+              <div className="w-px h-10 bg-white/[0.07]" />
+              <div>
+                <p className="text-2xl font-bold text-white">+{stats.newUsersLast30d}</p>
+                <p className="text-slate-400 mt-0.5">New users last 30d</p>
+              </div>
+              <div className="w-px h-10 bg-white/[0.07]" />
+              <div>
+                <p className="text-2xl font-bold text-white">{stats.tokenExpiredCount}</p>
+                <p className="text-slate-400 mt-0.5">Expired LinkedIn tokens</p>
+              </div>
+              <div className="w-px h-10 bg-white/[0.07]" />
+              <div>
+                <p className="text-2xl font-bold text-white">{stats.drafts}</p>
+                <p className="text-slate-400 mt-0.5">Saved drafts</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── USERS TAB ── */}
+      {tab === "users" && (
+        <div className="space-y-4">
+          {/* Controls */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <input
+              type="text"
+              placeholder="Search by name or email…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="bg-slate-900 border border-white/[0.07] rounded-lg px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#0A66C2]/60 w-64"
+            />
+            <select
+              value={sortKey}
+              onChange={e => setSortKey(e.target.value as SortKey)}
+              className="bg-slate-900 border border-white/[0.07] rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-[#0A66C2]/60"
+            >
+              <option value="lastSignIn">Sort: Last Active</option>
+              <option value="postCount">Sort: Post Count</option>
+              <option value="failedCount">Sort: Failed Posts</option>
+              <option value="createdAt">Sort: Joined</option>
+            </select>
+            <p className="text-slate-500 text-sm ml-auto">{filteredUsers.length} users</p>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="w-6 h-6 border-2 border-[#0A66C2] border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="bg-slate-900 border border-white/[0.07] rounded-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/[0.07] text-slate-400 text-left text-xs uppercase tracking-wider">
+                      <th className="px-5 py-3 font-medium">User</th>
+                      <th className="px-5 py-3 font-medium">Joined</th>
+                      <th className="px-5 py-3 font-medium">Last Active</th>
+                      <th className="px-5 py-3 font-medium">Posts</th>
+                      <th className="px-5 py-3 font-medium">Engagement</th>
+                      <th className="px-5 py-3 font-medium">LinkedIn</th>
+                      <th className="px-5 py-3 font-medium">Status</th>
+                      <th className="px-5 py-3 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04]">
+                    {filteredUsers.map(u => (
+                      <tr
+                        key={u.uid}
+                        className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+                        onClick={() => setDetailUser(u)}
+                      >
+                        <td className="px-5 py-4">
+                          <p className="text-white font-medium">{u.displayName || "—"}</p>
+                          <p className="text-slate-500 text-xs mt-0.5">{u.email}</p>
+                        </td>
+                        <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">
+                          {u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" }) : "—"}
+                        </td>
+                        <td className={`px-5 py-4 text-xs font-medium whitespace-nowrap ${lastActiveColor(u.lastSignIn)}`}>
+                          {timeAgo(u.lastSignIn)}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {u.publishedCount > 0 && <span className="bg-green-500/15 text-green-400 text-[10px] px-1.5 py-0.5 rounded border border-green-500/25">{u.publishedCount} pub</span>}
+                            {u.scheduledCount > 0 && <span className="bg-blue-500/15 text-blue-400 text-[10px] px-1.5 py-0.5 rounded border border-blue-500/25">{u.scheduledCount} sched</span>}
+                            {u.draftCount > 0     && <span className="bg-slate-500/15 text-slate-400 text-[10px] px-1.5 py-0.5 rounded border border-slate-500/25">{u.draftCount} draft</span>}
+                            {u.failedCount > 0    && <span className="bg-red-500/15 text-red-400 text-[10px] px-1.5 py-0.5 rounded border border-red-500/25">{u.failedCount} fail</span>}
+                            {u.postCount === 0    && <span className="text-slate-600 text-xs">—</span>}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-xs text-slate-400 whitespace-nowrap">
+                          {u.totalLikes > 0 || u.totalComments > 0
+                            ? <span>👍 {u.totalLikes} · 💬 {u.totalComments}</span>
+                            : <span className="text-slate-600">—</span>}
+                        </td>
+                        <td className="px-5 py-4">
+                          {u.linkedInConnected ? (
+                            u.tokenExpired
+                              ? <span className="bg-red-500/10 text-red-400 text-xs px-2 py-0.5 rounded-full border border-red-500/20">Expired</span>
+                              : <span className="bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-500/20">Connected</span>
+                          ) : (
+                            <span className="text-slate-600 text-xs">Not connected</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          {u.disabled
+                            ? <span className="bg-red-500/10 text-red-400 text-xs px-2 py-0.5 rounded-full border border-red-500/20">Disabled</span>
+                            : <span className="bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-500/20">Active</span>}
+                        </td>
+                        <td className="px-5 py-4" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => setDetailUser(u)} title="View details" className="text-slate-400 hover:text-[#0A66C2] transition-colors">
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => toggleDisable(u.uid, u.disabled)} disabled={actionId === u.uid} title={u.disabled ? "Enable" : "Disable"} className="text-slate-400 hover:text-amber-400 transition-colors disabled:opacity-40">
+                              {u.disabled ? <CheckCircle className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                            </button>
+                            <button onClick={() => deleteUser(u.uid, u.email)} disabled={actionId === u.uid} title="Delete user" className="text-slate-400 hover:text-red-400 transition-colors disabled:opacity-40">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredUsers.length === 0 && (
+                      <tr><td colSpan={8} className="px-5 py-12 text-center text-slate-500 text-sm">No users found.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── SYSTEM TAB ── */}
+      {tab === "system" && (
+        <div className="space-y-6">
+          {/* Users with failed posts */}
+          <div className="bg-slate-900 border border-white/[0.07] rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/[0.07] flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-400" />
+              <h2 className="font-semibold text-white text-sm">Users with Failed Posts</h2>
+              {failedUsers.length > 0 && (
+                <span className="bg-red-500/15 text-red-400 text-xs px-2 py-0.5 rounded-full border border-red-500/30 ml-auto">{failedUsers.length} affected</span>
+              )}
+            </div>
+            {failedUsers.length === 0 ? (
+              <div className="py-10 text-center text-slate-500 text-sm">No failed posts. System is healthy.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/[0.05] text-slate-400 text-left text-xs uppercase tracking-wider">
+                    <th className="px-6 py-3 font-medium">User</th>
+                    <th className="px-6 py-3 font-medium">Failed</th>
+                    <th className="px-6 py-3 font-medium">Total Posts</th>
+                    <th className="px-6 py-3 font-medium">LinkedIn</th>
+                    <th className="px-6 py-3 font-medium" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {failedUsers.map(u => (
+                    <tr key={u.uid} className="hover:bg-white/[0.02]">
+                      <td className="px-6 py-3">
+                        <p className="text-white">{u.displayName || u.email}</p>
+                        <p className="text-slate-500 text-xs">{u.email}</p>
+                      </td>
+                      <td className="px-6 py-3"><span className="text-red-400 font-semibold">{u.failedCount}</span></td>
+                      <td className="px-6 py-3 text-slate-400">{u.postCount}</td>
+                      <td className="px-6 py-3">
+                        {u.linkedInConnected
+                          ? u.tokenExpired
+                            ? <span className="text-red-400 text-xs">Token expired</span>
+                            : <span className="text-green-400 text-xs">Connected</span>
+                          : <span className="text-slate-500 text-xs">Not connected</span>}
+                      </td>
+                      <td className="px-6 py-3">
+                        <button onClick={() => setDetailUser(u)} className="text-[#0A66C2] text-xs hover:underline">View →</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Expiring tokens */}
+          <div className="bg-slate-900 border border-white/[0.07] rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/[0.07] flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-400" />
+              <h2 className="font-semibold text-white text-sm">Expiring / Expired LinkedIn Tokens</h2>
+              {expiringUsers.length > 0 && (
+                <span className="bg-amber-500/15 text-amber-400 text-xs px-2 py-0.5 rounded-full border border-amber-500/30 ml-auto">{expiringUsers.length} users</span>
+              )}
+            </div>
+            {expiringUsers.length === 0 ? (
+              <div className="py-10 text-center text-slate-500 text-sm">No expiring tokens in the next 48h.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/[0.05] text-slate-400 text-left text-xs uppercase tracking-wider">
+                    <th className="px-6 py-3 font-medium">User</th>
+                    <th className="px-6 py-3 font-medium">LinkedIn Name</th>
+                    <th className="px-6 py-3 font-medium">Expires</th>
+                    <th className="px-6 py-3 font-medium">Scheduled Posts</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {expiringUsers.map(u => (
+                    <tr key={u.uid} className="hover:bg-white/[0.02]">
+                      <td className="px-6 py-3">
+                        <p className="text-white">{u.displayName || u.email}</p>
+                        <p className="text-slate-500 text-xs">{u.email}</p>
+                      </td>
+                      <td className="px-6 py-3 text-slate-400">{u.linkedInName || "—"}</td>
+                      <td className="px-6 py-3">
+                        <span className={u.tokenExpired ? "text-red-400" : "text-amber-400"}>
+                          {u.tokenExpiresAt ? new Date(u.tokenExpiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                          {u.tokenExpired && " (expired)"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3 text-slate-400">{u.scheduledCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Cron info */}
+          <div className="bg-slate-900 border border-white/[0.07] rounded-xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="w-4 h-4 text-green-400" />
+              <h2 className="font-semibold text-white text-sm">Cron Scheduler</h2>
+              <span className="bg-green-500/15 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-500/30 ml-auto">Active</span>
+            </div>
+            <div className="space-y-2 text-sm text-slate-400">
+              <p>Provider: <span className="text-white">cron-job.org</span> — runs every 1 minute</p>
+              <p>Endpoint: <span className="text-slate-300">/api/cron/publish-due</span></p>
+              <p>Auth: <span className="text-slate-300">CRON_SECRET header (Bearer token)</span></p>
+              <p className="text-slate-500 text-xs mt-3">The cron publishes all scheduled posts whose scheduled_at has passed. It handles token refresh automatically and retries are manual (retry button in History).</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User detail drawer */}
+      {detailUser && (
+        <UserDetailDrawer
+          user={detailUser}
+          onClose={() => setDetailUser(null)}
+          adminFetch={adminFetch}
+        />
+      )}
     </div>
   );
 }

@@ -45,7 +45,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ← Back to dashboard
         </a>
       </header>
-      <main className="max-w-6xl mx-auto px-8 py-8">{children}</main>
+      <main className="max-w-7xl mx-auto px-8 py-8">{children}</main>
     </div>
   );
 }
