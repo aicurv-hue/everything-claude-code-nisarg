@@ -28,19 +28,10 @@ export async function GET(req: NextRequest) {
     const fortyEightHoursFromNow = now + 2 * 86400_000;
 
     // ── Parallel reads — all collection-level, no per-user loops ─────────────
-    const [
-      usersResult,
-      postsSnap,
-      tokensSnap,
-      failedRecentSnap,
-    ] = await Promise.all([
+    const [usersResult, postsSnap, tokensSnap] = await Promise.all([
       adminAuth.listUsers(1000),
       adminDb.collection("posts").get(),
       adminDb.collection("tokens").get(),
-      adminDb.collection("posts")
-        .where("status", "==", "failed")
-        .where("updated_at", ">=", new Date(twentyFourHoursAgo))
-        .get(),
     ]);
 
     // ── User growth ───────────────────────────────────────────────────────────
@@ -55,7 +46,12 @@ export async function GET(req: NextRequest) {
     const drafts          = allPosts.filter(p => p.status === "draft").length;
     const scheduledPosts  = allPosts.filter(p => p.status === "scheduled").length;
     const publishedPosts  = allPosts.filter(p => p.status === "published").length;
-    const failedPosts     = allPosts.filter(p => p.status === "failed").length;
+    const failedPosts        = allPosts.filter(p => p.status === "failed").length;
+    const failedPostsLast24h = allPosts.filter(p => {
+      if (p.status !== "failed") return false;
+      const secs = p.updated_at?.seconds ?? p.updated_at?._seconds ?? p.created_at?.seconds ?? 0;
+      return secs * 1000 >= twentyFourHoursAgo;
+    }).length;
     const individualPosts = allPosts.filter(p => p.segment === "individual").length;
     const corporatePosts  = allPosts.filter(p => p.segment === "corporate").length;
 
@@ -88,7 +84,6 @@ export async function GET(req: NextRequest) {
     const tokenExpiredCount       = allTokens.filter(t => t.expires_at && t.expires_at < now).length;
     const tokenExpiringIn24h      = allTokens.filter(t => t.expires_at && t.expires_at >= now && t.expires_at < twentyFourHoursFromNow).length;
     const tokenExpiringIn48h      = allTokens.filter(t => t.expires_at && t.expires_at >= now && t.expires_at < fortyEightHoursFromNow).length;
-    const failedPostsLast24h      = failedRecentSnap.size;
 
     return NextResponse.json({
       // Growth
