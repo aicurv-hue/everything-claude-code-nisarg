@@ -153,8 +153,6 @@ export default function ContentCalendar({ posts: allPosts, segment, onPostClick 
               if (!day) return <div key={`empty-${i}`} className="bg-slate-50/50 min-h-[100px]" />;
               const isToday = isSameDay(day, today);
               const dayPosts = postsOnDay(day);
-              const visible = dayPosts.slice(0, 2);
-              const overflow = dayPosts.length - 2;
 
               return (
                 <div
@@ -170,9 +168,9 @@ export default function ContentCalendar({ posts: allPosts, segment, onPostClick 
                     </span>
                   </div>
 
-                  {/* Post pills */}
-                  <div className="space-y-1">
-                    {visible.map((p) => (
+                  {/* Post pills — scrollable when more than 2 */}
+                  <div className={`space-y-1 ${dayPosts.length > 2 ? "max-h-[88px] overflow-y-auto pr-0.5" : ""}`}>
+                    {dayPosts.map((p) => (
                       <button
                         key={p.id}
                         onClick={() => onPostClick(p)}
@@ -182,14 +180,6 @@ export default function ContentCalendar({ posts: allPosts, segment, onPostClick 
                         {p.topic || p.content.slice(0, 25)}
                       </button>
                     ))}
-                    {overflow > 0 && (
-                      <button
-                        onClick={() => onPostClick(dayPosts[2])}
-                        className="text-[10px] text-slate-400 hover:text-slate-600 pl-1"
-                      >
-                        +{overflow} more
-                      </button>
-                    )}
                   </div>
                 </div>
               );
