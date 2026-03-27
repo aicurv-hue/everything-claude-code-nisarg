@@ -290,9 +290,15 @@ export default function HistoryPage() {
                           {post.topic}
                         </span>
                         {post.linkedin_post_id && (
-                          <span className="flex items-center gap-1 text-[11px] text-[#0A66C2] font-medium mt-0.5">
-                            <Linkedin className="w-2.5 h-2.5" /> Live on LinkedIn
-                          </span>
+                          <a
+                            href={`https://www.linkedin.com/feed/update/${post.linkedin_post_id}/`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-1 text-[11px] text-[#0A66C2] font-medium mt-0.5 hover:underline"
+                          >
+                            <Linkedin className="w-2.5 h-2.5" /> Live on LinkedIn ↗
+                          </a>
                         )}
                       </div>
                     </div>
