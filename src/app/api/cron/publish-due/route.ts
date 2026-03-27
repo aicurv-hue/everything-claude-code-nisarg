@@ -24,7 +24,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 const LI_VERSION  = "202505";
 const TIMEOUT_MS  = 20_000;
-const CRON_SECRET = process.env.CRON_SECRET; // optional guard
+const CRON_SECRET = process.env.CRON_SECRET; // required — set this in Vercel env vars
 
 // In-memory lock — prevents duplicate publishes when two cron calls overlap
 // (works in local dev where there is one server process)
@@ -156,13 +156,12 @@ async function postToLinkedIn(
 }
 
 export async function POST(req: NextRequest) {
-  // Auth: accept CRON_SECRET, Vercel cron header, or any valid Firebase ID token
-  // Falls through (open) if none of the above are configured — safe because
-  // this endpoint only processes posts already in Firestore, never creates data.
-  if (CRON_SECRET) {
+  // Auth: always require CRON_SECRET or Vercel cron header
+  // A valid Firebase ID token is also accepted for manual dashboard triggers
+  {
     const authHeader = req.headers.get("authorization") || "";
     const isVercelCron = req.headers.get("x-vercel-cron") === "1";
-    const isCronSecret = authHeader === `Bearer ${CRON_SECRET}`;
+    const isCronSecret = !!CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`;
     const isFirebaseUser = !isCronSecret && !isVercelCron && adminAuth && authHeader.startsWith("Bearer ")
       ? await adminAuth.verifyIdToken(authHeader.slice(7)).then(() => true).catch(() => false)
       : false;
@@ -321,58 +320,65 @@ export async function POST(req: NextRequest) {
   const published = results.filter(r => r.status === "published").length;
   const failed    = results.filter(r => r.status === "failed").length;
 
-  // ── Hourly engagement sync across all users ────────────────────────────────
+  // ── Hourly engagement sync — direct LinkedIn API calls using per-user tokens ──
   try {
-    const oneHourAgo    = Date.now() - 60 * 60 * 1000;
-    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-
-    let allPublished: Post[] = [];
     if (adminDb) {
+      const oneHourAgo    = Date.now() - 60 * 60 * 1000;
+      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
       const snap = await adminDb.collection("posts").where("status", "==", "published").get();
-      allPublished = snap.docs.map(d => ({ id: d.id, ...d.data() } as Post));
-    }
+      const allPublished: Post[] = snap.docs.map(d => ({ id: d.id, ...d.data() } as Post));
 
-    const toSync = allPublished.filter(p => {
-      if (!p.linkedin_post_id) return false;
-      const pubMs = (p.published_at?.seconds || 0) * 1000;
-      if (pubMs < thirtyDaysAgo) return false;
-      return !p.engagement_synced_at || p.engagement_synced_at < oneHourAgo;
-    }).slice(0, 20);
+      const toSync = allPublished.filter(p => {
+        if (!p.linkedin_post_id) return false;
+        const pubMs = (p.published_at?.seconds || 0) * 1000;
+        if (pubMs < thirtyDaysAgo) return false;
+        return !p.engagement_synced_at || p.engagement_synced_at < oneHourAgo;
+      }).slice(0, 20);
 
-    if (toSync.length > 0) {
-      console.log(`[cron] Syncing engagement for ${toSync.length} post(s)…`);
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+      if (toSync.length > 0) {
+        console.log(`[cron] Syncing engagement for ${toSync.length} post(s)…`);
 
-      // Group posts by user so each engagement call uses the correct token
-      const byUser = new Map<string, Post[]>();
-      for (const p of toSync) {
-        const uid = p.user_id || "unknown";
-        if (!byUser.has(uid)) byUser.set(uid, []);
-        byUser.get(uid)!.push(p);
-      }
+        // Group by user, look up each user's token from Firestore directly
+        const byUser = new Map<string, Post[]>();
+        for (const p of toSync) {
+          const uid = p.user_id;
+          if (!uid) continue;
+          if (!byUser.has(uid)) byUser.set(uid, []);
+          byUser.get(uid)!.push(p);
+        }
 
-      for (const [uid, userPosts] of byUser) {
-        const postUrns = userPosts.map(p => p.linkedin_post_id!);
-        const engRes = await fetch(`${appUrl}/api/linkedin/engagement`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ postUrns, userId: uid }),
-        }).catch(() => null);
+        for (const [uid, userPosts] of byUser) {
+          const tokenSnap = await adminDb.collection("tokens").doc(uid).get().catch(() => null);
+          const accessToken: string | undefined = tokenSnap?.exists ? tokenSnap.data()?.access_token : undefined;
+          if (!accessToken) continue;
 
-        if (engRes?.ok) {
-          const { results: engResults } = await engRes.json();
-          for (const { urn, likes, comments } of engResults) {
-            const post = userPosts.find(p => p.linkedin_post_id === urn);
-            if (post?.id && adminDb) {
-              await adminDb.collection("posts").doc(post.id).update({
+          for (const post of userPosts) {
+            try {
+              const encoded = encodeURIComponent(post.linkedin_post_id!);
+              const { signal, clear } = withTimeout(10_000);
+              const res = await fetch(`https://api.linkedin.com/v2/socialActions/${encoded}`, {
+                signal,
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  "LinkedIn-Version": LI_VERSION,
+                  "X-Restli-Protocol-Version": "2.0.0",
+                },
+              });
+              clear();
+              if (!res.ok) continue;
+              const data = await res.json();
+              const likes    = data.likesSummary?.totalLikes    ?? data.likeCount    ?? 0;
+              const comments = data.commentsSummary?.totalFirstLevelComments ?? data.commentCount ?? 0;
+              await adminDb.collection("posts").doc(post.id!).update({
                 likes_count: likes,
                 comments_count: comments,
                 engagement_synced_at: Date.now(),
                 updated_at: FieldValue.serverTimestamp(),
               }).catch(() => {});
-            }
+            } catch { /* non-critical */ }
           }
-          console.log(`[cron] Engagement synced for user ${uid}: ${engResults.length} post(s).`);
+          console.log(`[cron] Engagement synced for user ${uid}: ${userPosts.length} post(s).`);
         }
       }
     }

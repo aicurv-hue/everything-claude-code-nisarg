@@ -1,67 +1,91 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-
-const TOKEN_REFRESH_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // Refresh if < 7 days remaining
+import { adminDb, adminAuth } from "@/lib/firebase-admin";
 
 /**
  * GET /api/linkedin/status
  *
- * Returns LinkedIn connection status.
- * If the access_token is near expiry and a refresh_token exists,
- * silently refreshes it so the user never has to re-authenticate.
+ * Returns LinkedIn connection status for the AUTHENTICATED user only.
+ * Reads from Firestore (tokens/{firebaseUid}) — never from cookies.
+ *
+ * Auto-refreshes the token if near expiry and updates Firestore.
+ * Node.js runtime required (Firebase Admin SDK).
  */
-export async function GET(req: NextRequest) {
-  const cookieStore = await cookies();
-  const accessToken    = cookieStore.get("li_access_token")?.value;
-  const refreshToken   = cookieStore.get("li_refresh_token")?.value;
-  const tokenExpiry    = cookieStore.get("li_token_expiry")?.value;
-  const name           = cookieStore.get("li_user_name")?.value    || "";
-  const picture        = cookieStore.get("li_user_picture")?.value || "";
-  const email          = cookieStore.get("li_user_email")?.value   || "";
+const TOKEN_REFRESH_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-  // No access token at all
-  if (!accessToken) {
-    // But we have a refresh token — silently refresh in background
-    if (refreshToken) {
-      try {
-        const origin = new URL(req.url).origin;
-        await fetch(`${origin}/api/auth/linkedin/refresh`, { method: "POST" });
-        // After refresh, re-read cookies
-        const refreshed = cookieStore.get("li_access_token")?.value;
-        if (refreshed) {
-          return NextResponse.json({ connected: true, name, picture, email, refreshed: true });
-        }
-      } catch {
-        // Silent fail
-      }
+export async function GET(req: NextRequest) {
+  // ── Resolve Firebase UID ─────────────────────────────────────────────────
+  let firebaseUid: string | null = null;
+  const authHeader = req.headers.get("authorization") || "";
+  if (authHeader.startsWith("Bearer ") && adminAuth) {
+    try {
+      const decoded = await adminAuth.verifyIdToken(authHeader.slice(7));
+      firebaseUid = decoded.uid;
+    } catch {
+      // Invalid token
     }
+  }
+
+  if (!firebaseUid || !adminDb) {
     return NextResponse.json({ connected: false });
   }
 
-  // Token exists — check if it's near expiry and auto-refresh
-  if (refreshToken && tokenExpiry) {
-    const expiryMs = Number(tokenExpiry);
-    const timeLeft = expiryMs - Date.now();
+  // ── Look up this user's token in Firestore ───────────────────────────────
+  let tokenRecord: Record<string, any> | null = null;
+  try {
+    const snap = await adminDb.collection("tokens").doc(firebaseUid).get();
+    tokenRecord = snap.exists ? snap.data()! : null;
+  } catch (e) {
+    console.warn("[linkedin/status] Firestore lookup failed:", e);
+    return NextResponse.json({ connected: false });
+  }
 
+  if (!tokenRecord?.access_token) {
+    return NextResponse.json({ connected: false });
+  }
+
+  // ── Auto-refresh if near expiry ──────────────────────────────────────────
+  if (tokenRecord.refresh_token && tokenRecord.expires_at) {
+    const timeLeft = tokenRecord.expires_at - Date.now();
     if (timeLeft < TOKEN_REFRESH_THRESHOLD_MS) {
       try {
-        const origin = new URL(req.url).origin;
-        await fetch(`${origin}/api/auth/linkedin/refresh`, { method: "POST" });
-        console.log("[linkedin/status] Proactive token refresh triggered.");
-      } catch {
-        // Silent fail — still return connected with existing token
+        const tokenRes = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            grant_type:    "refresh_token",
+            refresh_token: tokenRecord.refresh_token,
+            client_id:     process.env.LINKEDIN_CLIENT_ID!,
+            client_secret: process.env.LINKEDIN_CLIENT_SECRET!,
+          }),
+        });
+        if (tokenRes.ok) {
+          const data = await tokenRes.json();
+          const updates: Record<string, any> = {
+            access_token: data.access_token,
+            expires_at:   Date.now() + (data.expires_in || 5184000) * 1000,
+          };
+          if (data.refresh_token) {
+            updates.refresh_token        = data.refresh_token;
+            updates.refresh_expires_at   = Date.now() + (data.refresh_token_expires_in || 31536000) * 1000;
+          }
+          await adminDb.collection("tokens").doc(firebaseUid).update(updates);
+          // Update local copy for response
+          Object.assign(tokenRecord, updates);
+          console.log(`[linkedin/status] Token auto-refreshed for ${firebaseUid}`);
+        }
+      } catch (e) {
+        console.warn("[linkedin/status] Auto-refresh failed:", e);
       }
     }
   }
 
   return NextResponse.json({
-    connected: true,
-    name,
-    picture,
-    email,
-    organizationId: process.env.LINKEDIN_ORGANIZATION_ID || null,
-    organizationUrn: process.env.LINKEDIN_ORGANIZATION_ID
-      ? `urn:li:organization:${process.env.LINKEDIN_ORGANIZATION_ID}`
-      : null,
+    connected:    true,
+    name:         tokenRecord.user_name    || "",
+    picture:      tokenRecord.user_picture || "",
+    email:        tokenRecord.user_email   || "",
+    tokenDaysLeft: tokenRecord.expires_at
+      ? Math.max(0, Math.floor((tokenRecord.expires_at - Date.now()) / (1000 * 60 * 60 * 24)))
+      : 0,
   });
 }

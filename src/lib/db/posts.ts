@@ -6,7 +6,10 @@ import {
   deleteDoc,
   doc,
   getDocs,
-  serverTimestamp
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
 } from "firebase/firestore";
 
 export interface Post {
@@ -206,11 +209,14 @@ export const postService = {
         .filter((p) => p.user_id === userId)
         .sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
     }
-    const snapshot = await getDocs(collection(db, COLLECTION));
-    return snapshot.docs
-      .map((d) => ({ id: d.id, ...d.data() } as Post))
-      .filter((p) => p.user_id === userId)
-      .sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
+    // Always filter at the DB level — never fetch all documents and filter client-side
+    const q = query(
+      collection(db, COLLECTION),
+      where("user_id", "==", userId),
+      orderBy("created_at", "desc")
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Post));
   },
 
   /** Schedule a post for future publishing */

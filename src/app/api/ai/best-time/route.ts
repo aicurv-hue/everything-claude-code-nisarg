@@ -40,8 +40,9 @@ async function verifyToken(req: NextRequest): Promise<string | null> {
 export async function POST(req: NextRequest) {
   try {
     const uid = await verifyToken(req);
+    if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const body = await req.json();
-    const userId = uid || body.userId || "demo-user";
+    const userId = uid;
     const rawSegment = body.segment || "individual";
     const forceRefresh = body.forceRefresh || false;
     const segment = (rawSegment === "corporate" ? "corporate" : "individual") as "individual" | "corporate";
@@ -156,9 +157,9 @@ Return ONLY a JSON array of exactly 3 objects, no markdown:
 
 export async function DELETE(req: NextRequest) {
   const uid = await verifyToken(req);
+  if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
-  const userId = uid || body.userId || "demo-user";
   const segment = body.segment || "individual";
-  await suggestionService.invalidate(userId, segment);
+  await suggestionService.invalidate(uid, segment);
   return NextResponse.json({ ok: true });
 }

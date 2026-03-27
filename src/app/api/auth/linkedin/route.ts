@@ -25,7 +25,10 @@ export async function GET(req: NextRequest) {
   ].join(" ");
 
   // Embed returnTo + Firebase UID in state for CSRF protection + user identification
-  const state = `${Math.random().toString(36).substring(2)}|${encodeURIComponent(returnTo)}|${encodeURIComponent(firebaseUid)}`;
+  // Use cryptographically secure random — Math.random() is predictable
+  const randomBytes = crypto.getRandomValues(new Uint8Array(16));
+  const randomPart  = Array.from(randomBytes).map(b => b.toString(16).padStart(2, "0")).join("");
+  const state = `${randomPart}|${encodeURIComponent(returnTo)}|${encodeURIComponent(firebaseUid)}`;
 
   const params = new URLSearchParams({
     response_type: "code",

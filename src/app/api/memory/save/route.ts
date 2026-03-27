@@ -1,26 +1,36 @@
 /**
  * POST /api/memory/save
  *
- * Internal endpoint — extracts memory from a post and saves to Firestore
- * using Admin SDK (bypasses security rules, works from both client fetch
- * and server-side cron calls).
- *
- * Called by preview/page.tsx after instant publish, and can be used
- * anywhere server-side auth context is unavailable.
+ * Extracts memory from a post and saves to Firestore using Admin SDK.
+ * Requires Authorization: Bearer <firebase-id-token> header.
+ * The userId in the body MUST match the verified Firebase UID — no spoofing.
  *
  * Node.js runtime required — uses Firebase Admin SDK.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { extractMemory } from "@/lib/ai/memory-extract";
 
 export async function POST(req: NextRequest) {
   try {
-    const { content, topic, audience, tone, segment, userId } = await req.json();
+    // ── Auth: verify Firebase token ───────────────────────────────────────────
+    const authHeader = req.headers.get("authorization") || "";
+    if (!authHeader.startsWith("Bearer ") || !adminAuth) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    let firebaseUid: string;
+    try {
+      const decoded = await adminAuth.verifyIdToken(authHeader.slice(7));
+      firebaseUid = decoded.uid;
+    } catch {
+      return NextResponse.json({ error: "Invalid auth token" }, { status: 401 });
+    }
 
-    if (!content || !userId) {
-      return NextResponse.json({ error: "Missing content or userId" }, { status: 400 });
+    const { content, topic, audience, tone, segment } = await req.json();
+
+    if (!content) {
+      return NextResponse.json({ error: "Missing content" }, { status: 400 });
     }
 
     if (!adminDb) {
@@ -34,7 +44,7 @@ export async function POST(req: NextRequest) {
     }
 
     await adminDb.collection("post_memories").add({
-      user_id:     userId,
+      user_id:     firebaseUid,          // always from verified token — never from body
       segment:     segment || "individual",
       topic:       topic || "",
       audience:    audience || "",
@@ -45,11 +55,10 @@ export async function POST(req: NextRequest) {
       created_at:  FieldValue.serverTimestamp(),
     });
 
-    console.log(`[memory/save] Memory saved for user ${userId}, topic: ${(topic || "").slice(0, 60)}`);
+    console.log(`[memory/save] Memory saved for user ${firebaseUid}, topic: ${(topic || "").slice(0, 60)}`);
     return NextResponse.json({ saved: true });
   } catch (err: any) {
     console.error("[memory/save] Failed:", err?.message || err);
-    // Non-critical — never return 500 to the caller
     return NextResponse.json({ saved: false, error: err?.message });
   }
 }

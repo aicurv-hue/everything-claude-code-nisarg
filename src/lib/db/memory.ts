@@ -15,6 +15,9 @@ import {
   getDocs,
   deleteDoc,
   doc,
+  query,
+  where,
+  orderBy,
   serverTimestamp,
 } from "firebase/firestore";
 
@@ -156,11 +159,16 @@ export const memoryService = {
         .slice(0, 100);
     }
     try {
-      const snapshot = await getDocs(collection(db, "post_memories"));
+      // Filter at DB level — never fetch all memories and filter client-side
+      const q = query(
+        collection(db, "post_memories"),
+        where("user_id", "==", userId),
+        where("segment", "==", segment),
+        orderBy("created_at", "desc")
+      );
+      const snapshot = await getDocs(q);
       return snapshot.docs
         .map((d) => ({ id: d.id, ...d.data() } as PostMemory))
-        .filter((m) => m.user_id === userId && m.segment === segment)
-        .sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0))
         .slice(0, 100);
     } catch (err) {
       console.warn("[Memory] Failed to load memories:", err);

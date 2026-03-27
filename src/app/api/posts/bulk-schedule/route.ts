@@ -32,9 +32,15 @@ export async function POST(req: NextRequest) {
     const created: string[] = [];
     const errors: { index: number; error: string }[] = [];
 
+    const minScheduleTime = Date.now() + 60_000; // must be at least 1 minute in the future
+
     for (let i = 0; i < posts.length; i++) {
       const row = posts[i];
       try {
+        const scheduledAt = new Date(row.scheduled_at);
+        if (isNaN(scheduledAt.getTime())) throw new Error("Invalid scheduled_at date");
+        if (scheduledAt.getTime() < minScheduleTime) throw new Error("scheduled_at must be at least 1 minute in the future");
+
         const postData = {
           user_id:    userId,
           account_id: "personal-account",
@@ -46,7 +52,7 @@ export async function POST(req: NextRequest) {
           length:     row.length || "medium",
           segment:    segment as "individual" | "corporate",
           research_data: {},
-          scheduled_at:      new Date(row.scheduled_at),
+          scheduled_at:      scheduledAt,
           schedule_timezone: row.timezone || timezone || "UTC",
           created_at: FieldValue.serverTimestamp(),
         };
