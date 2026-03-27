@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
 import { useRouter } from "next/navigation";
-import { FileText, Clock, ChevronRight, Search, Linkedin, ThumbsUp, MessageCircle, RefreshCw, AlertTriangle } from "lucide-react";
+import { FileText, Clock, ChevronRight, Search, Linkedin, ThumbsUp, MessageCircle, RefreshCw, AlertTriangle, Send } from "lucide-react";
 import { Post } from "@/lib/db/posts";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
@@ -55,6 +55,8 @@ export default function HistoryPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [retrying, setRetrying]         = useState<string | null>(null);
   const [retryingAll, setRetryingAll]   = useState(false);
+  const [reposting, setReposting]       = useState<string | null>(null);
+  const [repostStatus, setRepostStatus] = useState<Record<string, "success" | "error">>({});
 
   const accentTab = isCorporate
     ? "bg-violet-50 border-violet-300 text-violet-700"
@@ -107,6 +109,36 @@ export default function HistoryPage() {
       ));
     } finally {
       setRetrying(null);
+    }
+  };
+
+  const handleRepost = async (post: Post) => {
+    if (!post.id || reposting) return;
+    setReposting(post.id);
+    setRepostStatus(prev => { const n = { ...prev }; delete n[post.id!]; return n; });
+    try {
+      const token = await getAuthToken();
+      if (!token) return;
+      const res = await fetch("/api/linkedin/publish", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: post.content,
+          imageUrl: post.image_url || null,
+          segment: post.segment || segment,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setRepostStatus(prev => ({ ...prev, [post.id!]: "success" }));
+      } else {
+        setRepostStatus(prev => ({ ...prev, [post.id!]: "error" }));
+        console.error("[Repost] failed:", data.error);
+      }
+    } catch (err) {
+      setRepostStatus(prev => ({ ...prev, [post.id!]: "error" }));
+    } finally {
+      setReposting(null);
     }
   };
 
@@ -342,6 +374,30 @@ export default function HistoryPage() {
                       >
                         <RefreshCw className={`w-3 h-3 ${retrying === post.id ? "animate-spin" : ""}`} />
                         {retrying === post.id ? "Retrying…" : "Retry"}
+                      </button>
+                    )}
+                    {post.status === "published" && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleRepost(post); }}
+                        disabled={reposting === post.id}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all disabled:opacity-50 ml-auto ${
+                          repostStatus[post.id!] === "success"
+                            ? "bg-green-50 border-green-200 text-green-600"
+                            : repostStatus[post.id!] === "error"
+                            ? "bg-red-50 border-red-200 text-red-600"
+                            : "bg-slate-50 hover:bg-blue-50 border-slate-200 hover:border-[#0A66C2] text-slate-500 hover:text-[#0A66C2]"
+                        }`}
+                        title="Repost this to LinkedIn now"
+                      >
+                        {reposting === post.id ? (
+                          <><RefreshCw className="w-3 h-3 animate-spin" /> Posting…</>
+                        ) : repostStatus[post.id!] === "success" ? (
+                          <><Send className="w-3 h-3" /> Posted!</>
+                        ) : repostStatus[post.id!] === "error" ? (
+                          <><AlertTriangle className="w-3 h-3" /> Failed</>
+                        ) : (
+                          <><Send className="w-3 h-3" /> Repost</>
+                        )}
                       </button>
                     )}
                   </td>
