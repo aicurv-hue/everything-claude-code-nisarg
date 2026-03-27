@@ -38,14 +38,19 @@ export async function GET(req: NextRequest) {
   const segment = req.nextUrl.searchParams.get("segment");
 
   try {
-    const snapshot = await adminDb.collection("posts").where("user_id", "==", uid).get();
+    const snapshot = await adminDb
+      .collection("posts")
+      .where("user_id", "==", uid)
+      .orderBy("created_at", "desc")
+      .get();
+
     let posts = snapshot.docs.map((d) => {
       const data = d.data();
       return {
         id: d.id,
         ...data,
-        created_at: convertTimestamp(data.created_at),
-        updated_at: convertTimestamp(data.updated_at),
+        created_at:   convertTimestamp(data.created_at),
+        updated_at:   convertTimestamp(data.updated_at),
         published_at: convertTimestamp(data.published_at),
         scheduled_at: convertTimestamp(data.scheduled_at),
       } as Record<string, any>;
@@ -54,6 +59,23 @@ export async function GET(req: NextRequest) {
     if (segment) {
       posts = posts.filter((p) => p.segment === segment);
     }
+
+    // Sort by the most meaningful timestamp per status:
+    //  - published  → published_at desc  (latest live post first)
+    //  - scheduled  → scheduled_at asc   (next upcoming post first)
+    //  - draft/failed → created_at desc  (newest first)
+    posts.sort((a, b) => {
+      const getTs = (p: Record<string, any>) => {
+        if (p.status === "published") return p.published_at?.seconds ?? p.created_at?.seconds ?? 0;
+        if (p.status === "scheduled") return p.scheduled_at?.seconds ?? p.created_at?.seconds ?? 0;
+        return p.created_at?.seconds ?? 0;
+      };
+      const tsA = getTs(a);
+      const tsB = getTs(b);
+      // Scheduled: ascending (soonest first); everything else: descending
+      if (a.status === "scheduled" && b.status === "scheduled") return tsA - tsB;
+      return tsB - tsA;
+    });
 
     return NextResponse.json({ posts });
   } catch (err: any) {

@@ -1,5 +1,5 @@
 import { db, isMock } from "@/lib/firebase";
-import { collection, addDoc, getDocs, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where, serverTimestamp } from "firebase/firestore";
 
 export interface TimeSuggestion {
   slot: string;         // ISO 8601 datetime
@@ -35,10 +35,11 @@ export const suggestionService = {
       const all = getMock();
       return all.find((s) => s.user_id === userId && s.segment === segment && (s.expires_at?.seconds || 0) * 1000 > now) || null;
     }
-    const snap = await getDocs(collection(db, COLLECTION));
+    const q = query(collection(db, COLLECTION), where("user_id", "==", userId), where("segment", "==", segment));
+    const snap = await getDocs(q);
     const found = snap.docs
       .map((d) => ({ id: d.id, ...d.data() } as ScheduleSuggestion))
-      .find((s) => s.user_id === userId && s.segment === segment && (s.expires_at?.seconds || 0) * 1000 > now);
+      .find((s) => (s.expires_at?.seconds || 0) * 1000 > now);
     return found || null;
   },
 
