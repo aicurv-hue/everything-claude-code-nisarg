@@ -57,6 +57,7 @@ export default function HistoryPage() {
   const [retryingAll, setRetryingAll]   = useState(false);
   const [reposting, setReposting]       = useState<string | null>(null);
   const [repostStatus, setRepostStatus] = useState<Record<string, "success" | "error">>({});
+  const [repostIds, setRepostIds]       = useState<Record<string, string>>({});
 
   const accentTab = isCorporate
     ? "bg-violet-50 border-violet-300 text-violet-700"
@@ -131,6 +132,9 @@ export default function HistoryPage() {
       const data = await res.json();
       if (res.ok) {
         setRepostStatus(prev => ({ ...prev, [post.id!]: "success" }));
+        if (data.postId && data.postId !== "unknown") {
+          setRepostIds(prev => ({ ...prev, [post.id!]: data.postId }));
+        }
       } else {
         setRepostStatus(prev => ({ ...prev, [post.id!]: "error" }));
         console.error("[Repost] failed:", data.error);
@@ -398,7 +402,16 @@ export default function HistoryPage() {
                         {reposting === post.id ? (
                           <><RefreshCw className="w-3 h-3 animate-spin" /> Posting…</>
                         ) : repostStatus[post.id!] === "success" ? (
-                          <><Send className="w-3 h-3" /> Posted!</>
+                          repostIds[post.id!] ? (
+                            <a
+                              href={`https://www.linkedin.com/feed/update/${repostIds[post.id!]}/`}
+                              target="_blank" rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1"
+                            ><Send className="w-3 h-3" /> Posted! ↗</a>
+                          ) : (
+                            <><Send className="w-3 h-3" /> Posted!</>
+                          )
                         ) : repostStatus[post.id!] === "error" ? (
                           <><AlertTriangle className="w-3 h-3" /> Failed</>
                         ) : (

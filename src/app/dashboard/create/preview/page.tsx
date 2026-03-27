@@ -293,9 +293,13 @@ export default function PostPreviewPage() {
     setPublishStatus("idle");
 
     try {
+      const authToken = await getAuthToken();
       const res = await fetch("/api/linkedin/publish", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
         body: JSON.stringify({
           content: editedContent,
           imageUrl: finalImageUrl || null,

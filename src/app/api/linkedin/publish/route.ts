@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { adminDb, adminAuth } from "@/lib/firebase-admin";
 
 const LI_VERSION = "202505"; // LinkedIn API version header (YYYYMM)
 const TIMEOUT_MS  = 15_000;
@@ -118,13 +119,42 @@ async function uploadImage(
  * Switches author URN between personal profile and company page based on segment.
  */
 export async function POST(request: NextRequest) {
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get("li_access_token")?.value;
-  const userSub     = cookieStore.get("li_user_sub")?.value;
+  let accessToken: string | undefined;
+  let userSub: string | undefined;
+
+  // ── Step 1: Try Firestore token keyed by Firebase UID (correct multi-user path) ──
+  const authHeader = request.headers.get("authorization") || "";
+  const firebaseToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+  if (firebaseToken && adminAuth && adminDb) {
+    try {
+      const decoded = await adminAuth.verifyIdToken(firebaseToken);
+      const firebaseUid = decoded.uid;
+      const snap = await adminDb.collection("tokens").doc(firebaseUid).get();
+      if (snap.exists) {
+        const data = snap.data()!;
+        accessToken = data.access_token;
+        userSub     = data.user_sub;
+        console.log(`[linkedin/publish] Using Firestore token for Firebase UID: ${firebaseUid} (${data.user_email})`);
+      }
+    } catch (e) {
+      console.warn("[linkedin/publish] Firebase token verify failed, falling back to cookies:", e);
+    }
+  }
+
+  // ── Step 2: Fall back to cookies (legacy / direct browser sessions) ───────
+  if (!accessToken || !userSub) {
+    const cookieStore = await cookies();
+    accessToken = cookieStore.get("li_access_token")?.value;
+    userSub     = cookieStore.get("li_user_sub")?.value;
+    if (accessToken) {
+      console.log("[linkedin/publish] Using cookie token (fallback)");
+    }
+  }
 
   if (!accessToken || !userSub) {
     return NextResponse.json(
-      { error: "Not connected to LinkedIn. Please connect your account first." },
+      { error: "Not connected to LinkedIn. Please connect your account in Settings." },
       { status: 401 }
     );
   }
