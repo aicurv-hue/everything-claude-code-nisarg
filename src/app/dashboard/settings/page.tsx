@@ -315,7 +315,7 @@ export default function SettingsPage() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
               activeTab === tab.id
                 ? "bg-white text-slate-900 shadow-sm border border-slate-200"
                 : "text-slate-500 hover:text-slate-700"
