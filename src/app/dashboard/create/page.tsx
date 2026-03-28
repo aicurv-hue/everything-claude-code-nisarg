@@ -128,6 +128,7 @@ export default function CreatePostPage() {
           clientProfile: activeProfile,
           customInstructions: customInstructions.trim() || undefined,
           memoryContext: memoryContext.length > 0 ? memoryContext : undefined,
+          imageStyle: activeProfile?.imageStyle || undefined,
         }),
       });
       if (!generateRes.ok) throw new Error(`Generation failed: ${await generateRes.text()}`);
@@ -422,6 +423,14 @@ export default function CreatePostPage() {
                   <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-1">Brand Voice</p>
                   <p className="text-sm font-semibold text-slate-800">
                     {userProfile?.[segment]?.personality || "Not set — add in Settings"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-1">Image Style</p>
+                  <p className="text-sm font-semibold text-slate-800 capitalize">
+                    {userProfile?.[segment]?.imageStyle
+                      ? { photo: "📷 Photo", illustration: "🎨 Illustration", abstract: "🔷 Abstract", "3d": "🧊 3D Render", lineart: "✏️ Line Art", bw_photo: "⬛ B&W Photo" }[userProfile[segment].imageStyle!] || userProfile[segment].imageStyle
+                      : "Not set — choose in Settings → Image Style"}
                   </p>
                 </div>
 
