@@ -399,5 +399,10 @@ export async function generateImageHook(post: string, topic: string): Promise<st
 
   if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
   const data = await res.json();
-  return (data.choices?.[0]?.message?.content || "").trim().replace(/^["']|["']$/g, "");
+  return (data.choices?.[0]?.message?.content || "")
+    .trim()
+    .replace(/\*\*/g, "")        // strip markdown bold
+    .replace(/\*/g, "")          // strip markdown italic
+    .replace(/^["']|["']$/g, "") // strip surrounding quotes
+    .trim();
 }
