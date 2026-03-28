@@ -181,7 +181,7 @@ Do NOT illustrate the topic literally. Illustrate the FEELING.
 ═══ FIXED FRAME RULES — ALWAYS APPLY ═══
 - NO full faces — subjects must be partially turned, looking away, shown from chest-down, or seen from behind. Faces in profile are acceptable. This prevents LinkedIn uncanny-valley effect with AI-generated faces.
 - Format is always landscape 4:3 aspect ratio.
-- TEXT ZONE RULE (critical): The left 40% of the frame MUST be visually clean — dark, blurred, low-detail, or solid-toned. This area is reserved for a text overlay added in post-production. The subject/character MUST be positioned in the right 55–65% of the frame. Never place the subject or any visually busy element in the left third.
+- TEXT ZONE RULE (critical — square 1:1 format): The TOP-LEFT quadrant (top 45%, left 50%) MUST be visually clean — dark, blurred, or low-detail background. This area is reserved for a bold white text headline added in post-production. The subject/character MUST be in the CENTER-RIGHT or LOWER-RIGHT of the frame. Specify explicitly: e.g. "subject seated lower-right of frame", "figure occupies right half, upper-left is dark negative space". Never place the subject's face or hands in the top-left quadrant.
 - If a style prefix is prepended to your output (starts with words like "Cinematic editorial photography", "Soft editorial illustration", etc.) — treat it as the highest-priority visual directive. It defines the rendering medium, color science, and lighting style. Do not contradict it.
 
 ═══ ABSOLUTE RULES ═══
@@ -216,7 +216,7 @@ These make the post look like a 2022 GPT bot account:
 [MOMENT] — the decisive action, glance, posture, or stillness
 [LIGHTING] — one specific light source and its quality (golden-hour raking light / single overhead pendant / pre-dawn blue hour / monitor glow in dark room)
 [PALETTE] — 2 dominant colors + 1 accent, e.g. "charcoal and slate with a single warm amber source"
-[LENS/FRAME] — camera position and depth: (eye-level tight / wide establishing shot / 35mm shallow DOF / overhead flat lay / Dutch angle for tension)
+[LENS/FRAME] — camera position, depth, AND composition: square 1:1 format. Always specify subject in center-right or lower-right, top-left quadrant clean/dark for text overlay. (e.g. "subject anchored lower-right, upper-left is dark blurred background, 35mm shallow DOF")
 [QUALITY TAG] — always end with: ultra-detailed, cinematic photography, 4K, LinkedIn editorial style
 
 ═══ REFERENCE PROMPTS (match this quality bar) ═══
@@ -253,11 +253,18 @@ Output only the image prompt. Nothing else.
 
 ---
 
-*Last updated: 2026-03-28 | Version: 1.2 — Brand-Consistent Image System (Layer 1, 2, 3)*
+*Last updated: 2026-03-28 | Version: 1.3 — Mobile-first square format + Codex-style typography*
+
+**What changed in v1.3:**
+- Image format changed from `landscape_4_3` to `square_hd` (1024×1024) — fills full width on mobile LinkedIn feed
+- TEXT ZONE RULE updated for square 1:1: top-left quadrant must be dark/clean (reserved for hook text), subject must be in center-right or lower-right
+- `[LENS/FRAME]` architecture updated to mandate subject-right composition for square format
+- Hook font: Plus Jakarta Sans weight 800 (Codex/OpenAI-style) loaded via Next.js font system
+- Hook text constrained to left 44% — never overlaps the subject
 
 **What changed in v1.2:**
-- Added `FIXED FRAME RULES` block to `IMAGE_PROMPT_SYSTEM`: no full faces, landscape 4:3 always, style prefix is highest-priority directive
-- Art style prefixes are now prepended to every image prompt by `generate.ts` based on the user's saved `imageStyle` setting — Neel must treat them as rendering-medium constraints, not suggestions
-- Image hook overlay (Layer 2) is handled client-side on the preview page — Neel is NOT involved in hook generation (separate Gemini call via `/api/ai/image-hook`)
+- Added `FIXED FRAME RULES` block to `IMAGE_PROMPT_SYSTEM`: no full faces, style prefix is highest-priority directive
+- Art style prefixes prepended to every image prompt based on user's saved `imageStyle` setting
+- Image hook overlay (Layer 2) handled client-side — separate Gemini call via `/api/ai/image-hook`
 
 *To change Neel's behaviour: edit the sections above. generate.ts reads this file at runtime.*

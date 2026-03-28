@@ -284,7 +284,8 @@ This is Neel's persistent persona layer for this segment. The default contains t
 
 **Fixed frame rules applied regardless of style:**
 - No full faces (partial/profile/chest-down only)
-- Always landscape 4:3 (enforced in fal.ai API call parameters)
+- Always **square 1:1** (`square_hd` 1024×1024) — fills full width on mobile LinkedIn feed *(updated v1.3)*
+- TEXT ZONE RULE: top-left quadrant (top 45%, left 50%) must be dark/clean negative space — reserved for hook text overlay. Subject always in center-right or lower-right.
 
 ---
 
@@ -295,7 +296,7 @@ This is Neel's persistent persona layer for this segment. The default contains t
 **Function:** `generateImageHook(post, topic)` in `src/lib/ai/generate.ts`
 **Model:** `google/gemini-2.0-flash-001`, temperature 0.85, max_tokens 30
 
-**What it is:** A ≤7-word punchy question or bold statement overlaid as text on top of the generated/uploaded image. Rendered as a gradient + white bold text on the bottom of the image.
+**What it is:** A ≤7-word punchy question or bold statement overlaid as text on the generated/uploaded image. Rendered in **Plus Jakarta Sans weight 800** (OpenAI Codex-style typography) in the top-left zone of the image. A diagonal gradient (`rgba(0,0,0,0.62)` top-left → transparent at 58%) provides legibility without obscuring the subject. Hook text width is constrained to 44% of the image (left zone only) — the subject is always on the right. *(Updated v1.3)*
 
 **How it works:**
 1. User generates or uploads an image on the preview page
@@ -607,4 +608,23 @@ Go to **Settings → Image Style tab**:
 
 ---
 
-*Last audited: 2026-03-28 | Pipeline version: 4.3 (Brand-Consistent Image System — Layer 1 Art Style, Layer 2 Hook Overlay, Layer 3 Fixed Frame Rules)*
+---
+
+## Changelog
+
+### v4.3 — 2026-03-28 (Brand-Consistent Image System)
+- Layer G: Image Style Prefix system (6 art styles, per-segment)
+- Layer H: Image Hook Text overlay (on-demand Gemini call, 7-word max)
+- Fixed Frame Rules added to image prompt system
+- Tab 6 (Image Style) added to Settings page
+
+### v4.3.1 — 2026-03-28 (Mobile-First Image Format)
+- **Image format** changed from `landscape_4_3` → `square_hd` (1024×1024) — fills full width on mobile LinkedIn feed
+- **Hook typography** upgraded to Plus Jakarta Sans weight 800 (OpenAI Codex-style) via `next/font/google`
+- **TEXT ZONE RULE** updated for square 1:1: top-left quadrant (top 45%, left 50%) reserved for hook text, subject always center-right or lower-right
+- Hook text width constrained to 44% of image to prevent subject overlap
+- Diagonal gradient (top-left dark → transparent) replaces bottom-bar gradient
+- `Master_Neel_Prompt.md` updated to v1.3 with all square format rules
+- `neel-prompt-sections.ts` updated with square TEXT ZONE RULE and FIXED FRAME RULES
+
+*Last audited: 2026-03-28 | Pipeline version: 4.3.1 (Mobile-First Square Images + Codex Hook Typography)*

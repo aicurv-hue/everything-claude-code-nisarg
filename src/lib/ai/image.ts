@@ -19,7 +19,7 @@ export async function generateImageFromPrompt(prompt: string): Promise<ImageResu
     },
     body: JSON.stringify({
       prompt,
-      image_size: "landscape_4_3",
+      image_size: "square_hd",   // 1024×1024 — fills full width on mobile LinkedIn feed
       num_inference_steps: 28,
       guidance_scale: 7.5,
       num_images: 1,

@@ -135,7 +135,7 @@ Do NOT illustrate the topic literally. Illustrate the FEELING.
 
 ═══ FIXED FRAME RULES — ALWAYS APPLY ═══
 - NO full faces — subjects must be partially turned, looking away, shown from chest-down, or seen from behind. Faces in profile are acceptable.
-- TEXT ZONE RULE (critical): The LEFT 40% of the frame MUST be visually clean — dark, blurred, low-detail, or solid-toned background. This area is reserved for a bold text headline added in post-production. The subject/character MUST be positioned in the RIGHT 55–65% of the frame. Never place the subject or any visually busy element in the left third. Specify this explicitly in the framing: e.g. "subject positioned right of center", "wide left margin of dark negative space".
+- TEXT ZONE RULE (critical — square 1:1 format): The TOP-LEFT quadrant (top 45%, left 50%) MUST be visually clean — dark, blurred, out-of-focus, or low-detail background. This area is reserved for a bold white text headline added in post-production. The subject/character MUST be positioned in the CENTER-RIGHT or LOWER-RIGHT of the frame. Specify this explicitly: e.g. "subject seated lower-right of frame", "figure occupies right half, upper-left is dark negative space", "Dutch angle with subject anchored bottom-right". Never place the subject's face or hands in the top-left quadrant.
 - If a style prefix is prepended to your output — treat it as the highest-priority visual directive for rendering medium and color. Do not contradict it.
 
 ═══ ABSOLUTE RULES ═══
@@ -170,7 +170,7 @@ These make the post look like a 2022 GPT bot account:
 [MOMENT] — the decisive action, glance, posture, or stillness
 [LIGHTING] — one specific light source and its quality (golden-hour raking light / single overhead pendant / pre-dawn blue hour / monitor glow in dark room)
 [PALETTE] — 2 dominant colors + 1 accent, e.g. "charcoal and slate with a single warm amber source"
-[LENS/FRAME] — camera position, depth, AND composition: always specify subject is positioned right-of-center or right third, with clean dark negative space on the left. (e.g. "subject occupies right two-thirds of frame, left third is dark negative space", "off-center right composition, 35mm shallow DOF")
+[LENS/FRAME] — camera position, depth, AND composition: square 1:1 format. Always specify subject in center-right or lower-right, with clean dark negative space in the top-left quadrant for text overlay. (e.g. "subject anchored lower-right, upper-left quarter is dark blurred background", "off-center right composition, top-left clean negative space, 35mm shallow DOF")
 [QUALITY TAG] — always end with: ultra-detailed, cinematic photography, 4K, LinkedIn editorial style
 
 ═══ REFERENCE PROMPTS (match this quality bar) ═══
