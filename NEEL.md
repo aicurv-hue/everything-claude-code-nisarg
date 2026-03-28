@@ -1,8 +1,8 @@
-# NEEL — Complete Input Documentation
+# NEEL — Complete Pipeline Documentation
 
 > Neel is the AI author powering LinkAuto. This document covers every input layer that reaches Neel, how each one influences the output, where it is set, and what happens when it is missing.
 >
-> **Purpose:** Ensure zero data loss between the user's intent and Neel's generation. Every blank field is a missed opportunity for post quality.
+> **Purpose:** Single source of truth for building user SOPs, internal onboarding, and future feature design. Keep this updated whenever `generate.ts`, `research.ts`, memory, profiles, settings, or the create/preview pages change.
 
 ---
 
@@ -32,9 +32,15 @@ User fills Create form
          ▼
     Post + Image Prompt
          │
+         ├──► [Layer G] Image Style Prefix (from Settings Image Style tab)
+         │              prepended to every image prompt before fal.ai call
+         │
+         ├──► [Layer H] Image Hook Text (on-demand, preview page)
+         │              separate Gemini call → 7-word overlay text on image
+         │
          ▼
-[Layer G] Memory Extraction (fire-and-forget)
-    → Summary + Keywords saved to memory for next time
+[Layer I] Memory Extraction (fire-and-forget)
+    → Summary + Keywords + Style fingerprint saved to memory for next time
 ```
 
 ---
@@ -51,6 +57,13 @@ User fills Create form
 | `audience` | Enum | founders, marketers, engineers, general | Research is filtered to surface insights valuable to this audience. Neel frames every claim from their perspective. |
 | `length` | Enum | short (~100w), medium (~200w), long (~400w) | Sets exact word-count range and paragraph count in the prompt. Neel is given an explicit spec: "180–250 words, 5–7 paragraphs." |
 | `segment` | Context | individual, corporate | Switches entire voice mode. Individual = first-person, grounded in profile facts only. Corporate = company voice, business outcomes, named proof. |
+
+**AI Context sidebar (right panel on Create page) shows:**
+- Active AI writer model
+- Active niche
+- Active brand voice
+- **Active image style** (new — shows which visual style will be applied to generated images)
+- Memory count (number of past posts Neel has read)
 
 **What happens if topic is vague?**
 Research falls back to generic sub-questions (trends, pain points, statistics) — the post will be weaker. Specific topics = specific research = better hooks.
@@ -89,7 +102,7 @@ Each sub-question is answered and synthesised into:
 - `niche` / `roleOrIndustry` — contextualises the industry angle
 - `bioOrOffering` — ensures research is relevant to the author's product/service
 - `jtbd` — research surfaces insights aligned to what customers are hiring the author for
-- `customerPains` — research probes pain points the audience feels *(added in audit fix)*
+- `customerPains` — research probes pain points the audience feels
 
 **What happens if research fails?**
 A graceful fallback is used: `"Research on [topic] could not be completed. The post will be generated from the topic alone."` — Neel still writes but without data-backed claims. Quality drops significantly.
@@ -112,12 +125,12 @@ After the first post is generated, Neel builds a persistent memory of everything
 | `audience` | Audience targeted |
 | `tone` | Tone used |
 | `summary` | 2-sentence summary: angle taken + core argument made |
-| `keywords` | 5–10 concrete keywords (extracted by gpt-4o-mini) |
-| `style_notes` | **NEW** — 1-sentence style fingerprint: sentence rhythm, vocabulary register, data usage, voice markers |
+| `keywords` | 5–10 concrete keywords (extracted by AI) |
+| `style_notes` | 1-sentence style fingerprint: sentence rhythm, vocabulary register, data usage, voice markers |
 | `segment` | individual or corporate (kept separate) |
 | `created_at` | Timestamp — used for recency scoring |
 
-**Memory entries can now be deleted** by the user from `/dashboard/memory`. Hover any entry to reveal the delete (trash) icon. Deleting removes it from Neel's future context immediately.
+**Memory entries can be deleted** by the user from `/dashboard/memory`. Hover any entry to reveal the delete (trash) icon. Deleting removes it from Neel's future context immediately.
 
 ### Relevance Scoring (pure JS — zero tokens):
 ```
@@ -129,7 +142,7 @@ score = keyword overlap with current topic words × 2
 
 If no relevant matches exist (score = 0 for all), the 3 most recent entries are used as a continuity fallback.
 
-### What Neel does with memory (updated behaviour):
+### What Neel does with memory:
 
 **VOICE & STYLE — always applied first:**
 - Mirror the writing style from `style_notes` — sentence rhythm, vocabulary, data density
@@ -142,17 +155,13 @@ If no relevant matches exist (score = 0 for all), the 3 most recent entries are 
 - Avoid restating the EXACT same argument with different words
 - If topic is different from past posts: write fresh, reference established positioning if relevant
 
-**What Neel never does with memory:**
-- Never invents a story arc that contradicts past posts
-- Never pivots so sharply that the post sounds like a different author
-
 **Individual and Corporate memories are completely separate.** Switching segment gives Neel a different memory pool.
 
 ---
 
 ## Layer D — Brand Profile
 
-**Where set:** Settings page (`/dashboard/settings`) — 5 tabs
+**Where set:** Settings page (`/dashboard/settings`) — 6 tabs
 **Passed to:** `performResearch()` as `clientProfile` + `generatePost()` as `clientProfile`
 **File:** `src/lib/db/profiles.ts`
 
@@ -196,9 +205,28 @@ This is the most impactful layer after the topic itself. Every field is a non-ne
 | Field | Key | Effect |
 |---|---|---|
 | Model | `model` | Which LLM Neel uses for this segment. Each segment can have a different model. |
-| System Prompt | `systemPrompt` | Appended AFTER all built-in rules. Overrides or extends Neel's default behaviour. |
+| System Prompt | `systemPrompt` | Appended AFTER all built-in rules. Overrides or extends Neel's default behaviour. Use for persistent per-segment dos/don'ts. |
 
-**⚠️ Critical: Settings are segment-specific.** Individual and Corporate have completely independent profiles. If Corporate profile is blank, Neel writes without brand context for corporate posts.
+### Tab 6 — Image Style *(new in v1.2)*
+
+| Field | Key | Effect |
+|---|---|---|
+| Image Style | `imageStyle` | Selects the visual art style applied to every AI-generated image for this segment. Saved per-segment (Individual and Corporate can have different styles). |
+
+**Available image styles:**
+
+| Style ID | Label | What the prefix instructs fal.ai |
+|---|---|---|
+| `photo` | 📷 Photo | Cinematic editorial photography, ultra-realistic, natural lighting, shallow depth of field |
+| `illustration` | 🎨 Illustration | Soft editorial illustration, warm linework, hand-crafted texture, muted ink palette |
+| `abstract` | 🔷 Abstract | Abstract conceptual art, geometric shapes, emotion-driven composition, premium editorial |
+| `3d` | 🧊 3D Render | Photorealistic 3D render, volumetric lighting, depth, cinematic quality, editorial style |
+| `lineart` | ✏️ Line Art | Minimal black ink line art on white, clean strokes, no fill, sketch style |
+| `bw_photo` | ⬛ B&W Photo | Cinematic black and white photography, high contrast, film grain, editorial style, desaturated |
+
+**How it works:** When the user saves a style, the corresponding prefix string is prepended to every AI-generated image prompt by `generate.ts` before it reaches fal.ai. This locks the visual rendering medium across all posts. The underlying emotional/compositional prompt is still generated by Neel per-post — the style prefix constrains HOW it looks, not WHAT it shows.
+
+**⚠️ Critical: Image style is segment-specific.** Individual and Corporate can have completely independent visual identities. If no style is set, images are generated without a style constraint (Neel's cinematic editorial defaults still apply).
 
 ---
 
@@ -238,7 +266,53 @@ This is Neel's persistent persona layer for this segment. The default contains t
 
 ---
 
-## Layer G — Memory Extraction (Output → Future Input)
+## Layer G — Image Style Prefix *(new in v1.2)*
+
+**Where set:** Settings → Image Style tab
+**Where applied:** `src/lib/ai/generate.ts` — `generatePost()` and `generateImagePrompt()`
+**Route:** `/api/ai/image-prompt` also accepts and forwards `imageStyle`
+
+**Flow:**
+1. User selects a style in Settings → Image Style → Save
+2. Style is stored in `ProfileSegment.imageStyle` in Firestore
+3. On Create page load, `activeProfile.imageStyle` is read from the fetched profile
+4. When generating, `imageStyle` is sent in the request body to `/api/ai/generate`
+5. `generatePost()` reads `IMAGE_STYLE_PREFIXES[imageStyle]` and prepends it to the Neel-generated image prompt before returning
+6. Same prefix logic applies on standalone image-prompt regeneration (`handleRegenerateImagePrompt` on preview page reads `imageStyle` from `localStorage.client_profile`)
+
+**Key file:** `src/lib/ai/generate.ts` — `IMAGE_STYLE_PREFIXES` constant map
+
+**Fixed frame rules applied regardless of style:**
+- No full faces (partial/profile/chest-down only)
+- Always landscape 4:3 (enforced in fal.ai API call parameters)
+
+---
+
+## Layer H — Image Hook Text Overlay *(new in v1.2)*
+
+**Where:** Preview page (`/dashboard/create/preview`) — "Image Hook Text" panel below the image
+**Route:** `POST /api/ai/image-hook` (Edge Runtime)
+**Function:** `generateImageHook(post, topic)` in `src/lib/ai/generate.ts`
+**Model:** `google/gemini-2.0-flash-001`, temperature 0.85, max_tokens 30
+
+**What it is:** A ≤7-word punchy question or bold statement overlaid as text on top of the generated/uploaded image. Rendered as a gradient + white bold text on the bottom of the image.
+
+**How it works:**
+1. User generates or uploads an image on the preview page
+2. "Image Hook Text" panel appears below the image
+3. User clicks "Generate Hook" — Gemini generates a 7-word-max hook from the post content
+4. Hook is shown in an editable input field — user can tweak it freely
+5. Hook is displayed live on the image as a CSS overlay (bottom gradient + bold white text)
+6. Hook is saved as `image_hook` field on the Post object when drafting, publishing, or scheduling
+
+**Why on-demand (not auto-generated):**
+Adding an automatic hook generation on every image generation would add a second sequential OpenRouter call to an already-slow pipeline. Making it manual keeps the UX fast and lets users skip it entirely for posts where a text overlay doesn't fit.
+
+**Stored on Post:** `image_hook?: string` in `src/lib/db/posts.ts`
+
+---
+
+## Layer I — Memory Extraction (Output → Future Input)
 
 **Where run:** After `generatePost()` returns, fire-and-forget
 **File:** `src/lib/ai/memory-extract.ts`
@@ -249,7 +323,7 @@ After every successful generation, this runs silently:
 2. Sends a compact AI call asking for:
    - 2-sentence summary (angle taken + core argument)
    - 5–10 concrete keywords
-   - **1-sentence style fingerprint** — sentence rhythm, vocabulary register, data usage, voice markers
+   - 1-sentence style fingerprint — sentence rhythm, vocabulary register, data usage, voice markers
 3. Saves all three fields to the `post_memories` collection
 4. This entry becomes available for all future generations in this segment
 
@@ -271,6 +345,10 @@ After every successful generation, this runs silently:
 7. PROFILE SYSTEM PROMPT (from Layer F — settings AI tab)
 8. MEMORY CONTEXT (from Layer C — top 5 relevant past posts)     ← grows over time
 9. CUSTOM INSTRUCTIONS (from Layer E — per-post override)         ← highest priority
+
+Then (post-prompt, not in system prompt):
+10. IMAGE STYLE PREFIX (from Layer G) prepended to image prompt output
+11. IMAGE HOOK (from Layer H) — separate call, not part of Neel's prompt
 ```
 
 **User prompt (sent as the `user` turn):**
@@ -307,27 +385,24 @@ Posts with `status: "scheduled"` are picked up by the cron worker at `/api/cron/
 ```
 
 **Duplicate publish prevention** (two-layer):
-- **In-memory Set** (`publishingIds`) — prevents two concurrent cron calls in the same Node process from publishing the same post twice (local dev protection)
+- **In-memory Set** (`publishingIds`) — prevents two concurrent cron calls in the same Node process from publishing the same post twice
 - **Firestore status `"processing"`** — post disappears from `getScheduled()` results immediately; if server restarts mid-publish, the post stays in `"processing"` and is not re-fetched
-
-**Memory is saved only on confirmed LinkedIn publish** — not on draft save or scheduling. `savePostMemory` is called in the cron worker after LinkedIn confirms success.
 
 ### Image Mode in Scheduled Posts
 
-Three modes stored on the post:
 | Mode | Stored as | Worker behaviour |
 |------|-----------|-----------------|
-| `ai` | `image_url = null` initially; AI generates after scheduling | Generates AI image at schedule time if `image_url` is missing |
+| `ai` | `image_url = null` initially | Generates AI image at schedule time if `image_url` is missing |
 | `upload` | `image_url = Firebase Storage HTTPS URL` | User image uploaded to Storage at schedule time (10s timeout); worker uses stored URL |
 | `none` | `image_url = null`, `image_mode = "none"` | Worker posts text-only; no image |
 
-`data:` URL images (local files) are **uploaded to Firebase Storage** at schedule time via `uploadDataUrlToStorage()` so the worker can retrieve them later. A 10s `Promise.race` timeout prevents the scheduling dialog from hanging if Storage is unavailable.
+`data:` URL images are **uploaded to Firebase Storage** at schedule time via `uploadDataUrlToStorage()` so the worker can retrieve them later. A 10s `Promise.race` timeout prevents the scheduling dialog from hanging if Storage is unavailable.
 
 ### Engagement Tracking
 
 Likes and comments are synced hourly via the cron worker's engagement sync block.
 
-**Fields added to Post:**
+**Fields on Post:**
 - `likes_count` — LinkedIn reaction count
 - `comments_count` — LinkedIn comment count
 - `engagement_synced_at` — unix ms timestamp of last sync
@@ -338,36 +413,7 @@ Likes and comments are synced hourly via the cron worker's engagement sync block
 3. Calls `/api/linkedin/engagement` with their `linkedin_post_id` URNs
 4. Updates `likes_count`, `comments_count`, `engagement_synced_at` in Firestore
 
-**Visible in:**
-- `/dashboard/history` — Engagement column (👍 likes · 💬 comments)
-- `/dashboard` — Total Engagement stat card (sum of all likes + comments)
-- PostDetailDrawer — Likes / Comments cards on published posts
-
----
-
-## Bugs Found & Fixed During Audit
-
-| # | Bug / Issue | Fix Applied |
-|---|---|---|
-| 1 | Model name `google/gemini-2.0-flash-001` in settings — doesn't exist on OpenRouter | Changed to `google/gemini-2.0-flash` |
-| 2 | `customerPains` never passed to research — Neel didn't probe pain points | Added to research `clientContext` |
-| 3 | Empty profile fields appeared as `"undefined"` in prompt | Filter-before-append — only non-empty fields included |
-| 4 | Dynamic Tailwind class purged at build time | Replaced with static conditional strings |
-| 5 | Dashboard stats didn't refresh on segment switch | Fixed `loadAll()` dependency array |
-| 6 | Create page used disconnected local segment state | Replaced with `useSegment()` context |
-| 7 | **Hallucination** — Neel invented family members, locations, personal stories not in the profile. | Added `⛔ NO FABRICATION` rule: never invent family, locations, named clients, or events not in profile/research. |
-| 8 | **Always-different-angle** — memory rule forced pivot every time, even when deepening same topic was right. | Replaced with nuanced logic: deepen (Part 2) or new dimension — don't always pivot. |
-| 9 | **Voice drift** — memory stored angles but not HOW the user writes. | Added `style_notes` field — 1-sentence style fingerprint extracted per post and injected next generation. |
-| 10 | **No memory delete** — bad entries poisoned future posts with no way to remove them. | Added `memoryService.delete(id)` + hover-reveal trash button on `/dashboard/memory`. |
-| 11 | **`[BLANK LINE]` appearing literally in posts** — AI treated bracket labels as output content. | Rewrote STRUCTURE section with plain English instructions. Added rule: never write section label words in output. |
-| 12 | **Cliché image prompts** (gears, circuits, glowing orbs) — IMAGE_PROMPT_SYSTEM had no visual direction. | Rewrote IMAGE_PROMPT_SYSTEM: bans gears/circuits/holograms, requires human-centered scenes, cinematic editorial style, hero/emotional-tension framing. |
-| 13 | **`fs.readFileSync` crashes on Edge Runtime** — generate.ts read `Master_Neel_Prompt.md` from disk. | Inlined all sections as TS constants in `src/lib/ai/neel-prompt-sections.ts`. `Master_Neel_Prompt.md` stays as human-editable source of truth. |
-| 14 | **FUNCTION_INVOCATION_TIMEOUT** on `/api/ai/generate` and `/api/ai/research` — Vercel Hobby 10s limit. | Converted both routes to `export const runtime = "edge"` — no timeout on Vercel Edge Runtime. |
-| 15 | **OAuth callback 504 GATEWAY_TIMEOUT** — `await tokenService.save()` + token exchange + profile fetch exceeded 10s. | Made DB save fire-and-forget. Reduced profile fetch timeout 8s → 4s. Converted callback to Edge Runtime. |
-| 16 | **Scheduled posts always failing** — tokens saved to `linkedin_tokens` collection but cron reads from `tokens`. | Fixed `COLLECTION = "tokens"` in `src/lib/db/tokens.ts`. Users must reconnect LinkedIn once after this fix. |
-| 17 | **No LinkedIn disconnect button** — only reconnect existed. | Added red Disconnect button to Settings. `POST /api/auth/linkedin/disconnect` clears all `li_*` cookies. |
-| 18 | **Dashboard FAILED_PRECONDITION** — `orderBy("created_at")` + `where("segment")` required composite Firestore index that didn't exist. | Removed `orderBy` from Firestore query; sort done in JS after fetch. |
-| 19 | **OpenRouter 400 error** — `google/gemini-2.0-flash` is not a valid model ID. | Changed to `google/gemini-2.0-flash-001` across all routes, settings defaults, and `openrouter.ts`. |
+**Visible in:** History page, Dashboard stat cards, PostDetailDrawer
 
 ---
 
@@ -381,11 +427,40 @@ Likes and comments are synced hourly via the cron worker's engagement sync block
 | Profile `icp` empty | Research is audience-agnostic | Fill in Settings → Audience |
 | Profile `jtbd` empty | Research doesn't probe what customers need most | Fill in Settings → Audience |
 | Profile `customerPains` empty | Hooks lack emotional resonance | Fill in Settings → Customer Voice |
-| Profile `verbatimLanguage` empty | Neel uses generic professional language | Fill in Settings → Customer Voice — put exact phrases your customers say |
-| Profile `wordsToAvoid` empty | Neel may use your banned words | Fill in Settings → Customer Voice |
+| Profile `verbatimLanguage` empty | Neel uses generic professional language | Fill in Settings → Customer Voice |
+| Profile `wordsToAvoid` empty | Neel may use banned words | Fill in Settings → Customer Voice |
 | Profile `usp` empty | No differentiation from competitors | Fill in Settings → Branding |
+| Profile `imageStyle` not set | Images generated without visual style lock — inconsistent across posts | Choose a style in Settings → Image Style |
 | Memory empty (new user) | No continuity — Neel writes without history | Grows automatically with every generation |
 | Corporate profile blank | Corporate posts get no brand context | Fill in Settings with Corporate selected |
+
+---
+
+## Bugs Found & Fixed (Full History)
+
+| # | Bug / Issue | Fix Applied |
+|---|---|---|
+| 1 | Model name `google/gemini-2.0-flash-001` in settings — doesn't exist on OpenRouter | Changed to `google/gemini-2.0-flash` |
+| 2 | `customerPains` never passed to research — Neel didn't probe pain points | Added to research `clientContext` |
+| 3 | Empty profile fields appeared as `"undefined"` in prompt | Filter-before-append — only non-empty fields included |
+| 4 | Dynamic Tailwind class purged at build time | Replaced with static conditional strings |
+| 5 | Dashboard stats didn't refresh on segment switch | Fixed `loadAll()` dependency array |
+| 6 | Create page used disconnected local segment state | Replaced with `useSegment()` context |
+| 7 | **Hallucination** — Neel invented family members, locations, personal stories not in the profile | Added `⛔ NO FABRICATION` rule in `SEGMENT_INDIVIDUAL` and `SEGMENT_CORPORATE` |
+| 8 | **Always-different-angle** — memory rule forced pivot every time | Replaced with nuanced logic: deepen (Part 2) or new dimension — don't always pivot |
+| 9 | **Voice drift** — memory stored angles but not HOW the user writes | Added `style_notes` field — 1-sentence style fingerprint extracted per post |
+| 10 | **No memory delete** — bad entries poisoned future posts | Added `memoryService.delete(id)` + hover-reveal trash button on `/dashboard/memory` |
+| 11 | **`[BLANK LINE]` appearing literally in posts** | Rewrote STRUCTURE section with plain English instructions |
+| 12 | **Cliché image prompts** (gears, circuits, glowing orbs) | Rewrote `IMAGE_PROMPT_SYSTEM`: bans gears/circuits/holograms, requires human-centered scenes |
+| 13 | **`fs.readFileSync` crashes on Edge Runtime** | Inlined all sections as TS constants in `neel-prompt-sections.ts` |
+| 14 | **FUNCTION_INVOCATION_TIMEOUT** on `/api/ai/generate` and `/api/ai/research` | Converted both routes to Edge Runtime |
+| 15 | **OAuth callback 504 GATEWAY_TIMEOUT** | Fire-and-forget DB save; reduced profile fetch timeout; converted callback to Edge Runtime |
+| 16 | **Scheduled posts always failing** — tokens saved to wrong collection | Fixed `COLLECTION = "tokens"` in `src/lib/db/tokens.ts` |
+| 17 | **No LinkedIn disconnect button** | Added Disconnect button to Settings + `POST /api/auth/linkedin/disconnect` |
+| 18 | **Dashboard FAILED_PRECONDITION** — composite Firestore index missing | Removed `orderBy` from Firestore query; sort done in JS |
+| 19 | **OpenRouter 400 error** — invalid model ID | Changed to `google/gemini-2.0-flash-001` across all routes |
+| 20 | **Image style not applied on initial generation** — create page didn't send `imageStyle` | Added `imageStyle: activeProfile?.imageStyle` to generate request in `create/page.tsx` |
+| 21 | **6 settings tabs overflowing tab bar** — `px-4` padding too wide for 6 tabs | Reduced to `px-3` — all 6 tabs now fit in one row without scrolling |
 
 ---
 
@@ -393,38 +468,39 @@ Likes and comments are synced hourly via the cron worker's engagement sync block
 
 | File | Role |
 |---|---|
-| `Master_Neel_Prompt.md` | **Human-editable source of truth** for all Neel prompt text — edit here; code reads from `neel-prompt-sections.ts` |
-| `src/lib/ai/neel-prompt-sections.ts` | **Inlined TS constants** for every prompt section — Edge Runtime compatible replacement for file reads |
-| `src/app/dashboard/create/page.tsx` | Collects Layers A, E — triggers full pipeline |
-| `src/app/dashboard/create/preview/page.tsx` | Editable post preview — image picker, schedule button, **Regenerate Post**, **Regenerate Image** |
+| `Master_Neel_Prompt.md` | **Human-editable source of truth** for all Neel prompt text — edit here, then sync to `neel-prompt-sections.ts` |
+| `src/lib/ai/neel-prompt-sections.ts` | **Inlined TS constants** for every prompt section — Edge Runtime compatible |
+| `src/app/dashboard/create/page.tsx` | Collects Layers A, E — triggers full pipeline; shows active image style in AI Context sidebar |
+| `src/app/dashboard/create/preview/page.tsx` | Editable post preview — image picker, image overlay + hook editor, schedule button, Regenerate Post/Image |
 | `src/lib/ai/research.ts` | Runs Layer B — Edge Runtime, 2-stage research pipeline |
-| `src/lib/ai/generate.ts` | Assembles prompt from `neel-prompt-sections.ts`, calls Neel via OpenRouter. Exports `generateImagePrompt()` |
+| `src/lib/ai/generate.ts` | Assembles prompt, calls Neel via OpenRouter. Exports `generatePost()`, `generateImagePrompt()`, `generateImageHook()`. Contains `IMAGE_STYLE_PREFIXES` map. |
 | `src/lib/db/memory.ts` | Stores + retrieves Layer C — memory |
-| `src/lib/ai/memory-extract.ts` | Extracts Layer G — post-generation memory indexing |
-| `src/lib/db/profiles.ts` | Stores Layer D — brand profile |
-| `src/app/dashboard/settings/page.tsx` | UI for Layers D + F + LinkedIn connect/disconnect |
+| `src/lib/ai/memory-extract.ts` | Extracts Layer I — post-generation memory indexing |
+| `src/lib/db/profiles.ts` | Stores Layer D — brand profile. Contains `ImageStyle` type and `imageStyle` field on `ProfileSegment`. |
+| `src/lib/db/posts.ts` | Post CRUD. Contains `image_hook` field (Layer H overlay text). |
+| `src/app/dashboard/settings/page.tsx` | UI for Layers D + F + Image Style (6 tabs) + LinkedIn connect/disconnect |
 | `src/app/dashboard/memory/page.tsx` | Dashboard for Layer C — view + delete Neel's memory entries |
 | `src/lib/context/segment.tsx` | Global segment state (individual/corporate) |
 | `src/lib/ai/openrouter.ts` | OpenRouter client — `DEFAULT_MODEL: google/gemini-2.0-flash-001` |
 | `src/lib/ai/save-memory.ts` | `savePostMemory()` — called after confirmed LinkedIn publish |
 | `src/lib/storage/uploadImage.ts` | Uploads `data:` URL images to Firebase Storage; returns HTTPS URL |
 | `src/lib/db/tokens.ts` | LinkedIn token CRUD — saves to `tokens` collection (matches cron reader) |
-| `src/app/api/ai/generate/route.ts` | Edge Runtime — POST generates post via Neel |
+| `src/app/api/ai/generate/route.ts` | Edge Runtime — POST, passes full body to `generatePost()` including `imageStyle` |
 | `src/app/api/ai/research/route.ts` | Edge Runtime — POST runs 2-stage research |
-| `src/app/api/ai/image-prompt/route.ts` | Edge Runtime — POST regenerates image prompt standalone |
-| `src/app/api/auth/linkedin/callback/route.ts` | Edge Runtime — OAuth callback; exchanges code, sets cookies, fire-and-forget DB save |
-| `src/app/api/auth/linkedin/disconnect/route.ts` | POST clears all `li_*` cookies (disconnect); GET redirects to settings |
+| `src/app/api/ai/image-prompt/route.ts` | Edge Runtime — POST regenerates image prompt standalone, accepts `imageStyle` |
+| `src/app/api/ai/image-hook/route.ts` | **New (v1.2)** — Edge Runtime — POST generates 7-word hook text via `generateImageHook()` |
+| `src/app/api/auth/linkedin/callback/route.ts` | Edge Runtime — OAuth callback |
+| `src/app/api/auth/linkedin/disconnect/route.ts` | POST clears all `li_*` cookies (disconnect) |
 | `src/app/api/cron/publish-due/route.ts` | Cron worker — claims posts, refreshes tokens, publishes to LinkedIn, syncs engagement |
-| `src/app/api/dashboard/stats/route.ts` | Edge Runtime — returns stat counts from cookies |
 | `src/app/api/linkedin/engagement/route.ts` | Fetches likes + comments from LinkedIn API |
-| `vercel.json` | Vercel Cron config — triggers `/api/cron/publish-due` daily |
-| `push-all.sh` | **Always use this to push** — sends to `linkedin/main` (Vercel), `linkedin/linkedin-main`, `origin/linkedin-main` |
+| `vercel.json` | Vercel Cron config — triggers `/api/cron/publish-due` every minute |
+| `push-all.sh` | **Always use this to push** — deploys to Vercel + updates all branches |
 
 ### How neel-prompt-sections.ts works
 
 `generate.ts` imports `NEEL_SECTIONS` from `neel-prompt-sections.ts` — a TypeScript constant containing all prompt sections. Dynamic values use `{{PLACEHOLDER}}` syntax substituted at call time.
 
-`Master_Neel_Prompt.md` is the human-readable copy. When you edit it, manually sync the changed section into `neel-prompt-sections.ts` to apply in production.
+`Master_Neel_Prompt.md` is the human-readable copy. When you edit it, **manually sync the changed section** into `neel-prompt-sections.ts` to apply in production.
 
 | Section | Controls |
 |---|---|
@@ -436,12 +512,99 @@ Likes and comments are synced hourly via the cron worker's engagement sync block
 | `STRUCTURE` | Full post structure (hook → body → CTA → hashtags). `{{PARAGRAPHS}}` filled at runtime |
 | `COPYWRITING_RULES` | 7 hard rules applied to every sentence |
 | `FORMATTING` | Emoji, line break, ALL CAPS limits |
-| `IMAGE_PROMPT_SYSTEM` | Rules for the image generation prompt |
+| `IMAGE_PROMPT_SYSTEM` | Rules for image prompt generation — now includes FIXED FRAME RULES (v1.2) |
 | `IMAGE_PROMPT_USER` | Template for image user turn. `{{TOPIC}}`, `{{SEGMENT}}`, `{{POST}}` filled at runtime |
-
-**In development:** file is re-read on every generation call — edit and save `Master_Neel_Prompt.md` and the next generation uses the new rules instantly.
-**In production:** file is cached after first read for performance.
 
 ---
 
-*Last audited: 2026-03-26 | Pipeline version: 4.2 (Edge Runtime + Token fix + Regenerate + Disconnect)*
+## SOP — User Onboarding Checklist
+
+> Use this as a step-by-step guide for new users or when onboarding a client.
+
+### Step 1 — Connect LinkedIn
+- Go to **Settings** → Click **Connect LinkedIn**
+- Authorise the app — you'll be redirected back automatically
+- Status should show **Connected** with your name
+
+### Step 2 — Fill Your Individual Profile
+Go to **Settings → Identity tab** (with Individual selected):
+- [ ] Full Name
+- [ ] Current Role
+- [ ] Expertise / Niche
+- [ ] Personal Bio
+
+Go to **Settings → Audience tab**:
+- [ ] Ideal Customer Profile (ICP)
+- [ ] Jobs to be Done (JTBD)
+
+Go to **Settings → Branding tab**:
+- [ ] Content Pillars (3–5 topics)
+- [ ] Brand Personality / Tone
+- [ ] Unique Selling Proposition
+
+Go to **Settings → Customer Voice tab**:
+- [ ] Customer Pains
+- [ ] Verbatim Language (exact phrases customers say)
+- [ ] Words to Avoid
+
+### Step 3 — Set Your Image Style
+Go to **Settings → Image Style tab**:
+- [ ] Select a visual style for your posts
+- [ ] Recommended starting point: **📷 Photo** (cinematic editorial photography)
+- [ ] Click **Save Changes**
+
+### Step 4 — Generate Your First Post
+- Go to **Create Post**
+- Enter a specific topic (include a number or question for better research)
+- Select tone, audience, length
+- Check AI Context sidebar — confirm your niche, brand voice, and image style are shown
+- Click **Research & Generate Post**
+
+### Step 5 — Review on Preview Page
+- Edit the post text if needed
+- Select **AI Generate** for image → click **Generate Image**
+- Optionally click **Generate Hook** to add a text overlay on the image
+- **Schedule** or **Publish directly**
+
+### Step 6 — Repeat & Refine
+- After 3–5 posts, Neel's memory grows and posts become more consistent
+- Check **Memory** page to see what Neel has stored
+- If a post was bad, delete its memory entry to prevent it from influencing future posts
+
+---
+
+## SOP — Internal Team Reference
+
+### Changing Neel's Writing Behaviour
+1. Edit the relevant section in `Master_Neel_Prompt.md`
+2. Copy the changed section into the matching key in `src/lib/ai/neel-prompt-sections.ts`
+3. Test locally — `npm run dev`, generate a post, check output
+4. Push via `bash push-all.sh`
+
+### Adding a New Image Style
+1. Add the style ID to `ImageStyle` type in `src/lib/db/profiles.ts`
+2. Add the prefix string to `IMAGE_STYLE_PREFIXES` in `src/lib/ai/generate.ts`
+3. Add the style card metadata to `IMAGE_STYLES` array in `src/app/dashboard/settings/page.tsx`
+4. Document it in the Image Style table in this file
+5. Push via `bash push-all.sh`
+
+### Deploying
+**Always** use `bash push-all.sh` — never `git push` directly. The script pushes to:
+- `linkedin/main` → triggers Vercel production deploy
+- `linkedin/linkedin-main` → GitHub development branch
+- `origin/linkedin-main` → ECC repo mirror
+
+### Environment Variables (Vercel)
+| Variable | Purpose |
+|---|---|
+| `OPENROUTER_API_KEY` | AI generation (Neel, research, image prompts, hook) |
+| `FAL_API_KEY` | Image generation via fal.ai |
+| `FIREBASE_*` | Firestore + Auth |
+| `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` | OAuth |
+| `ADMIN_EMAILS` | Comma-separated list of admin dashboard users |
+| `BETA_APPROVED_EMAILS` | Comma-separated list of beta access users |
+| `CRON_SECRET` | Secures `/api/cron/publish-due` — passed as `x-cron-secret` header |
+
+---
+
+*Last audited: 2026-03-28 | Pipeline version: 4.3 (Brand-Consistent Image System — Layer 1 Art Style, Layer 2 Hook Overlay, Layer 3 Fixed Frame Rules)*
