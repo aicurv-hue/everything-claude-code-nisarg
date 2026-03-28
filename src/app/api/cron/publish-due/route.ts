@@ -45,8 +45,8 @@ async function refreshAccessToken(userId: string, refreshToken: string): Promise
       body: new URLSearchParams({
         grant_type:    "refresh_token",
         refresh_token: refreshToken,
-        client_id:     process.env.LINKEDIN_CLIENT_ID!,
-        client_secret: process.env.LINKEDIN_CLIENT_SECRET!,
+        client_id:     (process.env.LINKEDIN_CLIENT_ID || "").trim().replace(/\n/g, ""),
+        client_secret: (process.env.LINKEDIN_CLIENT_SECRET || "").trim().replace(/\n/g, ""),
       }),
     });
     if (!res.ok) { console.error("[cron] Token refresh failed:", await res.text()); return null; }

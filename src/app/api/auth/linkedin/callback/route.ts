@@ -69,10 +69,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Trim env vars — trailing spaces/newlines from Vercel can break the exchange
-  const clientId     = (process.env.LINKEDIN_CLIENT_ID     || "").trim();
-  const clientSecret = (process.env.LINKEDIN_CLIENT_SECRET || "").trim();
-  const redirectUri  = (process.env.LINKEDIN_REDIRECT_URI  || "").trim();
+  // Trim env vars — strip whitespace AND literal \n that Vercel sometimes injects
+  const clean = (v: string | undefined) => (v || "").trim().replace(/\\n/g, "").replace(/\n/g, "");
+  const clientId     = clean(process.env.LINKEDIN_CLIENT_ID);
+  const clientSecret = clean(process.env.LINKEDIN_CLIENT_SECRET);
+  const redirectUri  = clean(process.env.LINKEDIN_REDIRECT_URI);
 
   // ── Step 1: Exchange code for tokens ──────────────────────────────────────
   const tokenRes = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {

@@ -43,8 +43,8 @@ export async function POST(req: NextRequest) {
     body: new URLSearchParams({
       grant_type: "refresh_token",
       refresh_token: refreshToken,
-      client_id: process.env.LINKEDIN_CLIENT_ID!,
-      client_secret: process.env.LINKEDIN_CLIENT_SECRET!,
+      client_id: (process.env.LINKEDIN_CLIENT_ID || "").trim().replace(/\n/g, ""),
+      client_secret: (process.env.LINKEDIN_CLIENT_SECRET || "").trim().replace(/\n/g, ""),
     }),
   });
 
