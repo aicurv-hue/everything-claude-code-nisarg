@@ -884,8 +884,11 @@ export default function PostPreviewPage() {
                 <div className="w-full relative">
                   <img src={imageUrl} alt="AI generated LinkedIn image" className="w-full rounded-xl object-cover max-h-[400px]" />
                   {imageHook && (
-                    <div className="absolute bottom-0 left-0 right-0 rounded-b-xl bg-gradient-to-t from-black/70 via-black/30 to-transparent px-5 py-5">
-                      <p className="text-white font-bold text-lg leading-tight drop-shadow-lg">{imageHook}</p>
+                    <div className="absolute inset-0 rounded-xl" style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 50%, transparent 100%)" }}>
+                      <p className="absolute top-5 left-5 right-16 text-white font-black leading-[1.1] drop-shadow-2xl"
+                        style={{ fontSize: "clamp(1.25rem, 4vw, 2rem)", textShadow: "0 2px 12px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.9)" }}>
+                        {imageHook}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -914,8 +917,11 @@ export default function PostPreviewPage() {
                   <div className="relative">
                     <img src={uploadedPreview} alt="Uploaded image" className="w-full rounded-xl object-cover max-h-[400px]" />
                     {imageHook && (
-                      <div className="absolute bottom-0 left-0 right-0 rounded-b-xl bg-gradient-to-t from-black/70 via-black/30 to-transparent px-5 py-5">
-                        <p className="text-white font-bold text-lg leading-tight drop-shadow-lg">{imageHook}</p>
+                      <div className="absolute inset-0 rounded-xl" style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 50%, transparent 100%)" }}>
+                        <p className="absolute top-5 left-5 right-16 text-white font-black leading-[1.1] drop-shadow-2xl"
+                          style={{ fontSize: "clamp(1.25rem, 4vw, 2rem)", textShadow: "0 2px 12px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.9)" }}>
+                          {imageHook}
+                        </p>
                       </div>
                     )}
                     <button
