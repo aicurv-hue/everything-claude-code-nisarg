@@ -68,9 +68,13 @@ export default function SchedulePage() {
     load(true);
   };
 
-  const scheduled  = posts.filter((p) => p.status === "scheduled");
-  const published  = posts.filter((p) => p.status === "published");
-  const failed     = posts.filter((p) => p.status === "failed");
+  // Scheduled: soonest first | Published: latest first | Failed: newest first
+  const scheduled  = posts.filter((p) => p.status === "scheduled")
+    .sort((a, b) => (a.scheduled_at?.seconds ?? 0) - (b.scheduled_at?.seconds ?? 0));
+  const published  = posts.filter((p) => p.status === "published")
+    .sort((a, b) => (b.published_at?.seconds ?? b.created_at?.seconds ?? 0) - (a.published_at?.seconds ?? a.created_at?.seconds ?? 0));
+  const failed     = posts.filter((p) => p.status === "failed")
+    .sort((a, b) => (b.created_at?.seconds ?? 0) - (a.created_at?.seconds ?? 0));
 
   if (loading) {
     return (

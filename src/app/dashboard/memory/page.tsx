@@ -68,7 +68,10 @@ export default function MemoryPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      const mems: PostMemory[] = data.entries || [];
+      const mems: PostMemory[] = (data.entries || []).sort(
+        (a: PostMemory, b: PostMemory) =>
+          (b.created_at?.seconds ?? 0) - (a.created_at?.seconds ?? 0)
+      );
       setMemories(mems);
 
       // Compute stats client-side from the fetched entries

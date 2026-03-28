@@ -31,7 +31,11 @@ export default function DraftsPage() {
       });
       const data = await res.json();
       const all: Post[] = data.posts || [];
-      setDrafts(all.filter((p) => p.status === "draft"));
+      setDrafts(
+        all
+          .filter((p) => p.status === "draft")
+          .sort((a, b) => (b.created_at?.seconds ?? 0) - (a.created_at?.seconds ?? 0))
+      );
     } catch (err) {
       console.error("Error loading drafts:", err);
     } finally {

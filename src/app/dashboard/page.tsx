@@ -134,7 +134,14 @@ export default function DashboardHomePage() {
       setStats(dashData.stats);
       setProfile(dashData.profile);
       setAllPosts(dashData.allPosts || []);
-      setRecent((dashData.posts || []).slice(0, 6));
+      setRecent(
+        (dashData.posts || [])
+          .sort((a: Post, b: Post) => {
+            const ts = (p: Post) => p.published_at?.seconds ?? p.created_at?.seconds ?? 0;
+            return ts(b) - ts(a);
+          })
+          .slice(0, 6)
+      );
       setSystem(serverStats.system);
       setLinkedIn(serverStats.linkedin);
       setLastUpdated(serverStats.timestamp);

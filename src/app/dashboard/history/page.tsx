@@ -83,13 +83,21 @@ export default function HistoryPage() {
     loadHistory();
   }, [segment, user]);
 
-  const filtered = posts.filter((p) => {
-    const matchesSearch =
-      p.topic.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.content.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || p.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const sortSecs = (p: Post) => {
+    if (p.status === "published") return p.published_at?.seconds ?? p.created_at?.seconds ?? 0;
+    if (p.status === "scheduled") return p.scheduled_at?.seconds ?? p.created_at?.seconds ?? 0;
+    return p.created_at?.seconds ?? 0;
+  };
+
+  const filtered = posts
+    .filter((p) => {
+      const matchesSearch =
+        p.topic.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.content.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === "all" || p.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => sortSecs(b) - sortSecs(a));
 
   const handleRetry = async (post: Post) => {
     if (!post.id || retrying) return;
