@@ -7,6 +7,7 @@ import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import { getIdToken } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { getAuthToken } from "@/lib/utils/getAuthToken";
 import { Zap, Search, Brain, SlidersHorizontal, ChevronDown, ChevronUp, User, Building2, Sparkles } from "lucide-react";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
 
@@ -54,7 +55,8 @@ export default function CreatePostPage() {
     if (!user) return;
     const loadProfile = async () => {
       try {
-        const token = await getIdToken(auth.currentUser!);
+        const token = await getAuthToken();
+        if (!token) { setMemoryCount(0); return; }
         const [profileRes, memoryRes] = await Promise.all([
           fetch("/api/profiles", { headers: { Authorization: `Bearer ${token}` } }),
           fetch(`/api/memory?segment=${segment}&limit=100`, { headers: { Authorization: `Bearer ${token}` } }),
@@ -65,7 +67,7 @@ export default function CreatePostPage() {
         }
         if (memoryRes.ok) {
           const data = await memoryRes.json();
-          setMemoryCount(Array.isArray(data.memories) ? data.memories.length : 0);
+          setMemoryCount(Array.isArray(data.entries) ? data.entries.length : 0);
         } else {
           setMemoryCount(0);
         }
@@ -111,7 +113,7 @@ export default function CreatePostPage() {
           });
           if (memRes.ok) {
             const memData = await memRes.json();
-            memoryContext = memData.memories || [];
+            memoryContext = memData.entries || [];
           }
         }
       } catch { /* memory is non-critical */ }
