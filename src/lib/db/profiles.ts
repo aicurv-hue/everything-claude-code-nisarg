@@ -6,6 +6,8 @@ import {
   serverTimestamp 
 } from "firebase/firestore";
 
+export type ImageStyle = "photo" | "illustration" | "abstract" | "3d" | "lineart" | "bw_photo";
+
 export interface ProfileSegment {
   // Identity
   name?: string;
@@ -31,6 +33,9 @@ export interface ProfileSegment {
   // AI Config
   model?: string;
   systemPrompt?: string;
+
+  // Image Style (Layer 1 — saved per segment)
+  imageStyle?: ImageStyle;
 
   // LinkedIn (corporate only)
   linkedinOrganizationId?: string;

@@ -21,7 +21,20 @@ export interface PostRequest {
   clientProfile?: ProfileSegment;
   customInstructions?: string;    // Free-form dos/don'ts from the UI prompt panel
   memoryContext?: PostMemory[];   // Top-N relevant past posts — injected by create page
+  imageStyle?: string;            // Layer 1: art style key (photo|illustration|abstract|3d|lineart|bw_photo)
 }
+
+// ─── Image style prefix map (Layer 1 — Brand Consistency) ─────────────────────
+// Each style prefix is prepended to every AI-generated image prompt.
+// This locks the visual language across all posts for a given user/segment.
+const IMAGE_STYLE_PREFIXES: Record<string, string> = {
+  photo:        "Cinematic editorial photography, ultra-realistic, natural lighting, shallow depth of field —",
+  illustration: "Soft editorial illustration, warm linework, hand-crafted texture, muted ink palette —",
+  abstract:     "Abstract conceptual art, geometric shapes, emotion-driven composition, premium editorial —",
+  "3d":         "Photorealistic 3D render, volumetric lighting, depth, cinematic quality, editorial style —",
+  lineart:      "Minimal black ink line art on white, clean strokes, no fill, sketch style —",
+  bw_photo:     "Cinematic black and white photography, high contrast, film grain, editorial style, desaturated —",
+};
 
 // Maps length label to explicit word-count range and paragraph guidance
 const LENGTH_SPEC: Record<string, { words: string; paragraphs: string }> = {
@@ -152,7 +165,7 @@ function sanitizePost(raw: string): string {
  *   - marketing-skills-all: social-content (LinkedIn-specific structure, CTA, tone mapping)
  */
 export async function generatePost(request: PostRequest): Promise<GenerateResult> {
-  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext } = request;
+  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, imageStyle } = request;
 
   const lengthSpec = LENGTH_SPEC[length] || LENGTH_SPEC.medium;
 
@@ -297,7 +310,9 @@ Start directly with the hook line. Output nothing else.`;
       0.7
     );
 
-    const imagePrompt = (imagePromptCompletion.choices[0].message.content || "").trim();
+    const rawImagePrompt = (imagePromptCompletion.choices[0].message.content || "").trim();
+    const stylePrefix = imageStyle ? (IMAGE_STYLE_PREFIXES[imageStyle] ?? "") : "";
+    const imagePrompt = stylePrefix ? `${stylePrefix} ${rawImagePrompt}` : rawImagePrompt;
 
     return { post, imagePrompt };
   } catch (error: any) {
@@ -312,7 +327,7 @@ Start directly with the hook line. Output nothing else.`;
  * Standalone image prompt regeneration — skips post generation entirely.
  * Used when the user wants a new image prompt without rewriting the post.
  */
-export async function generateImagePrompt(topic: string, segment: string, post: string): Promise<string> {
+export async function generateImagePrompt(topic: string, segment: string, post: string, imageStyle?: string): Promise<string> {
   const imageSystemPrompt = section("IMAGE_PROMPT_SYSTEM");
   const imageUserPrompt = section("IMAGE_PROMPT_USER", {
     TOPIC:   topic,
@@ -344,5 +359,45 @@ export async function generateImagePrompt(topic: string, segment: string, post: 
 
   if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
   const data = await res.json();
-  return (data.choices?.[0]?.message?.content || "").trim();
+  const rawPrompt = (data.choices?.[0]?.message?.content || "").trim();
+  const stylePrefix = imageStyle ? (IMAGE_STYLE_PREFIXES[imageStyle] ?? "") : "";
+  return stylePrefix ? `${stylePrefix} ${rawPrompt}` : rawPrompt;
+}
+
+/**
+ * Layer 2: Generate a 7-word-max hook/question for image text overlay.
+ * On-demand — called when user clicks "Generate Hook" on the preview page.
+ */
+export async function generateImageHook(post: string, topic: string): Promise<string> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY not set");
+
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
+      "X-Title": "LinkAuto",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.0-flash-001",
+      messages: [
+        {
+          role: "system",
+          content: "You write short, punchy image overlay hooks for LinkedIn posts. Output ONLY the hook text — 7 words maximum, no punctuation at the end, no quotes. Make it a bold question or provocative statement that makes the viewer stop and read the post. Do not explain. Do not use hashtags.",
+        },
+        {
+          role: "user",
+          content: `Topic: "${topic}"\n\nPost:\n${post.slice(0, 600)}\n\nWrite a 7-word-max hook for the image overlay.`,
+        },
+      ],
+      temperature: 0.85,
+      max_tokens: 30,
+    }),
+  });
+
+  if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
+  const data = await res.json();
+  return (data.choices?.[0]?.message?.content || "").trim().replace(/^["']|["']$/g, "");
 }

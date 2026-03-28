@@ -43,6 +43,10 @@ export default function PostPreviewPage() {
   const [linkedInUser, setLinkedInUser]     = useState<{ name: string; picture: string; email: string } | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
 
+  // ── Image hook state (Layer 2 — text overlay) ───────────────────────────────
+  const [imageHook, setImageHook]               = useState<string>("");
+  const [isGeneratingHook, setIsGeneratingHook] = useState(false);
+
   // ── Regeneration state ──────────────────────────────────────────────────────
   const [isRegeneratingPost, setIsRegeneratingPost]   = useState(false);
   const [isRegeneratingImage, setIsRegeneratingImage] = useState(false);
@@ -85,6 +89,7 @@ export default function PostPreviewPage() {
     setPostData(parsed);
     setEditedContent(parsed.content);
     if (parsed.imagePrompt) setImagePrompt(parsed.imagePrompt);
+    if (parsed.imageHook) setImageHook(parsed.imageHook);
 
     getAuthToken().then(tok =>
       fetch("/api/linkedin/status", tok ? { headers: { Authorization: `Bearer ${tok}` } } : {})
@@ -124,6 +129,9 @@ export default function PostPreviewPage() {
     ].filter(Boolean).join("\n") || undefined;
 
     try {
+      const storedProfileRegen = localStorage.getItem("client_profile");
+      const imageStyleRegen = storedProfileRegen ? JSON.parse(storedProfileRegen).imageStyle : undefined;
+
       const res = await fetch("/api/ai/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -135,6 +143,7 @@ export default function PostPreviewPage() {
           segment:            postData.metadata.segment,
           research:           postData.research,
           customInstructions: effectiveInstructions,
+          imageStyle:         imageStyleRegen,
         }),
       });
       const data = await res.json();
@@ -168,13 +177,17 @@ export default function PostPreviewPage() {
     setPreviousImagePrompt(imagePrompt);
 
     try {
+      const storedProfile = localStorage.getItem("client_profile");
+      const imageStyle = storedProfile ? JSON.parse(storedProfile).imageStyle : undefined;
+
       const res = await fetch("/api/ai/image-prompt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          topic:   postData.metadata.topic,
-          segment: postData.metadata.segment,
-          post:    editedContent,
+          topic:      postData.metadata.topic,
+          segment:    postData.metadata.segment,
+          post:       editedContent,
+          imageStyle,
         }),
       });
       const data = await res.json();
@@ -208,6 +221,32 @@ export default function PostPreviewPage() {
     setImagePrompt(previousImagePrompt);
     setPreviousImagePrompt(current);
     setImageUrl(null);
+  };
+
+  /* ── Image hook generator (Layer 2) ── */
+  const generateHook = async () => {
+    if (!editedContent || isGeneratingHook) return;
+    setIsGeneratingHook(true);
+    try {
+      const res = await fetch("/api/ai/image-hook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          post: editedContent,
+          topic: postData?.metadata?.topic,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.hook) {
+        setImageHook(data.hook);
+        const stored = localStorage.getItem("latest_post");
+        if (stored) {
+          localStorage.setItem("latest_post", JSON.stringify({ ...JSON.parse(stored), imageHook: data.hook }));
+        }
+      }
+    } finally {
+      setIsGeneratingHook(false);
+    }
   };
 
   /* ── Image helpers ── */
@@ -279,6 +318,7 @@ export default function PostPreviewPage() {
         custom_instructions: postData.metadata.customInstructions || undefined,
         segment: postData.metadata.segment || "individual",
         research_data: postData.research,
+        image_hook: imageHook || undefined,
         created_at: null,
       });
       router.push("/dashboard/drafts");
@@ -307,6 +347,9 @@ export default function PostPreviewPage() {
           imageUrl: finalImageUrl || null,
           segment: postData.metadata.segment || "individual",
           organizationId: organizationId || undefined,
+          topic:    postData.metadata.topic    || "",
+          audience: postData.metadata.audience || "",
+          tone:     postData.metadata.tone     || "professional",
         }),
       });
 
@@ -324,6 +367,7 @@ export default function PostPreviewPage() {
           custom_instructions: postData.metadata.customInstructions || undefined,
           segment: postData.metadata.segment || "individual",
           research_data: postData.research,
+          image_hook: imageHook || undefined,
           created_at: null,
         });
       } else {
@@ -355,6 +399,7 @@ export default function PostPreviewPage() {
           research_data: postData.research,
           linkedin_post_id: data.postId || "unknown",
           image_url: finalImageUrl || undefined,
+          image_hook: imageHook || undefined,
           published_at: new Date().toISOString(),
           created_at: null,
         });
@@ -402,6 +447,7 @@ export default function PostPreviewPage() {
         organization_id: organizationId || undefined,
         research_data: postData.research,
         image_url: immediateImageUrl,
+        image_hook: imageHook || undefined,
         scheduled_at: scheduledAt.toISOString(),
         schedule_timezone: timezone,
         best_time_applied: bestTimeApplied,
@@ -835,8 +881,13 @@ export default function PostPreviewPage() {
               )}
 
               {imageMode === "ai" && !isGeneratingImage && imageUrl && !imageError && (
-                <div className="w-full">
+                <div className="w-full relative">
                   <img src={imageUrl} alt="AI generated LinkedIn image" className="w-full rounded-xl object-cover max-h-[400px]" />
+                  {imageHook && (
+                    <div className="absolute bottom-0 left-0 right-0 rounded-b-xl bg-gradient-to-t from-black/70 via-black/30 to-transparent px-5 py-5">
+                      <p className="text-white font-bold text-lg leading-tight drop-shadow-lg">{imageHook}</p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -862,6 +913,11 @@ export default function PostPreviewPage() {
                 <div className="w-full">
                   <div className="relative">
                     <img src={uploadedPreview} alt="Uploaded image" className="w-full rounded-xl object-cover max-h-[400px]" />
+                    {imageHook && (
+                      <div className="absolute bottom-0 left-0 right-0 rounded-b-xl bg-gradient-to-t from-black/70 via-black/30 to-transparent px-5 py-5">
+                        <p className="text-white font-bold text-lg leading-tight drop-shadow-lg">{imageHook}</p>
+                      </div>
+                    )}
                     <button
                       onClick={() => { setUploadedFile(null); setUploadedPreview(null); fileInputRef.current?.click(); }}
                       className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-all"
@@ -881,6 +937,36 @@ export default function PostPreviewPage() {
                 </div>
               )}
             </div>
+
+            {/* ── Hook text overlay editor (Layer 2) ── */}
+            {imageMode !== "none" && finalImageUrl && (
+              <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                      Image Hook Text
+                    </label>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Overlaid on the image. 7 words max. Leave blank to hide.</p>
+                  </div>
+                  <button
+                    onClick={generateHook}
+                    disabled={isGeneratingHook}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-xs text-slate-600 border border-slate-200 transition-all disabled:opacity-50"
+                  >
+                    <Sparkles className={`w-3 h-3 ${isGeneratingHook ? "animate-spin" : ""}`} />
+                    {isGeneratingHook ? "Generating..." : "Generate Hook"}
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={imageHook}
+                  onChange={(e) => setImageHook(e.target.value)}
+                  placeholder='e.g. "Are you making this mistake?"'
+                  maxLength={80}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-[#0A66C2]/30 text-slate-700 placeholder-slate-400"
+                />
+              </div>
+            )}
           </div>
 
         </div>

@@ -6,12 +6,13 @@ export const runtime = "edge";
 
 export async function POST(req: NextRequest) {
   try {
-    const { topic, segment, post } = await req.json();
+    const { topic, segment, post, imageStyle } = await req.json();
     if (!post) return NextResponse.json({ error: "post required" }, { status: 400 });
     const imagePrompt = await generateImagePrompt(
       topic || "LinkedIn post",
       segment || "individual",
       post,
+      imageStyle,
     );
     return NextResponse.json({ imagePrompt });
   } catch (err: any) {
