@@ -1,113 +1,82 @@
-# LinkedIn Automation SaaS — Project Framework (ECC)
+# LinkAuto — LinkedIn Automation SaaS
 
-This project leverages the **Everything Claude Code (ECC)** framework for high-performance AI agent orchestration and SaaS delivery.
-
-## 🚀 Vision
-
+## Vision
 A premium LinkedIn automation portal for **Individual Personal Branding** and **Corporate Company Management**, powered by a two-stage AI research/generation pipeline.
 
-## 🛠️ Stack & Architecture
-
+## Stack & Architecture
 - **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes (Edge Runtime for AI & OAuth), Vercel Cron
-- **Database/Auth**: Firebase Firestore + Firebase Auth (LinkedIn OAuth2, token storage, post history)
-- **AI Infrastructure**: OpenRouter (Gemini 2.0 Flash, GPT-4o, Claude 3.5), ECC Framework
+- **Backend**: Next.js API Routes (Node.js + Edge Runtime), Vercel deployment
+- **Database/Auth**: Firebase Firestore + Firebase Auth (LinkedIn OAuth2, per-user token storage)
+- **AI**: OpenRouter (Gemini 2.0 Flash, GPT-4o, Claude 3.5)
+- **Scheduling**: cron-job.org → `/api/cron/publish-due` every minute
 
 ---
 
-## 🌿 Git & Deployment Strategy
+## Git & Deployment
 
 ### Remotes
 | Remote | Repo | Purpose |
 |--------|------|---------|
 | `linkedin` | `aicurv-hue/linkedin-automation` | **Primary** — Vercel watches this |
-| `origin`   | `aicurv-hue/everything-claude-code-nisarg` | ECC framework mirror — DO NOT touch `main` |
+| `origin`   | `aicurv-hue/everything-claude-code-nisarg` | Mirror |
 
-### Branch Rules
-| Branch | Tracks | Purpose |
-|--------|--------|---------|
-| `linkedin-main` | `linkedin/main` | **Active development — always work here** |
-| `deploy-main`   | `linkedin/main` | Kept in sync — same content as linkedin-main |
-
-### Vercel Deploy Branch
-Vercel is connected to **`linkedin/main`** (`aicurv-hue/linkedin-automation`, `main` branch).
-Every push to `linkedin/main` triggers an automatic production deploy.
-
-### How to Push After Every Commit
-Always run `push-all.sh` — NEVER push manually to individual branches:
+### Active Branch
+Always work on `linkedin-main`. Never push manually — always use:
 ```bash
 bash push-all.sh
 ```
-This pushes `linkedin-main` to:
-- `linkedin/main` → triggers Vercel production deploy
-- `linkedin/linkedin-main` → GitHub branch backup
-- `origin/linkedin-main` → ECC repo mirror
+This pushes to `linkedin/main` (triggers Vercel deploy), `linkedin/linkedin-main`, and `origin/linkedin-main`.
 
 ---
 
-## 🤖 ECC Agent Orchestration (Anti Gravity Rules)
+## LinkedIn Automation Rules
 
-Whenever performing a task, ALWAYS cross-reference the relevant ECC agent and skill.
-
-### Core Agents to Use
-- **planner**: For all implementation planning (Stage 0).
-- **architect**: For system design and Firebase/Firestore decisions.
-- **tdd-guide**: For all new feature development (80%+ coverage required).
-- **code-reviewer**: Mandatory check after any significant modification.
-
-### Core Skills to Leverage
-- **content-engine**: Base for all LinkedIn post types and platform-native styles.
-- **market-research**: Primary logic for the "AI Research" phase of the input stream.
-- **article-writing**: For long-form corporate thought leadership posts.
-- **api-design**: For all Firebase/LinkedIn interaction patterns.
-
----
-
-## 📋 LinkedIn Automation Rules
-
-### Input Stream (Individual & Corporate)
-- **Individual**: Focus on storytelling, personal voice, and authority building.
-- **Corporate**: Focus on brand consistency, industry metrics, and case studies.
-- **Research Phase**: AI must perform "deep research" (using `market-research` skill) before generating a post.
+### Input Stream
+- **Individual**: Storytelling, personal voice, authority building.
+- **Corporate**: Brand consistency, industry metrics, case studies.
+- **Research Phase**: Two-stage AI pipeline — research synthesis → post generation.
 
 ### Output Stream
-- **Editing**: Never post directly. Always show a final editable preview.
-- **Scheduling**: Post stored in Firestore `posts` collection with `status: "scheduled"`.
-- **Segments**: Maintain strict separation between Individual and Corporate workspaces.
+- **Editing**: Never post directly. Always show editable preview first.
+- **Scheduling**: Posts stored in Firestore `posts` collection with `status: "scheduled"`.
+- **Segments**: Strict separation between Individual and Corporate workspaces.
 
-### Token Storage
-LinkedIn tokens are saved to Firestore **`tokens`** collection (keyed by Firebase UID).
-The cron worker reads from `tokens` — never change this collection name.
-
----
-
-## 📁 File Structure Conventions
-
-- `src/app/`: Next.js App Router (pages & API routes)
-- `src/components/`: UI components (Tailwind + Premium CSS)
-- `src/lib/`: Core logic (Firebase client, LinkedIn API, AI pipeline)
-- `src/lib/ai/neel-prompt-sections.ts`: Inlined prompt sections (Edge Runtime compatible)
-- `Master_Neel_Prompt.md`: Human-editable source of truth for all Neel prompt text
-- `repos/everything-claude-code-nisarg/`: ECC framework (pristine, DO NOT modify)
-- `repos/marketing-skills-all/`: Marketing skills repo (pristine, DO NOT modify)
-- `push-all.sh`: Push script — always use this instead of manual git push
+### Token Storage (CRITICAL — never change)
+- LinkedIn tokens → Firestore `tokens/{firebaseUID}` (keyed by Firebase UID)
+- Every API route MUST use Firebase ID token (`Authorization: Bearer <token>`) to identify user
+- Never use browser cookies for LinkedIn auth — multi-user SaaS, cookies are shared per browser
 
 ---
 
-## ⚡ Edge Runtime Routes (No Vercel Timeout)
-These routes run on Edge Runtime — no 10s limit on Vercel Hobby:
-- `src/app/api/ai/research/route.ts` — AI research pipeline
-- `src/app/api/ai/generate/route.ts` — Post generation
-- `src/app/api/ai/image-prompt/route.ts` — Standalone image prompt regen
-- `src/app/api/auth/linkedin/callback/route.ts` — OAuth callback
-- `src/app/api/dashboard/stats/route.ts` — Dashboard stats
-
-**Rule:** Any route that calls OpenRouter or LinkedIn OAuth MUST use `export const runtime = "edge"`.
+## File Structure
+- `src/app/` — Next.js App Router pages & API routes
+- `src/components/` — UI components (Tailwind, glassmorphism dark theme)
+- `src/lib/` — Core logic (Firebase, LinkedIn API, AI pipeline)
+- `src/lib/ai/neel-prompt-sections.ts` — Inlined prompt sections (Edge Runtime compatible)
+- `Master_Neel_Prompt.md` — Human-editable source of truth for all AI prompt text
+- `NEEL.md` — Pipeline documentation
+- `push-all.sh` — Always use this for deployment
 
 ---
 
-## 🧪 Verification & QA
+## Edge Runtime Routes (no Vercel timeout)
+Any route calling OpenRouter or LinkedIn OAuth must use `export const runtime = "edge"`:
+- `src/app/api/ai/research/route.ts`
+- `src/app/api/ai/generate/route.ts`
+- `src/app/api/ai/image-prompt/route.ts`
+- `src/app/api/auth/linkedin/callback/route.ts`
 
-- Run `/test-coverage` to ensure 80%+ unit/integration coverage.
-- Use `/e2e` for the LinkedIn OAuth and posting flows.
-- Use `/security-scan` (AgentShield) before any production-ready merge.
+---
+
+## Admin
+- Admin dashboard: `/admin`
+- Admin access controlled by `ADMIN_EMAILS` env var in Vercel
+- Current admins: `nisarg2526@gmail.com`, `aicurv@gmail.com`
+- Beta access controlled by `BETA_APPROVED_EMAILS` env var
+
+---
+
+## Scripts
+- `scripts/add-beta-user.mjs` — Add/remove beta users
+- `scripts/seed-beta-access.mjs` — Seed initial beta list
+- `scripts/test-scheduling.mjs` — Test scheduling logic
