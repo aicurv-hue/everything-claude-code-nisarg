@@ -97,10 +97,26 @@ export default function SettingsPage() {
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
-      if (e.data?.type === "linkedin_connected") refreshLinkedInStatus();
+      if (e.data?.type === "linkedin_connected") {
+        refreshLinkedInStatus();
+      }
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
+  }, []);
+
+  // Also handle direct redirect (non-popup fallback): check URL param on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("linkedin_connected") === "true") {
+      refreshLinkedInStatus();
+      // Clean the URL without reload
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    if (params.get("linkedin_error")) {
+      console.error("[LinkedIn OAuth error]", params.get("linkedin_error"));
+      window.history.replaceState({}, "", window.location.pathname);
+    }
   }, []);
 
   const handleReconnect = () => {
@@ -108,12 +124,25 @@ export default function SettingsPage() {
       alert("Still loading your account — please wait a moment and try again.");
       return;
     }
-    window.location.href = `/api/auth/linkedin?returnTo=/dashboard/settings&uid=${encodeURIComponent(user.uid)}`;
+    const oauthUrl = `/api/auth/linkedin?returnTo=/dashboard/settings&uid=${encodeURIComponent(user.uid)}`;
+    // Open as popup — 600x700 centered
+    const w = 600, h = 700;
+    const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
+    const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
+    const popup = window.open(oauthUrl, "linkedin_oauth", `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
+    // Fallback: if popup was blocked, redirect same tab
+    if (!popup || popup.closed) {
+      window.location.href = oauthUrl;
+    }
   };
 
   const handleDisconnect = async () => {
     setLiDisconnecting(true);
-    await fetch("/api/auth/linkedin/disconnect", { method: "POST" }).catch(() => {});
+    const token = await getAuthToken().catch(() => null);
+    await fetch("/api/auth/linkedin/disconnect", {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }).catch(() => {});
     setLiConnected(false);
     setLiName("");
     setLiEmail("");
