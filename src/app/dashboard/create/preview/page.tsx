@@ -86,13 +86,15 @@ export default function PostPreviewPage() {
     setEditedContent(parsed.content);
     if (parsed.imagePrompt) setImagePrompt(parsed.imagePrompt);
 
-    fetch("/api/linkedin/status")
-      .then((r) => r.json())
-      .then((d) => {
-        setLinkedInConnected(d.connected);
-        if (d.connected) setLinkedInUser({ name: d.name, picture: d.picture, email: d.email });
-      })
-      .catch(() => setLinkedInConnected(false));
+    getAuthToken().then(tok =>
+      fetch("/api/linkedin/status", tok ? { headers: { Authorization: `Bearer ${tok}` } } : {})
+        .then((r) => r.json())
+        .then((d) => {
+          setLinkedInConnected(d.connected);
+          if (d.connected) setLinkedInUser({ name: d.name, picture: d.picture, email: d.email });
+        })
+        .catch(() => setLinkedInConnected(false))
+    );
 
     // Load organization ID from user profile (for corporate publishing)
     if (parsed.metadata?.segment === "corporate") {

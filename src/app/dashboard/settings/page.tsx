@@ -70,27 +70,31 @@ export default function SettingsPage() {
   const [liJustDisconnected, setLiJustDisconnected] = useState(false);
 
   useEffect(() => {
-    fetch("/api/linkedin/status")
-      .then(r => r.json())
-      .then(d => {
-        setLiConnected(d.connected);
-        setLiName(d.name || "");
-        setLiEmail(d.email || "");
-        setLiExpiry(d.expiresAt || null);
-      })
-      .catch(() => {});
+    getAuthToken().then(tok =>
+      fetch("/api/linkedin/status", tok ? { headers: { Authorization: `Bearer ${tok}` } } : {})
+        .then(r => r.json())
+        .then(d => {
+          setLiConnected(d.connected);
+          setLiName(d.name || "");
+          setLiEmail(d.email || "");
+          setLiExpiry(d.expiresAt || null);
+        })
+        .catch(() => {})
+    );
   }, []);
 
   const refreshLinkedInStatus = () => {
-    fetch("/api/linkedin/status")
-      .then(r => r.json())
-      .then(d => {
-        setLiConnected(d.connected);
-        setLiName(d.name || "");
-        setLiEmail(d.email || "");
-        setLiExpiry(d.expiresAt || null);
-      })
-      .catch(() => {});
+    getAuthToken().then(tok =>
+      fetch("/api/linkedin/status", tok ? { headers: { Authorization: `Bearer ${tok}` } } : {})
+        .then(r => r.json())
+        .then(d => {
+          setLiConnected(d.connected);
+          setLiName(d.name || "");
+          setLiEmail(d.email || "");
+          setLiExpiry(d.expiresAt || null);
+        })
+        .catch(() => {})
+    );
   };
 
   // Listen for postMessage from OAuth popup

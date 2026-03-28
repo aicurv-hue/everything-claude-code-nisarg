@@ -65,13 +65,16 @@ export default function DraftEditPage() {
   }, [draftId]);
 
   useEffect(() => {
-    fetch("/api/linkedin/status")
-      .then((r) => r.json())
-      .then((d) => {
-        setLiConnected(d.connected);
-        if (d.connected) setLiUser({ name: d.name, picture: d.picture });
-      })
-      .catch(() => setLiConnected(false));
+    (async () => {
+      const tok = auth.currentUser ? await getIdToken(auth.currentUser) : null;
+      fetch("/api/linkedin/status", tok ? { headers: { Authorization: `Bearer ${tok}` } } : {})
+        .then((r) => r.json())
+        .then((d) => {
+          setLiConnected(d.connected);
+          if (d.connected) setLiUser({ name: d.name, picture: d.picture });
+        })
+        .catch(() => setLiConnected(false));
+    })();
   }, []);
 
   const handleSave = async () => {
