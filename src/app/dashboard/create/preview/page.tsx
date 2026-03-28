@@ -884,9 +884,17 @@ export default function PostPreviewPage() {
                 <div className="w-full relative">
                   <img src={imageUrl} alt="AI generated LinkedIn image" className="w-full rounded-xl object-cover max-h-[400px]" />
                   {imageHook && (
-                    <div className="absolute inset-0 rounded-xl" style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 50%, transparent 100%)" }}>
-                      <p className="absolute top-5 left-5 right-16 text-white font-black leading-[1.1] drop-shadow-2xl"
-                        style={{ fontSize: "clamp(1.25rem, 4vw, 2rem)", textShadow: "0 2px 12px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.9)" }}>
+                    <div className="absolute inset-0 rounded-xl pointer-events-none"
+                      style={{ background: "linear-gradient(105deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.38) 38%, transparent 58%)" }}>
+                      <p className="absolute top-5 left-5 text-white leading-[1.12]"
+                        style={{
+                          width: "44%",
+                          fontFamily: "var(--font-jakarta), 'Plus Jakarta Sans', Inter, sans-serif",
+                          fontWeight: 800,
+                          fontSize: "clamp(1.15rem, 3.5vw, 1.9rem)",
+                          letterSpacing: "-0.02em",
+                          textShadow: "0 2px 16px rgba(0,0,0,0.8), 0 1px 4px rgba(0,0,0,0.95)",
+                        }}>
                         {imageHook}
                       </p>
                     </div>

@@ -181,6 +181,7 @@ Do NOT illustrate the topic literally. Illustrate the FEELING.
 ═══ FIXED FRAME RULES — ALWAYS APPLY ═══
 - NO full faces — subjects must be partially turned, looking away, shown from chest-down, or seen from behind. Faces in profile are acceptable. This prevents LinkedIn uncanny-valley effect with AI-generated faces.
 - Format is always landscape 4:3 aspect ratio.
+- TEXT ZONE RULE (critical): The left 40% of the frame MUST be visually clean — dark, blurred, low-detail, or solid-toned. This area is reserved for a text overlay added in post-production. The subject/character MUST be positioned in the right 55–65% of the frame. Never place the subject or any visually busy element in the left third.
 - If a style prefix is prepended to your output (starts with words like "Cinematic editorial photography", "Soft editorial illustration", etc.) — treat it as the highest-priority visual directive. It defines the rendering medium, color science, and lighting style. Do not contradict it.
 
 ═══ ABSOLUTE RULES ═══

@@ -133,6 +133,11 @@ Do NOT illustrate the topic literally. Illustrate the FEELING.
    Post about leadership? Don't show a podium. Show the quiet moment before the decision.
    Post about growth? Don't show arrows. Show the person who did the work, alone, in their environment.
 
+═══ FIXED FRAME RULES — ALWAYS APPLY ═══
+- NO full faces — subjects must be partially turned, looking away, shown from chest-down, or seen from behind. Faces in profile are acceptable.
+- TEXT ZONE RULE (critical): The LEFT 40% of the frame MUST be visually clean — dark, blurred, low-detail, or solid-toned background. This area is reserved for a bold text headline added in post-production. The subject/character MUST be positioned in the RIGHT 55–65% of the frame. Never place the subject or any visually busy element in the left third. Specify this explicitly in the framing: e.g. "subject positioned right of center", "wide left margin of dark negative space".
+- If a style prefix is prepended to your output — treat it as the highest-priority visual directive for rendering medium and color. Do not contradict it.
+
 ═══ ABSOLUTE RULES ═══
 - Output ONLY the final image prompt. No preamble, no explanation, no label.
 - NO text, words, numbers, logos, signs, or UI overlays anywhere in the image.
@@ -165,7 +170,7 @@ These make the post look like a 2022 GPT bot account:
 [MOMENT] — the decisive action, glance, posture, or stillness
 [LIGHTING] — one specific light source and its quality (golden-hour raking light / single overhead pendant / pre-dawn blue hour / monitor glow in dark room)
 [PALETTE] — 2 dominant colors + 1 accent, e.g. "charcoal and slate with a single warm amber source"
-[LENS/FRAME] — camera position and depth: (eye-level tight / wide establishing shot / 35mm shallow DOF / overhead flat lay / Dutch angle for tension)
+[LENS/FRAME] — camera position, depth, AND composition: always specify subject is positioned right-of-center or right third, with clean dark negative space on the left. (e.g. "subject occupies right two-thirds of frame, left third is dark negative space", "off-center right composition, 35mm shallow DOF")
 [QUALITY TAG] — always end with: ultra-detailed, cinematic photography, 4K, LinkedIn editorial style
 
 ═══ REFERENCE PROMPTS (match this quality bar) ═══
