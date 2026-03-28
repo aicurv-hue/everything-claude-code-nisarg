@@ -126,7 +126,9 @@ export default function DashboardHomePage() {
         fetch(`/api/dashboard/data?segment=${segment}`, {
           headers: { Authorization: `Bearer ${token}` },
         }).then((r) => r.json()),
-        fetch("/api/dashboard/stats").then((r) => r.json()),
+        fetch("/api/dashboard/stats", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }).then((r) => r.json()),
       ]);
 
       if (dashData.error) throw new Error(dashData.error);
@@ -155,6 +157,25 @@ export default function DashboardHomePage() {
   }, [user, segment]);
 
   useEffect(() => { if (user) loadAll(); }, [user, segment, loadAll]);
+
+  // Handle ?linkedin_connected=true redirect from OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("linkedin_connected") === "true") {
+      window.history.replaceState({}, "", window.location.pathname);
+      if (user) loadAll(true);
+    }
+  }, [user]);
+
+  // Handle postMessage from OAuth popup
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type === "linkedin_connected" && user) loadAll(true);
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [user]);
 
   const totalLikes    = allPosts.reduce((s, p) => s + (p.likes_count    ?? 0), 0);
   const totalComments = allPosts.reduce((s, p) => s + (p.comments_count ?? 0), 0);
@@ -320,8 +341,15 @@ export default function DashboardHomePage() {
                   )}
                 </div>
               ) : (
-                <a
-                  href={`/api/auth/linkedin?returnTo=/dashboard&uid=${encodeURIComponent(user?.uid || "")}`}
+                <button
+                  onClick={() => {
+                    const url = `/api/auth/linkedin?returnTo=/dashboard&uid=${encodeURIComponent(user?.uid || "")}`;
+                    const w = 600, h = 700;
+                    const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
+                    const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
+                    const popup = window.open(url, "linkedin_oauth", `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
+                    if (!popup || popup.closed) window.location.href = url;
+                  }}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                     isCorporate
                       ? "bg-violet-100 border-violet-300 text-violet-700 hover:bg-violet-200"
@@ -330,7 +358,7 @@ export default function DashboardHomePage() {
                 >
                   <Linkedin className="w-3.5 h-3.5" />
                   Connect LinkedIn
-                </a>
+                </button>
               )}
             </div>
 
@@ -487,13 +515,20 @@ export default function DashboardHomePage() {
           </div>
 
           {system?.linkedin === "disconnected" && (
-            <a
-              href={`/api/auth/linkedin?returnTo=/dashboard&uid=${encodeURIComponent(user?.uid || "")}`}
+            <button
+              onClick={() => {
+                const url = `/api/auth/linkedin?returnTo=/dashboard&uid=${encodeURIComponent(user?.uid || "")}`;
+                const w = 600, h = 700;
+                const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
+                const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
+                const popup = window.open(url, "linkedin_oauth", `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
+                if (!popup || popup.closed) window.location.href = url;
+              }}
               className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-[#0A66C2]/10 hover:bg-[#0A66C2]/15 text-[#0A66C2] text-xs font-medium transition-all border border-[#0A66C2]/20"
             >
               <Linkedin className="w-3.5 h-3.5" />
               Connect LinkedIn
-            </a>
+            </button>
           )}
 
           {stats && stats.failed > 0 && (
