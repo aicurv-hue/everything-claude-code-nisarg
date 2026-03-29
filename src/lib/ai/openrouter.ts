@@ -10,8 +10,8 @@ export const openRouter = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
   apiKey: apiKey || "mock-key",
   defaultHeaders: {
-    "HTTP-Referer": "http://localhost:3000", // Optional, for OpenRouter tracking
-    "X-Title": "LinkedIn Automation Portal", // Optional
+    "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://linkedin-automation-chi.vercel.app",
+    "X-Title": "LinkAuto — LinkedIn Automation Portal",
   }
 });
 

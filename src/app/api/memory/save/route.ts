@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
     await adminDb.collection("post_memories").add({
       user_id:     firebaseUid,          // always from verified token — never from body
       segment:     segment || "individual",
+      source:      "auto",
       topic:       topic || "",
       audience:    audience || "",
       tone:        tone || "professional",

@@ -33,6 +33,7 @@ export async function savePostMemory({
       await adminDb.collection("post_memories").add({
         user_id:     userId,
         segment,
+        source:      "auto",
         topic,
         audience,
         tone,
