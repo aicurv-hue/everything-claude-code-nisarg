@@ -41,7 +41,6 @@ export async function GET(req: NextRequest) {
     const snapshot = await adminDb
       .collection("posts")
       .where("user_id", "==", uid)
-      .orderBy("created_at", "desc")
       .get();
 
     let posts = snapshot.docs.map((d) => {
