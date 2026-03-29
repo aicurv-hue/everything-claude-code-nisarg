@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { savePostMemory } from "@/lib/ai/save-memory";
 
 const LI_VERSION = "202505"; // LinkedIn API version header (YYYYMM)
 const TIMEOUT_MS  = 15_000;
@@ -120,6 +121,7 @@ async function uploadImage(
 export async function POST(request: NextRequest) {
   let accessToken: string | undefined;
   let userSub: string | undefined;
+  let firebaseUid: string | undefined;
 
   // ── Step 1: Try Firestore token keyed by Firebase UID (correct multi-user path) ──
   const authHeader = request.headers.get("authorization") || "";
@@ -128,7 +130,7 @@ export async function POST(request: NextRequest) {
   if (firebaseToken && adminAuth && adminDb) {
     try {
       const decoded = await adminAuth.verifyIdToken(firebaseToken);
-      const firebaseUid = decoded.uid;
+      firebaseUid = decoded.uid;
       const snap = await adminDb.collection("tokens").doc(firebaseUid).get();
       if (snap.exists) {
         const data = snap.data()!;
@@ -148,7 +150,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { content, imageUrl, segment = "individual", organizationId } = await request.json();
+  const { content, imageUrl, segment = "individual", organizationId, topic, audience, tone } = await request.json();
 
   if (!content?.trim()) {
     return NextResponse.json({ error: "Post content is empty." }, { status: 400 });
@@ -245,6 +247,18 @@ export async function POST(request: NextRequest) {
   // Posts API returns the post URN in the "x-restli-id" header
   const postId = res.headers.get("x-restli-id") || res.headers.get("location") || "unknown";
   console.log(`[linkedin/publish] ✅ Success — postId: ${postId} | account: ${segment} | image: ${!!imageUrn}`);
+
+  // Save memory — fire and forget, never blocks the response
+  if (firebaseUid) {
+    savePostMemory({
+      content,
+      topic:    topic    || "",
+      audience: audience || "",
+      tone:     tone     || "professional",
+      segment:  segment as "individual" | "corporate",
+      userId:   firebaseUid,
+    }).catch(() => {});
+  }
 
   return NextResponse.json({
     success: true,

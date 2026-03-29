@@ -20,7 +20,8 @@ export interface PostRequest {
   systemPrompt?: string;
   clientProfile?: ProfileSegment;
   customInstructions?: string;    // Free-form dos/don'ts from the UI prompt panel
-  memoryContext?: PostMemory[];   // Top-N relevant past posts — injected by create page
+  memoryContext?: PostMemory[];   // Top-N relevant auto-saved past posts — injected by create page
+  writingSamples?: PostMemory[];  // User-uploaded writing samples — style/voice ground truth
   imageStyle?: string;            // Layer 1: art style key (photo|illustration|abstract|3d|lineart|bw_photo)
 }
 
@@ -54,6 +55,59 @@ function section(name: string, replacements?: Record<string, string>): string {
     }
   }
   return text;
+}
+
+// ─── Writing samples block builder ────────────────────────────────────────────
+
+/**
+ * Builds a writing-samples block from user-uploaded posts.
+ *
+ * These are real posts the author wrote BEFORE using this tool.
+ * Neel treats these as ground truth for voice/style calibration — not as
+ * content history. The goal: make Neel sound indistinguishable from the author.
+ *
+ * Token budget: hard-capped at ~2500 chars. Style notes are the highest-signal
+ * field — always included. Summaries included for angle awareness.
+ */
+function buildWritingSamplesBlock(samples: PostMemory[]): string {
+  if (!samples || samples.length === 0) return "";
+
+  const lines: string[] = [
+    "══════════════════════════════════════════",
+    "WRITING SAMPLES — VOICE & STYLE GROUND TRUTH",
+    "══════════════════════════════════════════",
+    `The author uploaded ${samples.length} real LinkedIn post${samples.length > 1 ? "s" : ""} they wrote before using this tool.`,
+    "These are YOUR STYLE BIBLE. Study every pattern across all samples:",
+    "",
+    "• HOW they open posts (stat? story? question? bold statement?)",
+    "• Sentence length rhythm (short punchy? long flowing? mixed?)",
+    "• Vocabulary register (technical? plain? conversational? formal?)",
+    "• How they use white space and paragraph breaks",
+    "• How they close (question? call to action? direct statement?)",
+    "• Their punctuation habits (em dashes? ellipsis? none?)",
+    "",
+  ];
+
+  for (let i = 0; i < samples.length; i++) {
+    const s = samples[i];
+    lines.push(`── Sample ${i + 1} of ${samples.length} ──`);
+    lines.push(`What it covered: ${s.summary}`);
+    if (s.style_notes) lines.push(`Voice pattern: ${s.style_notes}`);
+    lines.push(`Key terms: ${s.keywords.join(", ")}`);
+    lines.push("");
+  }
+
+  lines.push(
+    "══ VOICE CALIBRATION MANDATE ══",
+    "Your output MUST sound like it came from the SAME PERSON who wrote these samples.",
+    "Not similar — the SAME. If the reader compared your post side-by-side with the samples,",
+    "they should not be able to tell which one Neel wrote.",
+    "Any deviation from the established voice patterns above is a failure.",
+    "══════════════════════════════════════════",
+  );
+
+  const block = lines.join("\n");
+  return block.length > 2500 ? block.slice(0, 2500) + "\n══════════════════════════════════════════" : block;
 }
 
 // ─── Memory block builder ──────────────────────────────────────────────────────
@@ -165,7 +219,7 @@ function sanitizePost(raw: string): string {
  *   - marketing-skills-all: social-content (LinkedIn-specific structure, CTA, tone mapping)
  */
 export async function generatePost(request: PostRequest): Promise<GenerateResult> {
-  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, imageStyle } = request;
+  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, writingSamples, imageStyle } = request;
 
   const lengthSpec = LENGTH_SPEC[length] || LENGTH_SPEC.medium;
 
@@ -227,6 +281,9 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
           `══════════════════════════════════════════`,
           systemPrompt,
         ].join("\n")
+      : "",
+    writingSamples && writingSamples.length > 0
+      ? `\n\n${buildWritingSamplesBlock(writingSamples)}`
       : "",
     memoryContext && memoryContext.length > 0
       ? `\n\n${buildMemoryBlock(memoryContext)}`

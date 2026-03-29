@@ -37,6 +37,14 @@ export interface PostMemory {
   keywords: string[];
   /** Style fingerprint — captures HOW the user writes, not just what was covered */
   style_notes?: string;
+  /**
+   * How this memory was created:
+   *   "auto"        — extracted automatically after a post went live via the tool
+   *   "user_upload" — user manually pasted a post they wrote before using the tool
+   */
+  source?: "auto" | "user_upload";
+  /** Original post text — only stored for user_upload entries */
+  raw_content?: string;
   created_at: any;
 }
 

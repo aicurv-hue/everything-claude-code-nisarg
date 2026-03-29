@@ -377,7 +377,10 @@ export default function PostPreviewPage() {
         // Save memory via server-side endpoint (Admin SDK — works in production)
         fetch("/api/memory/save", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          },
           body: JSON.stringify({
             content:  editedContent,
             topic:    postData.metadata.topic,
@@ -455,7 +458,7 @@ export default function PostPreviewPage() {
       });
 
       setScheduleStatus("success");
-      const label = scheduledAt.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
+      const label = scheduledAt.toLocaleString("en-US", { timeZone: timezone, day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
       const imageStatusMsg = imageMode === "ai" && !immediateImageUrl ? " · Generating image in background…" : immediateImageUrl ? " · Image attached" : "";
       setScheduleMessage(`Scheduled for ${label} (${timezone})${imageStatusMsg}`);
       setShowSchedulePicker(false);

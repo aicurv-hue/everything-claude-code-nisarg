@@ -44,7 +44,9 @@ export default function CreatePostPage() {
   const [generatingStep, setGeneratingStep] = useState<"research" | "memory" | "writing" | null>(null);
   const [customInstructions, setCustomInstructions] = useState("");
   const [showPromptPanel, setShowPromptPanel]       = useState(false);
-  const [memoryCount, setMemoryCount] = useState<number | null>(null);
+  const [memoryCount, setMemoryCount]   = useState<number | null>(null);
+  const [sampleCount, setSampleCount]   = useState<number | null>(null);
+  const [writingSamples, setWritingSamples] = useState<any[]>([]);
   const router = useRouter();
 
   const accentColor = isCorporate ? "text-violet-600" : "text-[#0A66C2]";
@@ -56,7 +58,7 @@ export default function CreatePostPage() {
     const loadProfile = async () => {
       try {
         const token = await getAuthToken();
-        if (!token) { setMemoryCount(0); return; }
+        if (!token) { setMemoryCount(0); setSampleCount(0); return; }
         const [profileRes, memoryRes] = await Promise.all([
           fetch("/api/profiles", { headers: { Authorization: `Bearer ${token}` } }),
           fetch(`/api/memory?segment=${segment}&limit=100`, { headers: { Authorization: `Bearer ${token}` } }),
@@ -67,9 +69,15 @@ export default function CreatePostPage() {
         }
         if (memoryRes.ok) {
           const data = await memoryRes.json();
-          setMemoryCount(Array.isArray(data.entries) ? data.entries.length : 0);
+          const all = Array.isArray(data.entries) ? data.entries : [];
+          const auto    = all.filter((e: any) => e.source !== "user_upload");
+          const uploads = all.filter((e: any) => e.source === "user_upload");
+          setMemoryCount(auto.length);
+          setSampleCount(uploads.length);
+          setWritingSamples(uploads);
         } else {
           setMemoryCount(0);
+          setSampleCount(0);
         }
       } catch {
         setMemoryCount(0);
@@ -103,7 +111,7 @@ export default function CreatePostPage() {
       if (!researchRes.ok) throw new Error(`Research failed: ${await researchRes.text()}`);
       const research = await researchRes.json();
 
-      // ── Stage 2: Load memory via API route ───────────────────────────────────
+      // ── Stage 2: Load auto-saved memory via API route ────────────────────────
       setGeneratingStep("memory");
       let memoryContext: any[] = [];
       try {
@@ -113,7 +121,8 @@ export default function CreatePostPage() {
           });
           if (memRes.ok) {
             const memData = await memRes.json();
-            memoryContext = memData.entries || [];
+            // Only auto-saved entries for content continuity (user_upload handled separately as style samples)
+            memoryContext = (memData.entries || []).filter((e: any) => e.source !== "user_upload");
           }
         }
       } catch { /* memory is non-critical */ }
@@ -129,7 +138,8 @@ export default function CreatePostPage() {
           systemPrompt: activeProfile?.systemPrompt || undefined,
           clientProfile: activeProfile,
           customInstructions: customInstructions.trim() || undefined,
-          memoryContext: memoryContext.length > 0 ? memoryContext : undefined,
+          memoryContext:   memoryContext.length > 0   ? memoryContext   : undefined,
+          writingSamples:  writingSamples.length > 0  ? writingSamples  : undefined,
           imageStyle: activeProfile?.imageStyle || undefined,
         }),
       });
@@ -451,6 +461,50 @@ export default function CreatePostPage() {
                   </p>
                   {memoryCount === 0 && (
                     <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">After you generate, Neel will remember this post and use it to keep your future posts consistent.</p>
+                  )}
+                </div>
+
+                {/* Sample Memory row */}
+                <div className="pt-3 border-t border-slate-100">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles className={`w-3.5 h-3.5 ${accentColor}`} />
+                    <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide">Sample Memory</p>
+                    <HelpTooltip
+                      text="Paste real posts you have written before using LinkAuto. Neel studies them to calibrate your exact voice, sentence rhythm, and vocabulary — making every post sound unmistakably like you."
+                      example="Upload 3–5 of your best past LinkedIn posts for the strongest voice match."
+                      position="left"
+                    />
+                  </div>
+                  {sampleCount === null ? (
+                    <p className="text-sm font-semibold text-slate-800">Loading...</p>
+                  ) : sampleCount === 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                        <span className="text-amber-500 mt-0.5 shrink-0">⚠</span>
+                        <div>
+                          <p className="text-[11px] font-semibold text-amber-800">No writing samples yet</p>
+                          <p className="text-[10px] text-amber-700 mt-0.5 leading-relaxed">
+                            Neel will write in a generic LinkedIn voice. Add samples so he can match your unique style.
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href="/dashboard/memory"
+                        className={`flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-[11px] font-medium border transition-all ${accentBg} ${accentColor} hover:opacity-80`}
+                      >
+                        <Brain className="w-3 h-3" />
+                        Add Writing Samples →
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-slate-800">
+                        {sampleCount} sample{sampleCount > 1 ? "s" : ""} · voice calibrated
+                      </p>
+                      <span className="text-[10px] text-green-600 font-medium bg-green-50 border border-green-200 px-1.5 py-0.5 rounded">
+                        ✓ Active
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
