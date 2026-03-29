@@ -62,6 +62,18 @@ export async function GET(request: NextRequest) {
   const returnTo    = stateParts[1] ? decodeURIComponent(stateParts[1]) : "/dashboard/create/preview";
   const firebaseUid = stateParts[2] ? decodeURIComponent(stateParts[2]) : "";
 
+  // Verify state against cookie to prevent CSRF / UID spoofing
+  const cookieStore = await cookies();
+  const storedState = cookieStore.get("li_oauth_state")?.value || "";
+  if (!storedState || storedState !== rawState) {
+    console.error("[linkedin/callback] State mismatch — possible CSRF attack");
+    return NextResponse.redirect(
+      new URL(`/dashboard/settings?linkedin_error=${encodeURIComponent("OAuth state mismatch — please try again")}`, request.url)
+    );
+  }
+  // Clear the state cookie immediately — single-use
+  cookieStore.delete("li_oauth_state");
+
   if (error || !code) {
     const reason = searchParams.get("error_description") || error || "Unknown error";
     return NextResponse.redirect(
@@ -116,8 +128,6 @@ export async function GET(request: NextRequest) {
   const linkedInPicture = profile?.picture  || "";
 
   // ── Step 3: Store all tokens in cookies ───────────────────────────────────
-  const cookieStore = await cookies();
-
   // Access token — 60 days
   cookieStore.set("li_access_token", accessToken, COOKIE_OPTS_PRIVATE(expiresIn));
   cookieStore.set("li_token_expiry", String(Date.now() + expiresIn * 1000), COOKIE_OPTS_PUBLIC(expiresIn));
@@ -142,7 +152,10 @@ export async function GET(request: NextRequest) {
     try {
       const saveRes = await fetch(`${appUrl}/api/tokens/save`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(process.env.INTERNAL_API_SECRET ? { "x-internal-secret": process.env.INTERNAL_API_SECRET } : {}),
+        },
         body: JSON.stringify({
           user_id:            firebaseUid,
           access_token:       accessToken,

@@ -39,5 +39,16 @@ export async function GET(req: NextRequest) {
   });
 
   const linkedInAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;
-  return NextResponse.redirect(linkedInAuthUrl);
+  const response = NextResponse.redirect(linkedInAuthUrl);
+
+  // Store state in httpOnly cookie so callback can verify CSRF
+  response.cookies.set("li_oauth_state", state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 600, // 10 minutes — enough for any OAuth flow
+    path: "/",
+    sameSite: "lax",
+  });
+
+  return response;
 }

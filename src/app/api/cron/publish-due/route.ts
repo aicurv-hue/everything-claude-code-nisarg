@@ -270,8 +270,7 @@ export async function POST(req: NextRequest) {
         let orgId = (post as any).organization_id;
         if (!orgId) {
           const profileSnap = await adminDb!.collection("profiles").doc(userId).get();
-          orgId = profileSnap.data()?.corporate?.linkedinOrganizationId
-            || process.env.LINKEDIN_ORGANIZATION_ID;
+          orgId = profileSnap.data()?.corporate?.linkedinOrganizationId;
         }
         if (!orgId) throw new Error("No LinkedIn Organization ID set. Add it in Settings → Identity (Corporate).");
         authorUrn = `urn:li:organization:${orgId}`;
