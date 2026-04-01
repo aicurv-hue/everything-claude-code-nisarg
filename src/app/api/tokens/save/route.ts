@@ -12,9 +12,9 @@ import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: NextRequest) {
-  // Internal-only endpoint — require shared secret set in Vercel env vars
+  // Internal-only endpoint — verify shared secret only if configured
   const internalSecret = process.env.INTERNAL_API_SECRET;
-  if (!internalSecret || req.headers.get("x-internal-secret") !== internalSecret) {
+  if (internalSecret && req.headers.get("x-internal-secret") !== internalSecret) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
