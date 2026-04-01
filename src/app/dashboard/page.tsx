@@ -343,7 +343,7 @@ export default function DashboardHomePage() {
               ) : (
                 <button
                   onClick={() => {
-                    const url = `/api/auth/linkedin?returnTo=/dashboard&uid=${encodeURIComponent(user?.uid || "")}`;
+                    const url = `/api/auth/linkedin?returnTo=/dashboard/settings&uid=${encodeURIComponent(user?.uid || "")}`;
                     const w = 600, h = 700;
                     const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
                     const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
@@ -517,7 +517,7 @@ export default function DashboardHomePage() {
           {system?.linkedin === "disconnected" && (
             <button
               onClick={() => {
-                const url = `/api/auth/linkedin?returnTo=/dashboard&uid=${encodeURIComponent(user?.uid || "")}`;
+                const url = `/api/auth/linkedin?returnTo=/dashboard/settings&uid=${encodeURIComponent(user?.uid || "")}`;
                 const w = 600, h = 700;
                 const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
                 const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
