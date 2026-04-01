@@ -336,6 +336,23 @@ export default function PostPreviewPage() {
 
     try {
       const authToken = await getAuthToken();
+      // Create the Firestore post first so we have a postDbId to link memory to
+      const postDbRecord = await createPost({
+        user_id: user!.uid, account_id: "personal-account",
+        status: "published",
+        content: editedContent, topic: postData.metadata.topic,
+        tone: postData.metadata.tone, audience: postData.metadata.audience,
+        length: postData.metadata.length,
+        custom_instructions: postData.metadata.customInstructions || undefined,
+        segment: postData.metadata.segment || "individual",
+        research_data: postData.research,
+        image_url: finalImageUrl || undefined,
+        image_hook: imageHook || undefined,
+        published_at: new Date().toISOString(),
+        created_at: null,
+      });
+      const postDbId = (postDbRecord as any)?.id || undefined;
+
       const res = await fetch("/api/linkedin/publish", {
         method: "POST",
         headers: {
@@ -350,6 +367,7 @@ export default function PostPreviewPage() {
           topic:    postData.metadata.topic    || "",
           audience: postData.metadata.audience || "",
           tone:     postData.metadata.tone     || "professional",
+          postDbId,
         }),
       });
 
@@ -358,54 +376,25 @@ export default function PostPreviewPage() {
       if (!res.ok) {
         setPublishStatus("error");
         setPublishMessage(data.error || "Publishing failed. Please try again.");
-        await createPost({
-          user_id: user!.uid, account_id: "personal-account",
-          status: "draft",
-          content: editedContent, topic: postData.metadata.topic,
-          tone: postData.metadata.tone, audience: postData.metadata.audience,
-          length: postData.metadata.length,
-          custom_instructions: postData.metadata.customInstructions || undefined,
-          segment: postData.metadata.segment || "individual",
-          research_data: postData.research,
-          image_hook: imageHook || undefined,
-          created_at: null,
-        });
+        // Update the post we already created to draft status
+        if (postDbId && authToken) {
+          fetch("/api/posts", {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ id: postDbId, status: "draft" }),
+          }).catch(() => {});
+        }
       } else {
         setPublishStatus("success");
         setPublishMessage("Post published successfully to LinkedIn! 🎉");
-
-        // Save memory via server-side endpoint (Admin SDK — works in production)
-        fetch("/api/memory/save", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-          },
-          body: JSON.stringify({
-            content:  editedContent,
-            topic:    postData.metadata.topic,
-            audience: postData.metadata.audience,
-            tone:     postData.metadata.tone,
-            segment:  postData.metadata.segment || "individual",
-            userId:   user!.uid,
-          }),
-        }).catch(() => {});
-
-        await createPost({
-          user_id: user!.uid, account_id: "personal-account",
-          status: "published",
-          content: editedContent, topic: postData.metadata.topic,
-          tone: postData.metadata.tone, audience: postData.metadata.audience,
-          length: postData.metadata.length,
-          custom_instructions: postData.metadata.customInstructions || undefined,
-          segment: postData.metadata.segment || "individual",
-          research_data: postData.research,
-          linkedin_post_id: data.postId || "unknown",
-          image_url: finalImageUrl || undefined,
-          image_hook: imageHook || undefined,
-          published_at: new Date().toISOString(),
-          created_at: null,
-        });
+        // Update the post with the LinkedIn post ID
+        if (postDbId && authToken) {
+          fetch("/api/posts", {
+            method: "PATCH",
+            headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ id: postDbId, linkedin_post_id: data.postId || "unknown" }),
+          }).catch(() => {});
+        }
       }
     } catch {
       setPublishStatus("error");

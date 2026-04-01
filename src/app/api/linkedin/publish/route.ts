@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { content, imageUrl, segment = "individual", organizationId, topic, audience, tone } = await request.json();
+  const { content, imageUrl, segment = "individual", organizationId, topic, audience, tone, postDbId } = await request.json();
 
   if (!content?.trim()) {
     return NextResponse.json({ error: "Post content is empty." }, { status: 400 });
@@ -257,6 +257,7 @@ export async function POST(request: NextRequest) {
       tone:     tone     || "professional",
       segment:  segment as "individual" | "corporate",
       userId:   firebaseUid,
+      postId:   postDbId || undefined,
     }).catch(() => {});
   }
 

@@ -15,8 +15,7 @@ interface Props {
 
 function fmtDate(seconds?: number) {
   if (!seconds) return "—";
-  return new Date(seconds * 1000).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
+  return new Date(seconds * 1000).toLocaleString(undefined, {
     day: "numeric", month: "short", year: "numeric",
     hour: "2-digit", minute: "2-digit", hour12: true,
   });

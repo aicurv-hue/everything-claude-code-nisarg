@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, CalendarDays, Clock, Globe } from "lucide-react";
 import AITimeSuggestion from "./AITimeSuggestion";
+import { getAuthToken } from "@/lib/utils/getAuthToken";
 
 interface Props {
   onSchedule: (scheduledAt: Date, timezone: string, bestTimeApplied: boolean) => void;
@@ -13,21 +14,41 @@ interface Props {
   initialDate?: Date;
 }
 
-const IST_OFFSET_MS = 330 * 60 * 1000; // UTC+5:30 in milliseconds
-
-function toISTDateString(d: Date): string {
-  // Convert UTC date to IST by adding 5:30 offset, then format as YYYY-MM-DD
-  const ist = new Date(d.getTime() + IST_OFFSET_MS);
-  const y = ist.getUTCFullYear();
-  const m = String(ist.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(ist.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
+/** Format a Date as YYYY-MM-DD in the given timezone */
+function toTZDateString(d: Date, tz: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(d);
+  return `${parts.find(p => p.type === "year")!.value}-${parts.find(p => p.type === "month")!.value}-${parts.find(p => p.type === "day")!.value}`;
 }
 
-function toISTTimeString(d: Date): string {
-  // Convert UTC date to IST by adding 5:30 offset, then format as HH:MM
-  const ist = new Date(d.getTime() + IST_OFFSET_MS);
-  return `${String(ist.getUTCHours()).padStart(2, "0")}:${String(ist.getUTCMinutes()).padStart(2, "0")}`;
+/** Format a Date as HH:MM in the given timezone */
+function toTZTimeString(d: Date, tz: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false,
+  }).format(d);
+}
+
+/**
+ * Convert a local date string + time string in a given timezone to a UTC Date.
+ * Uses the Intl API to determine the UTC offset for that timezone at that moment.
+ */
+function localToUtc(dateStr: string, timeStr: string, tz: string): Date {
+  // Treat dateStr+timeStr as UTC to get an approximate timestamp
+  const approx = new Date(`${dateStr}T${timeStr}:00Z`);
+  // Determine what that UTC time looks like in the target timezone
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    year: "numeric", month: "numeric", day: "numeric",
+    hour: "numeric", minute: "numeric", second: "numeric",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(approx);
+  const get = (type: string) => parseInt(parts.find(p => p.type === type)!.value);
+  // The UTC offset at this moment (ms): approx UTC - how it appears in tz as UTC
+  const offsetMs = approx.getTime() - Date.UTC(get("year"), get("month") - 1, get("day"), get("hour") % 24, get("minute"), get("second"));
+  // Apply offset: local time in tz → UTC
+  return new Date(approx.getTime() + offsetMs);
 }
 
 export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId = "demo-user", segment = "individual", initialDate }: Props) {
@@ -35,60 +56,59 @@ export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId
   const accent      = isCorporate ? "bg-violet-600 hover:bg-violet-700" : "bg-[#0A66C2] hover:bg-[#0854a0]";
   const focusRing   = isCorporate ? "focus:ring-violet-500/20 focus:border-violet-500" : "focus:ring-[#0A66C2]/20 focus:border-[#0A66C2]";
 
-  const init     = initialDate || new Date(Date.now() + 24 * 3600 * 1000);
-  const [date, setDate]             = useState(toISTDateString(init));
+  // Detect browser timezone on mount
+  const [timezone] = useState<string>(() =>
+    typeof window !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC"
+  );
+
+  const init = initialDate || new Date(Date.now() + 24 * 3600 * 1000);
+  const [date, setDate]             = useState(() => toTZDateString(init, timezone));
   const [time, setTime]             = useState("09:00");
-  const timezone = "Asia/Kolkata";
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [aiLoading, setAiLoading]   = useState(true);
   const [bestApplied, setBestApplied] = useState(false);
 
   const inputClass = `w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all ${focusRing}`;
 
-  useEffect(() => {
+  const fetchSuggestions = async (forceRefresh = false) => {
     setAiLoading(true);
-    fetch("/api/ai/best-time", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, segment }),
-    })
-      .then((r) => r.json())
-      .then((d) => { if (d.suggestions) setSuggestions(d.suggestions); })
-      .catch(() => {})
-      .finally(() => setAiLoading(false));
-  }, [userId, segment]);
+    if (forceRefresh) setSuggestions([]);
+    try {
+      const token = await getAuthToken();
+      const res = await fetch("/api/ai/best-time", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ userId, segment, ...(forceRefresh ? { forceRefresh: true } : {}) }),
+      });
+      const d = await res.json();
+      if (d.suggestions) setSuggestions(d.suggestions);
+    } catch {
+      // non-critical — suggestions just won't show
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchSuggestions(); }, [userId, segment]); // eslint-disable-line
 
   const handleApplySuggestion = (slot: string) => {
     const d = new Date(slot);
-    setDate(toISTDateString(d));
-    setTime(toISTTimeString(d));
+    setDate(toTZDateString(d, timezone));
+    setTime(toTZTimeString(d, timezone));
     setBestApplied(true);
-  };
-
-  const handleRefreshAI = () => {
-    setAiLoading(true);
-    setSuggestions([]);
-    fetch("/api/ai/best-time", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, segment, forceRefresh: true }),
-    })
-      .then((r) => r.json())
-      .then((d) => { if (d.suggestions) setSuggestions(d.suggestions); })
-      .catch(() => {})
-      .finally(() => setAiLoading(false));
   };
 
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const minDate = toISTDateString(new Date());
-
-  // isValid: just needs to be a parseable datetime (parsed as IST with +05:30 suffix)
-  const selectedDt = new Date(`${date}T${time}:00+05:30`);
+  const minDate = toTZDateString(new Date(), timezone);
+  const selectedDt = localToUtc(date, time, timezone);
   const isValid = !isNaN(selectedDt.getTime());
 
   const handleSubmit = () => {
-    const dt = new Date(`${date}T${time}:00+05:30`);
+    const dt = localToUtc(date, time, timezone);
     if (isNaN(dt.getTime())) {
       setSubmitError("Please enter a valid date and time.");
       return;
@@ -160,7 +180,7 @@ export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId
             suggestions={suggestions}
             isLoading={aiLoading}
             onSelect={handleApplySuggestion}
-            onRefresh={handleRefreshAI}
+            onRefresh={() => fetchSuggestions(true)}
             isCorporate={isCorporate}
           />
 

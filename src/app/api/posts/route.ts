@@ -149,6 +149,15 @@ export async function DELETE(req: NextRequest) {
     }
 
     await docRef.delete();
+
+    // Clean up linked memory entry (best-effort — non-blocking)
+    adminDb.collection("post_memories")
+      .where("post_id", "==", id)
+      .where("user_id", "==", uid)
+      .get()
+      .then((snap) => Promise.all(snap.docs.map((d) => d.ref.delete())))
+      .catch(() => {});
+
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error("[/api/posts DELETE]", err);

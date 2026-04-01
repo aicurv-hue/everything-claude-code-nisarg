@@ -207,8 +207,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (due.length === 0) {
-    console.log("[cron] No posts due.");
-    return NextResponse.json({ processed: 0, message: "No posts due." });
+    console.log("[cron] No posts due — proceeding to engagement sync.");
   }
 
   // ── Process each due post (each may belong to a different user) ────────────
@@ -299,6 +298,7 @@ export async function POST(req: NextRequest) {
         tone:     post.tone     || "professional",
         segment:  (post.segment as "individual" | "corporate") || "individual",
         userId,
+        postId:   post.id,
       }).catch(() => {});
 
       results.push({ id: post.id, status: "published" });
@@ -354,28 +354,67 @@ export async function POST(req: NextRequest) {
 
           for (const post of userPosts) {
             try {
-              const encoded = encodeURIComponent(post.linkedin_post_id!);
-              const { signal, clear } = withTimeout(10_000);
-              const res = await fetch(`https://api.linkedin.com/v2/socialActions/${encoded}`, {
-                signal,
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                  "LinkedIn-Version": LI_VERSION,
-                  "X-Restli-Protocol-Version": "2.0.0",
-                },
-              });
-              clear();
-              if (!res.ok) continue;
-              const data = await res.json();
-              const likes    = data.likesSummary?.totalLikes    ?? data.likeCount    ?? 0;
-              const comments = data.commentsSummary?.totalFirstLevelComments ?? data.commentCount ?? 0;
+              const postUrn = post.linkedin_post_id!;
+              const encoded = encodeURIComponent(postUrn);
+
+              // Fetch likes count via /rest/reactions
+              const { signal: s1, clear: c1 } = withTimeout(10_000);
+              const likesRes = await fetch(
+                `https://api.linkedin.com/rest/reactions?q=entity&entity=${encoded}&count=0`,
+                {
+                  signal: s1,
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "LinkedIn-Version": LI_VERSION,
+                    "X-Restli-Protocol-Version": "2.0.0",
+                  },
+                }
+              );
+              c1();
+
+              // Fetch comments count via /rest/comments
+              const { signal: s2, clear: c2 } = withTimeout(10_000);
+              const commentsRes = await fetch(
+                `https://api.linkedin.com/rest/comments?q=comments&commentUrn=${encoded}&count=0`,
+                {
+                  signal: s2,
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "LinkedIn-Version": LI_VERSION,
+                    "X-Restli-Protocol-Version": "2.0.0",
+                  },
+                }
+              );
+              c2();
+
+              let likes = 0;
+              let comments = 0;
+
+              if (likesRes.ok) {
+                const likesData = await likesRes.json();
+                likes = likesData.paging?.total ?? likesData.total ?? 0;
+              } else {
+                console.warn(`[cron/engagement] Likes fetch ${likesRes.status} for ${postUrn}: ${await likesRes.text()}`);
+              }
+
+              if (commentsRes.ok) {
+                const commentsData = await commentsRes.json();
+                comments = commentsData.paging?.total ?? commentsData.total ?? 0;
+              } else {
+                console.warn(`[cron/engagement] Comments fetch ${commentsRes.status} for ${postUrn}: ${await commentsRes.text()}`);
+              }
+
               await adminDb.collection("posts").doc(post.id!).update({
                 likes_count: likes,
                 comments_count: comments,
                 engagement_synced_at: Date.now(),
                 updated_at: FieldValue.serverTimestamp(),
               }).catch(() => {});
-            } catch { /* non-critical */ }
+
+              console.log(`[cron/engagement] ${postUrn} → ${likes} likes, ${comments} comments`);
+            } catch (e: any) {
+              console.warn(`[cron/engagement] Failed for ${post.id}: ${e?.message}`);
+            }
           }
           console.log(`[cron] Engagement synced for user ${uid}: ${userPosts.length} post(s).`);
         }

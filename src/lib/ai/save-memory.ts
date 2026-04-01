@@ -16,6 +16,7 @@ export async function savePostMemory({
   tone,
   segment,
   userId = "",
+  postId,
 }: {
   content: string;
   topic: string;
@@ -23,6 +24,7 @@ export async function savePostMemory({
   tone: string;
   segment: "individual" | "corporate";
   userId?: string;
+  postId?: string;
 }): Promise<void> {
   try {
     const extract = await extractMemory(content, topic, audience, tone);
@@ -40,6 +42,7 @@ export async function savePostMemory({
         summary:     extract.summary,
         keywords:    extract.keywords,
         style_notes: extract.style_notes || "",
+        post_id:     postId || null,
         created_at:  FieldValue.serverTimestamp(),
       });
     } else {

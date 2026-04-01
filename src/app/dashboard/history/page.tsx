@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
 import { useRouter } from "next/navigation";
-import { FileText, Clock, ChevronRight, Search, Linkedin, ThumbsUp, MessageCircle, RefreshCw, AlertTriangle, Send } from "lucide-react";
+import { FileText, Clock, ChevronRight, Search, Linkedin, ThumbsUp, MessageCircle, RefreshCw, AlertTriangle, Send, Trash2 } from "lucide-react";
 import { Post } from "@/lib/db/posts";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
@@ -58,6 +58,7 @@ export default function HistoryPage() {
   const [reposting, setReposting]       = useState<string | null>(null);
   const [repostStatus, setRepostStatus] = useState<Record<string, "success" | "error">>({});
   const [repostIds, setRepostIds]       = useState<Record<string, string>>({});
+  const [deleting, setDeleting]         = useState<string | null>(null);
 
   const accentTab = isCorporate
     ? "bg-violet-50 border-violet-300 text-violet-700"
@@ -174,6 +175,24 @@ export default function HistoryPage() {
       ));
     } finally {
       setRetryingAll(false);
+    }
+  };
+
+  const handleDelete = async (post: Post) => {
+    if (!post.id || deleting) return;
+    if (!confirm(`Delete "${post.topic}"? This cannot be undone.`)) return;
+    setDeleting(post.id);
+    try {
+      const token = await getAuthToken();
+      if (!token) return;
+      await fetch("/api/posts", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ id: post.id }),
+      });
+      setPosts(prev => prev.filter(p => p.id !== post.id));
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -374,59 +393,73 @@ export default function HistoryPage() {
 
                   {/* Action */}
                   <td className="px-5 py-4 text-right">
-                    {post.status === "draft" && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); post.id && router.push(`/dashboard/drafts/${post.id}/edit`); }}
-                        className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-all"
-                        title="Edit draft"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    )}
-                    {post.status === "failed" && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRetry(post); }}
-                        disabled={retrying === post.id}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 text-[11px] font-semibold transition-all disabled:opacity-50 ml-auto"
-                        title="Reset to scheduled and retry publishing"
-                      >
-                        <RefreshCw className={`w-3 h-3 ${retrying === post.id ? "animate-spin" : ""}`} />
-                        {retrying === post.id ? "Retrying…" : "Retry"}
-                      </button>
-                    )}
-                    {post.status === "published" && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRepost(post); }}
-                        disabled={reposting === post.id}
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all disabled:opacity-50 ml-auto ${
-                          repostStatus[post.id!] === "success"
-                            ? "bg-green-50 border-green-200 text-green-600"
-                            : repostStatus[post.id!] === "error"
-                            ? "bg-red-50 border-red-200 text-red-600"
-                            : "bg-slate-50 hover:bg-blue-50 border-slate-200 hover:border-[#0A66C2] text-slate-500 hover:text-[#0A66C2]"
-                        }`}
-                        title="Repost this to LinkedIn now"
-                      >
-                        {reposting === post.id ? (
-                          <><RefreshCw className="w-3 h-3 animate-spin" /> Posting…</>
-                        ) : repostStatus[post.id!] === "success" ? (
-                          repostIds[post.id!] ? (
-                            <a
-                              href={`https://www.linkedin.com/feed/update/${repostIds[post.id!]}/`}
-                              target="_blank" rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-1"
-                            ><Send className="w-3 h-3" /> Posted! ↗</a>
+                    <div className="flex items-center justify-end gap-1.5">
+                      {post.status === "draft" && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); post.id && router.push(`/dashboard/drafts/${post.id}/edit`); }}
+                          className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-all"
+                          title="Edit draft"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      )}
+                      {post.status === "failed" && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleRetry(post); }}
+                          disabled={retrying === post.id}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 text-[11px] font-semibold transition-all disabled:opacity-50"
+                          title="Reset to scheduled and retry publishing"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${retrying === post.id ? "animate-spin" : ""}`} />
+                          {retrying === post.id ? "Retrying…" : "Retry"}
+                        </button>
+                      )}
+                      {post.status === "published" && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleRepost(post); }}
+                          disabled={reposting === post.id}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all disabled:opacity-50 ${
+                            repostStatus[post.id!] === "success"
+                              ? "bg-green-50 border-green-200 text-green-600"
+                              : repostStatus[post.id!] === "error"
+                              ? "bg-red-50 border-red-200 text-red-600"
+                              : "bg-slate-50 hover:bg-blue-50 border-slate-200 hover:border-[#0A66C2] text-slate-500 hover:text-[#0A66C2]"
+                          }`}
+                          title="Repost this to LinkedIn now"
+                        >
+                          {reposting === post.id ? (
+                            <><RefreshCw className="w-3 h-3 animate-spin" /> Posting…</>
+                          ) : repostStatus[post.id!] === "success" ? (
+                            repostIds[post.id!] ? (
+                              <a
+                                href={`https://www.linkedin.com/feed/update/${repostIds[post.id!]}/`}
+                                target="_blank" rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-1"
+                              ><Send className="w-3 h-3" /> Posted! ↗</a>
+                            ) : (
+                              <><Send className="w-3 h-3" /> Posted!</>
+                            )
+                          ) : repostStatus[post.id!] === "error" ? (
+                            <><AlertTriangle className="w-3 h-3" /> Failed</>
                           ) : (
-                            <><Send className="w-3 h-3" /> Posted!</>
-                          )
-                        ) : repostStatus[post.id!] === "error" ? (
-                          <><AlertTriangle className="w-3 h-3" /> Failed</>
-                        ) : (
-                          <><Send className="w-3 h-3" /> Repost</>
-                        )}
+                            <><Send className="w-3 h-3" /> Repost</>
+                          )}
+                        </button>
+                      )}
+                      {/* Delete — always visible, for every status */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(post); }}
+                        disabled={deleting === post.id}
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all disabled:opacity-40"
+                        title="Delete post"
+                      >
+                        {deleting === post.id
+                          ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />
+                        }
                       </button>
-                    )}
+                    </div>
                   </td>
                 </tr>
               ))
