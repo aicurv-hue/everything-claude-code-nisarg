@@ -158,7 +158,7 @@ function CronPoller() {
         if (!res.ok) console.warn("[CronPoller] Worker error:", data);
         else console.log("[CronPoller] Worker result:", data);
       } catch (err) {
-        console.error("[CronPoller] Fetch failed:", err);
+        console.warn("[CronPoller] Fetch failed:", err);
       }
     };
     run();
@@ -173,6 +173,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [betaChecking, setBetaChecking] = React.useState(false);
   const [betaApproved, setBetaApproved] = React.useState<boolean | null>(null);
+  const [betaError, setBetaError] = React.useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -186,7 +187,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     fetch(`/api/beta/check?email=${encodeURIComponent(user.email || "")}`)
       .then(r => r.json())
       .then(data => setBetaApproved(data.approved === true))
-      .catch(() => setBetaApproved(false))
+      .catch(() => setBetaError(true))
       .finally(() => setBetaChecking(false));
   }, [user]);
 
@@ -199,6 +200,29 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return null;
+
+  if (betaError) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-slate-900 border border-white/[0.07] rounded-2xl p-8 text-center">
+          <p className="text-slate-400 text-sm mb-4">Could not verify access. Check your connection and try again.</p>
+          <button
+            onClick={() => {
+              setBetaError(false);
+              setBetaChecking(true);
+              setBetaApproved(null);
+              fetch(`/api/beta/check?email=${encodeURIComponent(user!.email || "")}`)
+                .then(r => r.json())
+                .then(d => setBetaApproved(d.approved === true))
+                .catch(() => setBetaError(true))
+                .finally(() => setBetaChecking(false));
+            }}
+            className="px-4 py-2 bg-[#0A66C2] text-white text-sm rounded-lg hover:bg-[#0854a0]"
+          >Retry</button>
+        </div>
+      </div>
+    );
+  }
 
   if (betaApproved === false) {
     return (

@@ -24,6 +24,15 @@ export default function SignupPage() {
     setLoading(true);
     try {
       await signUp(email, password, name.trim());
+      // Seed a blank Firestore profile for the new user (fire-and-forget)
+      const token = await import("@/lib/utils/getAuthToken").then(m => m.getAuthToken());
+      if (token) {
+        fetch("/api/profile/init", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ displayName: name.trim() }),
+        }).catch(() => {});
+      }
       // Check beta access before sending to dashboard
       const res = await fetch(`/api/beta/check?email=${encodeURIComponent(email.toLowerCase().trim())}`);
       const { approved } = await res.json();

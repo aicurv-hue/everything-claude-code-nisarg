@@ -20,7 +20,14 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await signIn(email, password);
-      router.replace("/dashboard");
+      try {
+        const res = await fetch(`/api/beta/check?email=${encodeURIComponent(email.toLowerCase().trim())}`);
+        const { approved } = await res.json();
+        router.replace(approved ? "/dashboard" : "/waitlist");
+      } catch {
+        // Fetch failed — go to dashboard and let AuthGuard handle it
+        router.replace("/dashboard");
+      }
     } catch (err: any) {
       setError(friendlyError(err.code));
     } finally {
