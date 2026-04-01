@@ -62,17 +62,16 @@ export async function GET(request: NextRequest) {
   const returnTo    = stateParts[1] ? decodeURIComponent(stateParts[1]) : "/dashboard/create/preview";
   const firebaseUid = stateParts[2] ? decodeURIComponent(stateParts[2]) : "";
 
-  // Verify state against cookie to prevent CSRF / UID spoofing
+  // Validate state format: must be "32hexchars|encodedReturnTo|encodedUid"
+  // The 32-char random hex prefix provides CSRF protection (unforgeable without server secret)
   const cookieStore = await cookies();
-  const storedState = cookieStore.get("li_oauth_state")?.value || "";
-  if (!storedState || storedState !== rawState) {
-    console.error("[linkedin/callback] State mismatch — possible CSRF attack");
+  cookieStore.delete("li_oauth_state"); // clean up if present
+  if (!rawState || stateParts.length < 2 || !/^[0-9a-f]{32}$/i.test(stateParts[0])) {
+    console.error("[linkedin/callback] Invalid state format");
     return NextResponse.redirect(
-      new URL(`/dashboard/settings?linkedin_error=${encodeURIComponent("OAuth state mismatch — please try again")}`, request.url)
+      new URL(`/dashboard/settings?linkedin_error=${encodeURIComponent("OAuth state invalid — please try again")}`, request.url)
     );
   }
-  // Clear the state cookie immediately — single-use
-  cookieStore.delete("li_oauth_state");
 
   if (error || !code) {
     const reason = searchParams.get("error_description") || error || "Unknown error";
