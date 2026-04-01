@@ -65,6 +65,7 @@ export default function HistoryPage() {
     : "bg-blue-50 border-blue-300 text-[#0A66C2]";
 
   useEffect(() => {
+    if (!user) return; // wait for auth to hydrate
     async function loadHistory() {
       setIsLoading(true);
       try {

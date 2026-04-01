@@ -26,6 +26,7 @@ export default function SchedulePage() {
   const accentBg    = isCorporate ? "bg-violet-50 border-violet-200" : "bg-blue-50 border-blue-200";
 
   const load = useCallback(async (silent = false) => {
+    if (!user) return; // wait for auth to hydrate
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
