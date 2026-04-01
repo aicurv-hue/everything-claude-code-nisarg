@@ -180,30 +180,7 @@ export async function GET(request: NextRequest) {
   }
 
   // ── Step 4: Redirect back to where they came from ─────────────────────────
-  const destination = returnTo.startsWith("/") ? returnTo : "/dashboard/create/preview";
+  const destination = returnTo.startsWith("/") ? returnTo : "/dashboard/settings";
   const finalUrl = new URL(`${destination}?linkedin_connected=true`, request.url);
-
-  // If this was opened as a popup (returnTo is /dashboard/settings),
-  // return a self-closing page instead of a redirect so the popup closes
-  // and the opener window refreshes its LinkedIn status automatically.
-  if (destination === "/dashboard/settings") {
-    return new Response(
-      `<!DOCTYPE html><html><head><title>Connected</title></head><body>
-      <script>
-        if (window.opener) {
-          window.opener.postMessage({ type: "linkedin_connected" }, window.location.origin);
-          window.close();
-        } else {
-          window.location.href = "${finalUrl.toString()}";
-        }
-      </script>
-      <p style="font-family:sans-serif;text-align:center;margin-top:40px;color:#0A66C2">
-        ✅ LinkedIn connected! Closing window...
-      </p>
-      </body></html>`,
-      { headers: { "Content-Type": "text/html" } }
-    );
-  }
-
   return NextResponse.redirect(finalUrl);
 }

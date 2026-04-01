@@ -344,11 +344,7 @@ export default function DashboardHomePage() {
                 <button
                   onClick={() => {
                     const url = `/api/auth/linkedin?returnTo=/dashboard/settings&uid=${encodeURIComponent(user?.uid || "")}`;
-                    const w = 600, h = 700;
-                    const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
-                    const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
-                    const popup = window.open(url, "linkedin_oauth", `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
-                    if (!popup || popup.closed) window.location.href = url;
+                    window.location.href = url;
                   }}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                     isCorporate

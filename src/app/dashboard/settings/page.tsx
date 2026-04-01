@@ -130,15 +130,7 @@ export default function SettingsPage() {
       return;
     }
     const oauthUrl = `/api/auth/linkedin?returnTo=/dashboard/settings&uid=${encodeURIComponent(user.uid)}`;
-    // Open as popup — 600x700 centered
-    const w = 600, h = 700;
-    const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
-    const top  = Math.round(window.screenY + (window.outerHeight - h) / 2);
-    const popup = window.open(oauthUrl, "linkedin_oauth", `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
-    // Fallback: if popup was blocked, redirect same tab
-    if (!popup || popup.closed) {
-      window.location.href = oauthUrl;
-    }
+    window.location.href = oauthUrl;
   };
 
   const handleDisconnect = async () => {
