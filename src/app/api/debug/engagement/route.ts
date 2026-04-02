@@ -12,6 +12,7 @@ const LI_VERSION = "202504";
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").toLowerCase().split(",").map(e => e.trim());
 
 export async function GET(req: NextRequest) {
+  try {
   // Auth — admin only
   const authHeader = req.headers.get("authorization") || "";
   if (!authHeader.startsWith("Bearer ")) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -23,14 +24,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 
-  // Get the most recent published post that has a linkedin_post_id
+  // Get published posts — no orderBy to avoid missing index errors
   const snap = await adminDb.collection("posts")
     .where("status", "==", "published")
-    .orderBy("published_at", "desc")
-    .limit(5)
+    .limit(50)
     .get();
 
   const posts = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+  // Sort by published_at descending in JS
+  posts.sort((a, b) => (b.published_at?.seconds || 0) - (a.published_at?.seconds || 0));
   const post = posts.find(p => p.linkedin_post_id);
 
   if (!post) return NextResponse.json({ error: "No published posts with linkedin_post_id found" });
@@ -114,6 +116,9 @@ export async function GET(req: NextRequest) {
       comments_rest:      commentsResult,
     },
   });
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || String(err) }, { status: 500 });
+  }
 }
 
 function tryParse(text: string): any {
