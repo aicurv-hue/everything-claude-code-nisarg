@@ -70,13 +70,22 @@ export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId
 
   const inputClass = `w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all ${focusRing}`;
 
+  const DEFAULT_SUGGESTIONS = [
+    { slot: "", day_of_week: "Tuesday",   time_label: "9:00 AM",  score: 88, reasoning: "B2B audiences are most active Tuesday mornings before meetings begin." },
+    { slot: "", day_of_week: "Thursday",  time_label: "5:00 PM",  score: 82, reasoning: "End-of-day Thursday sees high scroll activity as professionals wind down." },
+    { slot: "", day_of_week: "Wednesday", time_label: "12:00 PM", score: 76, reasoning: "Midweek lunch breaks are a strong secondary engagement window on LinkedIn." },
+  ];
+
   const fetchSuggestions = async (forceRefresh = false) => {
     setAiLoading(true);
     if (forceRefresh) setSuggestions([]);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
     try {
       const token = await getAuthToken();
       const res = await fetch("/api/ai/best-time", {
         method: "POST",
+        signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -84,10 +93,15 @@ export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId
         body: JSON.stringify({ userId, segment, ...(forceRefresh ? { forceRefresh: true } : {}) }),
       });
       const d = await res.json();
-      if (d.suggestions) setSuggestions(d.suggestions);
+      if (d.suggestions?.length) {
+        setSuggestions(d.suggestions);
+      } else {
+        setSuggestions(DEFAULT_SUGGESTIONS);
+      }
     } catch {
-      // non-critical — suggestions just won't show
+      setSuggestions(DEFAULT_SUGGESTIONS);
     } finally {
+      clearTimeout(timer);
       setAiLoading(false);
     }
   };
