@@ -323,6 +323,7 @@ export async function POST(req: NextRequest) {
   try {
     if (adminDb) {
       const oneHourAgo    = Date.now() - 60 * 60 * 1000;
+      const fiveMinAgo    = Date.now() - 5 * 60 * 1000;
       const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
       const snap = await adminDb.collection("posts").where("status", "==", "published").get();
@@ -332,7 +333,13 @@ export async function POST(req: NextRequest) {
         if (!p.linkedin_post_id) return false;
         const pubMs = (p.published_at?.seconds || 0) * 1000;
         if (pubMs < thirtyDaysAgo) return false;
-        return !p.engagement_synced_at || p.engagement_synced_at < oneHourAgo;
+        // Never synced → always pick up
+        if (!p.engagement_synced_at) return true;
+        // Zero engagement → retry every 5 min (more aggressive until we get data)
+        const hasNoData = !p.likes_count && !p.comments_count;
+        if (hasNoData) return p.engagement_synced_at < fiveMinAgo;
+        // Has data → re-check hourly
+        return p.engagement_synced_at < oneHourAgo;
       }).slice(0, 20);
 
       if (toSync.length > 0) {
