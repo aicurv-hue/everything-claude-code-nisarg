@@ -22,7 +22,7 @@ import { savePostMemory } from "@/lib/ai/save-memory";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 
-const LI_VERSION  = "202505";
+const LI_VERSION  = "202504";
 const TIMEOUT_MS  = 20_000;
 const CRON_SECRET = process.env.CRON_SECRET; // required — set this in Vercel env vars
 
@@ -357,51 +357,50 @@ export async function POST(req: NextRequest) {
               const postUrn = post.linkedin_post_id!;
               const encoded = encodeURIComponent(postUrn);
 
-              // Fetch likes count via /rest/reactions
+              // socialActions returns numLikes + numComments in one call
+              // Works with w_member_social scope (no Partner approval required)
               const { signal: s1, clear: c1 } = withTimeout(10_000);
-              const likesRes = await fetch(
-                `https://api.linkedin.com/rest/reactions?q=entity&entity=${encoded}&count=0`,
+              const actionsRes = await fetch(
+                `https://api.linkedin.com/v2/socialActions/${encoded}`,
                 {
                   signal: s1,
                   headers: {
                     Authorization: `Bearer ${accessToken}`,
-                    "LinkedIn-Version": LI_VERSION,
                     "X-Restli-Protocol-Version": "2.0.0",
                   },
                 }
               );
               c1();
 
-              // Fetch comments count via /rest/comments
-              const { signal: s2, clear: c2 } = withTimeout(10_000);
-              const commentsRes = await fetch(
-                `https://api.linkedin.com/rest/comments?q=comments&commentUrn=${encoded}&count=0`,
-                {
-                  signal: s2,
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    "LinkedIn-Version": LI_VERSION,
-                    "X-Restli-Protocol-Version": "2.0.0",
-                  },
-                }
-              );
-              c2();
-
               let likes = 0;
               let comments = 0;
 
-              if (likesRes.ok) {
-                const likesData = await likesRes.json();
-                likes = likesData.paging?.total ?? likesData.total ?? 0;
+              if (actionsRes.ok) {
+                const actionsData = await actionsRes.json();
+                likes    = actionsData.numLikes    ?? actionsData.likesSummary?.totalLikes    ?? 0;
+                comments = actionsData.numComments ?? actionsData.commentsSummary?.totalFirstLevelComments ?? 0;
               } else {
-                console.warn(`[cron/engagement] Likes fetch ${likesRes.status} for ${postUrn}: ${await likesRes.text()}`);
-              }
-
-              if (commentsRes.ok) {
-                const commentsData = await commentsRes.json();
-                comments = commentsData.paging?.total ?? commentsData.total ?? 0;
-              } else {
-                console.warn(`[cron/engagement] Comments fetch ${commentsRes.status} for ${postUrn}: ${await commentsRes.text()}`);
+                // Fallback: try /rest/reactions for likes count only
+                console.warn(`[cron/engagement] socialActions ${actionsRes.status} for ${postUrn} — trying reactions fallback`);
+                const { signal: s2, clear: c2 } = withTimeout(10_000);
+                const likesRes = await fetch(
+                  `https://api.linkedin.com/rest/reactions?q=entity&entity=${encoded}&count=0`,
+                  {
+                    signal: s2,
+                    headers: {
+                      Authorization: `Bearer ${accessToken}`,
+                      "LinkedIn-Version": LI_VERSION,
+                      "X-Restli-Protocol-Version": "2.0.0",
+                    },
+                  }
+                );
+                c2();
+                if (likesRes.ok) {
+                  const likesData = await likesRes.json();
+                  likes = likesData.paging?.total ?? likesData.total ?? 0;
+                } else {
+                  console.warn(`[cron/engagement] Reactions fallback ${likesRes.status} for ${postUrn}: ${await likesRes.text()}`);
+                }
               }
 
               await adminDb.collection("posts").doc(post.id!).update({
