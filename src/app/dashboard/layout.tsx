@@ -22,7 +22,7 @@ function BetaSignOutButton() {
   );
 }
 
-function Sidebar({ onOpenGuide }: { onOpenGuide: () => void }) {
+function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failedCount: number }) {
   const { setSegment, isIndividual, isCorporate } = useSegment();
   const { user, logOut } = useAuth();
   const pathname = usePathname();
@@ -86,6 +86,7 @@ function Sidebar({ onOpenGuide }: { onOpenGuide: () => void }) {
       <nav className="px-2 pt-2 flex-1 space-y-0.5">
         {navItems.map(({ href, label, icon }) => {
           const isActive = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+          const showBadge = href === "/dashboard/history" && failedCount > 0;
           return (
             <Link
               key={href}
@@ -96,9 +97,19 @@ function Sidebar({ onOpenGuide }: { onOpenGuide: () => void }) {
                   : "text-slate-400 hover:text-white hover:bg-white/[0.06]"
               }`}
             >
-              <span className={isActive ? "text-white" : "text-slate-500"}>{icon}</span>
+              <span className={`relative ${isActive ? "text-white" : "text-slate-500"}`}>
+                {icon}
+                {showBadge && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
+                )}
+              </span>
               {label}
-              {isActive && (
+              {showBadge && (
+                <span className="ml-auto text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">
+                  {failedCount}
+                </span>
+              )}
+              {!showBadge && isActive && (
                 <div className={`ml-auto w-1 h-4 rounded-full ${accentClass}`} />
               )}
             </Link>
@@ -261,23 +272,47 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const [showGuide, setShowGuide] = useState(false);
 
-  // Show guide automatically on first-ever login
+  // Redirect first-time users to onboarding page
   useEffect(() => {
     if (!user) return;
     const key = `linkauto_guide_seen_${user.uid}`;
     if (!localStorage.getItem(key)) {
-      setShowGuide(true);
-      localStorage.setItem(key, "1");
+      // Don't redirect if already on onboarding (avoids loop)
+      if (!pathname.startsWith("/onboarding")) {
+        router.replace("/onboarding");
+      }
     }
+  }, [user, pathname, router]);
+
+  const [failedCount, setFailedCount] = useState(0);
+
+  // Poll for failed posts every 5 minutes to keep badge accurate
+  useEffect(() => {
+    if (!user) return;
+    const check = async () => {
+      try {
+        const token = await getAuthToken();
+        const res = await fetch("/api/dashboard/data?segment=individual", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const data = await res.json();
+        setFailedCount(data?.stats?.failed ?? 0);
+      } catch { /* silent */ }
+    };
+    check();
+    const id = setInterval(check, 5 * 60_000);
+    return () => clearInterval(id);
   }, [user]);
 
   return (
     <>
       <CronPoller />
       <div className="min-h-screen flex bg-slate-50 text-slate-900">
-        <Sidebar onOpenGuide={() => setShowGuide(true)} />
+        <Sidebar onOpenGuide={() => setShowGuide(true)} failedCount={failedCount} />
         <main className="flex-1 overflow-auto min-h-screen">
           {children}
         </main>

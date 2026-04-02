@@ -42,6 +42,7 @@ export default function PostPreviewPage() {
   const [linkedInConnected, setLinkedInConnected] = useState<boolean | null>(null);
   const [linkedInUser, setLinkedInUser]     = useState<{ name: string; picture: string; email: string } | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [profileName, setProfileName]       = useState<string | null>(null);
 
   // ── Image hook state (Layer 2 — text overlay) ───────────────────────────────
   const [imageHook, setImageHook]               = useState<string>("");
@@ -101,19 +102,22 @@ export default function PostPreviewPage() {
         .catch(() => setLinkedInConnected(false))
     );
 
-    // Load organization ID from user profile (for corporate publishing)
-    if (parsed.metadata?.segment === "corporate") {
-      getAuthToken().then(token => {
-        if (!token) return;
-        fetch("/api/user/profile", { headers: { Authorization: `Bearer ${token}` } })
-          .then(r => r.json())
-          .then(p => {
+    // Load profile — check name (mandatory) + org ID (corporate)
+    getAuthToken().then(token => {
+      if (!token) return;
+      fetch("/api/user/profile", { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(p => {
+          const seg = parsed.metadata?.segment || "individual";
+          const name = seg === "corporate" ? p?.corporate?.name : p?.individual?.name;
+          setProfileName(name || null);
+          if (seg === "corporate") {
             const orgId = p?.corporate?.linkedinOrganizationId;
             if (orgId) setOrganizationId(orgId);
-          })
-          .catch(() => {});
-      });
-    }
+          }
+        })
+        .catch(() => {});
+    });
   }, [router]);
 
   /* ── Regenerate post ── */
@@ -501,9 +505,10 @@ export default function PostPreviewPage() {
               </button>
 
               <button
-                onClick={() => setShowSchedulePicker(true)}
-                disabled={scheduleStatus === "success"}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-sm font-semibold text-white transition-all disabled:opacity-50"
+                onClick={() => linkedInConnected ? setShowSchedulePicker(true) : undefined}
+                disabled={scheduleStatus === "success" || linkedInConnected === false}
+                title={linkedInConnected === false ? "Connect LinkedIn first to schedule posts" : undefined}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <CalendarDays className="w-4 h-4" />
                 {scheduleStatus === "success" ? "Scheduled ✓" : "Schedule"}
@@ -529,6 +534,30 @@ export default function PostPreviewPage() {
               )}
             </div>
           </div>
+
+          {/* ── Setup required warning ── */}
+          {(profileName === null || !linkedInConnected) && linkedInConnected !== null && (
+            <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+              <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-amber-800">Complete setup before publishing</p>
+                <div className="mt-1.5 space-y-1">
+                  {!linkedInConnected && (
+                    <p className="text-[11px] text-amber-700">
+                      • <strong>LinkedIn not connected</strong> — required to publish or schedule.{" "}
+                      <a href={`/api/auth/linkedin?returnTo=/dashboard/create/preview&uid=${encodeURIComponent(user?.uid || "")}`} className="underline font-semibold">Connect now →</a>
+                    </p>
+                  )}
+                  {profileName === null && (
+                    <p className="text-[11px] text-amber-700">
+                      • <strong>Profile name missing</strong> — the AI needs your name to write in your voice.{" "}
+                      <a href="/dashboard/settings" className="underline font-semibold">Add in Settings →</a>
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* LinkedIn account banner */}
           {linkedInConnected === true && linkedInUser?.name && (
