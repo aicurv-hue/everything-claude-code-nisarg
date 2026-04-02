@@ -21,6 +21,7 @@ import {
 import { UserProfile, ProfileSegment, ImageStyle } from "@/lib/db/profiles";
 import { useAuth } from "@/lib/context/auth";
 import { HelpTooltip, FieldHint } from "@/components/ui/HelpTooltip";
+import { ProfileAIAssist } from "@/components/ui/ProfileAIAssist";
 
 export const DEFAULT_SYSTEM_PROMPT = `You are a world-class marketing copywriter and content strategist.
 Your goal is to generate high-performing LinkedIn content that drives engagement and authority.
@@ -427,12 +428,14 @@ export default function SettingsPage() {
                 placeholder="e.g. Founders of B2B SaaS companies at seed to Series A, 10–50 employees, struggling to generate inbound leads from LinkedIn."
                 rows={3} className={textareaClass} />
               <FieldHint>The more specific this is, the more your posts will speak directly to the people most likely to engage and buy.</FieldHint>
+              <ProfileAIAssist field="icp" value={currentProfile.icp} context={currentProfile as unknown as Record<string,string>} profileType={profileType} onApply={v => handleFieldChange("icp", v)} />
             </div>
             <div className="grid grid-cols-2 gap-5">
               <div>
                 <label className={labelClass}>Target {profileType === "individual" ? "Audience" : "Company"} Stage</label>
                 <input value={currentProfile.companyStage} onChange={e => handleFieldChange("companyStage", e.target.value)} placeholder="e.g. Seed to Series B founders" className={inputClass} />
                 <FieldHint>Calibrates language — early-stage and enterprise buyers need very different framing.</FieldHint>
+                <ProfileAIAssist field="companyStage" value={currentProfile.companyStage} context={currentProfile as unknown as Record<string,string>} profileType={profileType} onApply={v => handleFieldChange("companyStage", v)} />
               </div>
               <div>
                 <label className={`${labelClass} flex items-center gap-1.5`}>
@@ -447,6 +450,7 @@ export default function SettingsPage() {
                   placeholder="e.g. Reduce energy costs by 15–30% without buying new equipment"
                   className={inputClass} />
                 <FieldHint>Neel probes this exact outcome in research — making every post feel like it addresses what your buyer cares about most.</FieldHint>
+                <ProfileAIAssist field="jtbd" value={currentProfile.jtbd} context={currentProfile as unknown as Record<string,string>} profileType={profileType} onApply={v => handleFieldChange("jtbd", v)} />
               </div>
             </div>
           </div>
@@ -471,6 +475,7 @@ export default function SettingsPage() {
                 placeholder="e.g. Energy Efficiency, Manufacturing Operations, Sustainability, Cost Reduction"
                 className={inputClass} />
               <FieldHint>Separate topics with commas. Neel will stay inside these lanes and never stray into unrelated territory.</FieldHint>
+              <ProfileAIAssist field="pillars" value={currentProfile.pillars} context={currentProfile as unknown as Record<string,string>} profileType={profileType} onApply={v => handleFieldChange("pillars", v)} />
             </div>
             <div>
               <label className={`${labelClass} flex items-center gap-1.5`}>
@@ -481,6 +486,7 @@ export default function SettingsPage() {
                 />
               </label>
               <input value={currentProfile.personality} onChange={e => handleFieldChange("personality", e.target.value)} placeholder="e.g. Authoritative yet conversational — never corporate-speak" className={inputClass} />
+              <ProfileAIAssist field="personality" value={currentProfile.personality} context={currentProfile as unknown as Record<string,string>} profileType={profileType} onApply={v => handleFieldChange("personality", v)} />
             </div>
             <div>
               <label className={`${labelClass} flex items-center gap-1.5`}>
@@ -493,6 +499,7 @@ export default function SettingsPage() {
               </label>
               <textarea value={currentProfile.usp} onChange={e => handleFieldChange("usp", e.target.value)} placeholder="e.g. The only [category] that [specific differentiator] — with [proof]." rows={3} className={textareaClass} />
               <FieldHint>Neel weaves this in naturally — it differentiates your posts from anyone else writing about the same topics.</FieldHint>
+              <ProfileAIAssist field="usp" value={currentProfile.usp} context={currentProfile as unknown as Record<string,string>} profileType={profileType} onApply={v => handleFieldChange("usp", v)} />
             </div>
           </div>
         )}
@@ -517,6 +524,7 @@ export default function SettingsPage() {
                 placeholder="e.g. They worry their energy bill is eating margins but don't know where to start. They've tried audits before that found nothing."
                 rows={3} className={textareaClass} />
               <FieldHint>Neel opens these wounds in the hook, then closes them with your solution. The more specific, the more powerful.</FieldHint>
+              <ProfileAIAssist field="customerPains" value={currentProfile.customerPains} context={currentProfile as unknown as Record<string,string>} profileType={profileType} onApply={v => handleFieldChange("customerPains", v)} />
             </div>
             <div className="grid grid-cols-2 gap-5">
               <div>
@@ -533,6 +541,7 @@ export default function SettingsPage() {
                   placeholder='e.g. "our bills are crazy", "we just guess", "audit found nothing"'
                   className={inputClass} />
                 <FieldHint>Neel weaves these in so readers feel seen. Copied from real conversations = highest resonance.</FieldHint>
+                <ProfileAIAssist field="verbatimLanguage" value={currentProfile.verbatimLanguage} context={currentProfile as unknown as Record<string,string>} profileType={profileType} onApply={v => handleFieldChange("verbatimLanguage", v)} buttonLabel="Expand with AI" />
               </div>
               <div>
                 <label className={`${labelClass} flex items-center gap-1.5`}>
