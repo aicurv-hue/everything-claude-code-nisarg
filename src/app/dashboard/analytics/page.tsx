@@ -1,0 +1,392 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { TrendingUp, ThumbsUp, MessageSquare, BarChart3, Star, Calendar, Clock, Zap } from "lucide-react";
+import { useAuth } from "@/lib/context/auth";
+import { getAuthToken } from "@/lib/utils/getAuthToken";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface Overview {
+  totalPosts: number;
+  totalLikes: number;
+  totalComments: number;
+  avgEngagement: number;
+  bestPost: { id: string; topic: string; likes: number; comments: number; publishedAt: number } | null;
+  thisMonth: number;
+  lastMonth: number;
+}
+interface HourPoint   { hour: number; count: number; avgEngagement: number }
+interface DayPoint    { day: number; label: string; count: number; avgEngagement: number }
+interface TonePoint   { tone: string; count: number; avgEngagement: number }
+interface LengthPoint { length: string; count: number; avgEngagement: number }
+interface WeekPoint   { label: string; count: number }
+interface TopPost     { id: string; topic: string; tone: string; segment: string; publishedAt: number; likes: number; comments: number }
+
+interface AnalyticsData {
+  empty: boolean;
+  overview: Overview;
+  byHour: HourPoint[];
+  byDayOfWeek: DayPoint[];
+  byTone: TonePoint[];
+  byLength: LengthPoint[];
+  weeklyGrowth: WeekPoint[];
+  topPosts: TopPost[];
+  recommendation: { bestHourLabel: string | null; bestDayLabel: string | null };
+}
+
+// ── Mini bar chart ────────────────────────────────────────────────────────────
+
+function BarChart({
+  data,
+  labelKey,
+  valueKey,
+  highlightIndex,
+  maxLabel,
+  color = "#0A66C2",
+}: {
+  data: Record<string, any>[];
+  labelKey: string;
+  valueKey: string;
+  highlightIndex?: number;
+  maxLabel?: string;
+  color?: string;
+}) {
+  const values = data.map(d => d[valueKey] as number);
+  const max    = Math.max(...values, 1);
+
+  return (
+    <div className="flex items-end gap-0.5 h-28 w-full">
+      {data.map((d, i) => {
+        const pct  = max > 0 ? (d[valueKey] / max) * 100 : 0;
+        const isHi = i === highlightIndex;
+        return (
+          <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative" title={`${d[labelKey]}: ${d[valueKey]}`}>
+            <div
+              className="w-full rounded-t transition-all duration-300 min-h-[2px]"
+              style={{
+                height: `${Math.max(pct, 2)}%`,
+                background: isHi ? "#F59E0B" : color,
+                opacity: pct === 0 ? 0.2 : 1,
+              }}
+            />
+            {/* Tooltip on hover */}
+            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+              {d[labelKey]}: {d[valueKey]}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Stat card ─────────────────────────────────────────────────────────────────
+
+function StatCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string | number; sub?: string }) {
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-7 h-7 rounded-lg bg-[#0A66C2]/10 flex items-center justify-center text-[#0A66C2]">{icon}</div>
+        <p className="text-xs text-slate-500 font-medium">{label}</p>
+      </div>
+      <p className="text-2xl font-bold text-slate-900">{value}</p>
+      {sub && <p className="text-[11px] text-slate-400 mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+// ── Section wrapper ───────────────────────────────────────────────────────────
+
+function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="text-[#0A66C2]">{icon}</div>
+        <h2 className="font-semibold text-slate-800 text-sm">{title}</h2>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export default function AnalyticsPage() {
+  const { user } = useAuth();
+  const [data, setData]       = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      setLoading(true);
+      try {
+        const token = await getAuthToken();
+        const res = await fetch("/api/analytics", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Failed to load analytics");
+        setData(json);
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-8 h-8 border-2 border-[#0A66C2] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+        <p className="text-red-500 text-sm">{error}</p>
+      </div>
+    );
+  }
+
+  if (!data || data.empty) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+        <div className="text-center">
+          <BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-600 font-medium">No published posts yet</p>
+          <p className="text-slate-400 text-sm mt-1">Publish your first post to see analytics here.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { overview, byHour, byDayOfWeek, byTone, byLength, weeklyGrowth, topPosts, recommendation } = data;
+
+  // Best hour/day index for highlighting
+  const bestHourIdx = byHour.filter(h => h.count >= 1).length > 0
+    ? byHour.reduce((best, h, i) => h.avgEngagement > byHour[best].avgEngagement ? i : best, 0)
+    : undefined;
+  const bestDayIdx = byDayOfWeek.reduce((best, d, i) => d.avgEngagement > byDayOfWeek[best].avgEngagement ? i : best, 0);
+
+  const monthDelta = overview.lastMonth > 0
+    ? Math.round(((overview.thisMonth - overview.lastMonth) / overview.lastMonth) * 100)
+    : overview.thisMonth > 0 ? 100 : 0;
+
+  const engagementHasData = overview.totalLikes + overview.totalComments > 0;
+
+  return (
+    <div className="p-6 bg-slate-50 min-h-screen">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-slate-900">Analytics</h1>
+        <p className="text-sm text-slate-500 mt-0.5">Post performance across your LinkedIn activity</p>
+        {!engagementHasData && (
+          <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-xs text-amber-700">
+            <strong>Likes & comments show 0</strong> — LinkedIn requires{" "}
+            <code className="bg-amber-100 px-1 rounded">r_member_social</code> scope (Partner approval) to read
+            engagement. Time-of-post and volume charts are accurate.
+          </div>
+        )}
+      </div>
+
+      {/* ── Section 1: Overview stat cards ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <StatCard
+          icon={<BarChart3 className="w-4 h-4" />}
+          label="Total Posts"
+          value={overview.totalPosts}
+          sub={`${overview.thisMonth} this month${monthDelta !== 0 ? ` (${monthDelta > 0 ? "+" : ""}${monthDelta}% vs last)` : ""}`}
+        />
+        <StatCard
+          icon={<ThumbsUp className="w-4 h-4" />}
+          label="Total Likes"
+          value={engagementHasData ? overview.totalLikes : "—"}
+          sub={engagementHasData ? undefined : "Needs r_member_social scope"}
+        />
+        <StatCard
+          icon={<MessageSquare className="w-4 h-4" />}
+          label="Total Comments"
+          value={engagementHasData ? overview.totalComments : "—"}
+          sub={engagementHasData ? undefined : "Needs r_member_social scope"}
+        />
+        <StatCard
+          icon={<TrendingUp className="w-4 h-4" />}
+          label="Avg Engagement"
+          value={engagementHasData ? overview.avgEngagement : "—"}
+          sub={engagementHasData ? "likes + comments / post" : "per post"}
+        />
+      </div>
+
+      {/* ── Best time recommendation ── */}
+      {(recommendation.bestHourLabel || recommendation.bestDayLabel) && (
+        <div className="bg-gradient-to-r from-[#0A66C2]/10 to-indigo-50 border border-[#0A66C2]/20 rounded-xl p-4 mb-5 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-[#0A66C2]/20 flex items-center justify-center shrink-0">
+            <Zap className="w-5 h-5 text-[#0A66C2]" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-[#0A66C2] uppercase tracking-wider mb-0.5">Your Best Time to Post</p>
+            <p className="text-sm font-semibold text-slate-800">
+              {[recommendation.bestDayLabel, recommendation.bestHourLabel].filter(Boolean).join(" at ")}
+              {" "}— based on your historical engagement patterns
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+        {/* ── Hour of Day chart ── */}
+        <Section title="Hour of Day vs Avg Engagement" icon={<Clock className="w-4 h-4" />}>
+          <BarChart
+            data={byHour}
+            labelKey="hour"
+            valueKey="avgEngagement"
+            highlightIndex={bestHourIdx}
+            color="#0A66C2"
+          />
+          <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+            <span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>11 PM</span>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-2">
+            Yellow bar = your best-performing hour.
+            {recommendation.bestHourLabel && <> Peak: <strong className="text-slate-600">{recommendation.bestHourLabel}</strong></>}
+          </p>
+        </Section>
+
+        {/* ── Day of Week chart ── */}
+        <Section title="Day of Week vs Avg Engagement" icon={<Calendar className="w-4 h-4" />}>
+          <BarChart
+            data={byDayOfWeek}
+            labelKey="label"
+            valueKey="avgEngagement"
+            highlightIndex={bestDayIdx}
+            color="#0A66C2"
+          />
+          <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+            {byDayOfWeek.map(d => <span key={d.day}>{d.label}</span>)}
+          </div>
+          <p className="text-[11px] text-slate-400 mt-2">
+            {recommendation.bestDayLabel && <>Best day: <strong className="text-slate-600">{recommendation.bestDayLabel}</strong></>}
+          </p>
+        </Section>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+        {/* ── Tone vs Engagement ── */}
+        <Section title="Tone vs Engagement" icon={<Star className="w-4 h-4" />}>
+          <div className="space-y-2">
+            {byTone.map((t, i) => (
+              <div key={t.tone}>
+                <div className="flex justify-between text-xs mb-0.5">
+                  <span className="text-slate-600 capitalize">{t.tone}</span>
+                  <span className="text-slate-400">{t.avgEngagement} avg · {t.count} posts</span>
+                </div>
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${byTone[0].avgEngagement > 0 ? (t.avgEngagement / byTone[0].avgEngagement) * 100 : 0}%`,
+                      background: i === 0 ? "#0A66C2" : "#93c5fd",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        {/* ── Post Length ── */}
+        <Section title="Post Length vs Engagement" icon={<BarChart3 className="w-4 h-4" />}>
+          <div className="space-y-2">
+            {byLength.map((l, i) => {
+              const maxEng = Math.max(...byLength.map(x => x.avgEngagement), 1);
+              return (
+                <div key={l.length}>
+                  <div className="flex justify-between text-xs mb-0.5">
+                    <span className="text-slate-600 capitalize">{l.length}</span>
+                    <span className="text-slate-400">{l.avgEngagement} avg · {l.count} posts</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${maxEng > 0 ? (l.avgEngagement / maxEng) * 100 : 0}%`,
+                        background: "#0A66C2",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+
+        {/* ── Weekly Growth ── */}
+        <Section title="Posts per Week (last 8 weeks)" icon={<TrendingUp className="w-4 h-4" />}>
+          <BarChart
+            data={weeklyGrowth}
+            labelKey="label"
+            valueKey="count"
+            color="#0A66C2"
+          />
+          <div className="flex justify-between text-[10px] text-slate-400 mt-1 overflow-hidden">
+            <span>{weeklyGrowth[0]?.label}</span>
+            <span>{weeklyGrowth[weeklyGrowth.length - 1]?.label}</span>
+          </div>
+        </Section>
+      </div>
+
+      {/* ── Top Posts ── */}
+      <Section title="Top 5 Posts by Engagement" icon={<Star className="w-4 h-4" />}>
+        {topPosts.length === 0 ? (
+          <p className="text-sm text-slate-400">No published posts yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  <th className="text-left text-xs text-slate-400 font-medium pb-2 pr-4">Topic</th>
+                  <th className="text-left text-xs text-slate-400 font-medium pb-2 pr-4">Tone</th>
+                  <th className="text-left text-xs text-slate-400 font-medium pb-2 pr-4">Date</th>
+                  <th className="text-right text-xs text-slate-400 font-medium pb-2 pr-4">Likes</th>
+                  <th className="text-right text-xs text-slate-400 font-medium pb-2">Comments</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topPosts.map((p, i) => (
+                  <tr key={p.id} className="border-b border-slate-50 last:border-0">
+                    <td className="py-2 pr-4">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-[#0A66C2]/10 text-[#0A66C2] text-[10px] font-bold flex items-center justify-center shrink-0">
+                          {i + 1}
+                        </span>
+                        <span className="text-slate-700 text-xs truncate max-w-[200px]">{p.topic}</span>
+                      </div>
+                    </td>
+                    <td className="py-2 pr-4">
+                      <span className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full capitalize">{p.tone}</span>
+                    </td>
+                    <td className="py-2 pr-4 text-xs text-slate-400">
+                      {p.publishedAt ? new Date(p.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                    </td>
+                    <td className="py-2 pr-4 text-right text-xs font-medium text-slate-700">
+                      {p.likes > 0 ? p.likes : "—"}
+                    </td>
+                    <td className="py-2 text-right text-xs font-medium text-slate-700">
+                      {p.comments > 0 ? p.comments : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Section>
+    </div>
+  );
+}
