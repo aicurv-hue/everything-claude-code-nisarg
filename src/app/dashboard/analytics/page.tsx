@@ -168,17 +168,23 @@ export default function AnalyticsPage() {
 
   const { overview, byHour, byDayOfWeek, byTone, byLength, weeklyGrowth, topPosts, recommendation } = data;
 
+  const engagementHasData = overview.totalLikes + overview.totalComments > 0;
+
+  // When engagement data is all zeros, fall back to post count for charts
+  const hourMetric = engagementHasData ? "avgEngagement" : "count";
+  const dayMetric  = engagementHasData ? "avgEngagement" : "count";
+
   // Best hour/day index for highlighting
-  const bestHourIdx = byHour.filter(h => h.count >= 1).length > 0
-    ? byHour.reduce((best, h, i) => h.avgEngagement > byHour[best].avgEngagement ? i : best, 0)
+  const bestHourIdx = byHour.some(h => h.count > 0)
+    ? byHour.reduce((best, h, i) => (h[hourMetric as keyof HourPoint] as number) > (byHour[best][hourMetric as keyof HourPoint] as number) ? i : best, 0)
     : undefined;
-  const bestDayIdx = byDayOfWeek.reduce((best, d, i) => d.avgEngagement > byDayOfWeek[best].avgEngagement ? i : best, 0);
+  const bestDayIdx = byDayOfWeek.reduce((best, d, i) =>
+    (d[dayMetric as keyof DayPoint] as number) > (byDayOfWeek[best][dayMetric as keyof DayPoint] as number) ? i : best, 0
+  );
 
   const monthDelta = overview.lastMonth > 0
     ? Math.round(((overview.thisMonth - overview.lastMonth) / overview.lastMonth) * 100)
     : overview.thisMonth > 0 ? 100 : 0;
-
-  const engagementHasData = overview.totalLikes + overview.totalComments > 0;
 
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
@@ -241,11 +247,14 @@ export default function AnalyticsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
         {/* ── Hour of Day chart ── */}
-        <Section title="Hour of Day vs Avg Engagement" icon={<Clock className="w-4 h-4" />}>
+        <Section
+          title={engagementHasData ? "Hour of Day vs Avg Engagement" : "Hour of Day — Posts Published"}
+          icon={<Clock className="w-4 h-4" />}
+        >
           <BarChart
             data={byHour}
             labelKey="hour"
-            valueKey="avgEngagement"
+            valueKey={hourMetric}
             highlightIndex={bestHourIdx}
             color="#0A66C2"
           />
@@ -253,17 +262,22 @@ export default function AnalyticsPage() {
             <span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>11 PM</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-2">
-            Yellow bar = your best-performing hour.
-            {recommendation.bestHourLabel && <> Peak: <strong className="text-slate-600">{recommendation.bestHourLabel}</strong></>}
+            {engagementHasData
+              ? <>Yellow bar = best-performing hour. Peak: <strong className="text-slate-600">{recommendation.bestHourLabel}</strong></>
+              : <>Showing post volume by hour. Yellow = most-posted hour: <strong className="text-slate-600">{recommendation.bestHourLabel ?? "—"}</strong></>
+            }
           </p>
         </Section>
 
         {/* ── Day of Week chart ── */}
-        <Section title="Day of Week vs Avg Engagement" icon={<Calendar className="w-4 h-4" />}>
+        <Section
+          title={engagementHasData ? "Day of Week vs Avg Engagement" : "Day of Week — Posts Published"}
+          icon={<Calendar className="w-4 h-4" />}
+        >
           <BarChart
             data={byDayOfWeek}
             labelKey="label"
-            valueKey="avgEngagement"
+            valueKey={dayMetric}
             highlightIndex={bestDayIdx}
             color="#0A66C2"
           />
@@ -271,51 +285,73 @@ export default function AnalyticsPage() {
             {byDayOfWeek.map(d => <span key={d.day}>{d.label}</span>)}
           </div>
           <p className="text-[11px] text-slate-400 mt-2">
-            {recommendation.bestDayLabel && <>Best day: <strong className="text-slate-600">{recommendation.bestDayLabel}</strong></>}
+            {engagementHasData
+              ? <>Best day: <strong className="text-slate-600">{recommendation.bestDayLabel}</strong></>
+              : <>Most active day: <strong className="text-slate-600">{recommendation.bestDayLabel ?? "—"}</strong></>
+            }
           </p>
         </Section>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
         {/* ── Tone vs Engagement ── */}
-        <Section title="Tone vs Engagement" icon={<Star className="w-4 h-4" />}>
+        <Section
+          title={engagementHasData ? "Tone vs Engagement" : "Tone — Post Distribution"}
+          icon={<Star className="w-4 h-4" />}
+        >
           <div className="space-y-2">
-            {byTone.map((t, i) => (
-              <div key={t.tone}>
-                <div className="flex justify-between text-xs mb-0.5">
-                  <span className="text-slate-600 capitalize">{t.tone}</span>
-                  <span className="text-slate-400">{t.avgEngagement} avg · {t.count} posts</span>
-                </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${byTone[0].avgEngagement > 0 ? (t.avgEngagement / byTone[0].avgEngagement) * 100 : 0}%`,
-                      background: i === 0 ? "#0A66C2" : "#93c5fd",
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        {/* ── Post Length ── */}
-        <Section title="Post Length vs Engagement" icon={<BarChart3 className="w-4 h-4" />}>
-          <div className="space-y-2">
-            {byLength.map((l, i) => {
-              const maxEng = Math.max(...byLength.map(x => x.avgEngagement), 1);
+            {byTone.map((t, i) => {
+              const toneMetric = engagementHasData ? t.avgEngagement : t.count;
+              const toneMax    = engagementHasData
+                ? Math.max(...byTone.map(x => x.avgEngagement), 1)
+                : Math.max(...byTone.map(x => x.count), 1);
               return (
-                <div key={l.length}>
+                <div key={t.tone}>
                   <div className="flex justify-between text-xs mb-0.5">
-                    <span className="text-slate-600 capitalize">{l.length}</span>
-                    <span className="text-slate-400">{l.avgEngagement} avg · {l.count} posts</span>
+                    <span className="text-slate-600 capitalize">{t.tone}</span>
+                    <span className="text-slate-400">
+                      {engagementHasData ? `${t.avgEngagement} avg · ` : ""}{t.count} posts
+                    </span>
                   </div>
                   <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
-                        width: `${maxEng > 0 ? (l.avgEngagement / maxEng) * 100 : 0}%`,
+                        width: `${toneMax > 0 ? (toneMetric / toneMax) * 100 : 0}%`,
+                        background: i === 0 ? "#0A66C2" : "#93c5fd",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+
+        {/* ── Post Length ── */}
+        <Section
+          title={engagementHasData ? "Post Length vs Engagement" : "Post Length — Distribution"}
+          icon={<BarChart3 className="w-4 h-4" />}
+        >
+          <div className="space-y-2">
+            {byLength.map((l) => {
+              const lengthMetric = engagementHasData ? l.avgEngagement : l.count;
+              const lengthMax    = engagementHasData
+                ? Math.max(...byLength.map(x => x.avgEngagement), 1)
+                : Math.max(...byLength.map(x => x.count), 1);
+              return (
+                <div key={l.length}>
+                  <div className="flex justify-between text-xs mb-0.5">
+                    <span className="text-slate-600 capitalize">{l.length}</span>
+                    <span className="text-slate-400">
+                      {engagementHasData ? `${l.avgEngagement} avg · ` : ""}{l.count} posts
+                    </span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${lengthMax > 0 ? (lengthMetric / lengthMax) * 100 : 0}%`,
                         background: "#0A66C2",
                       }}
                     />

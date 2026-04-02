@@ -169,8 +169,14 @@ export async function GET(req: NextRequest) {
     }));
 
   // ── Best posting time recommendation ─────────────────────────────────────
-  const bestHour = byHour.filter(h => h.count >= 2).sort((a, b) => b.avgEngagement - a.avgEngagement)[0];
-  const bestDay  = byDayOfWeek.filter(d => d.count >= 2).sort((a, b) => b.avgEngagement - a.avgEngagement)[0];
+  const hasEngagement = totalLikes + totalComments > 0;
+  // If engagement data exists, rank by avg engagement; otherwise rank by post count (most-posted hour)
+  const bestHour = hasEngagement
+    ? byHour.filter(h => h.count >= 2).sort((a, b) => b.avgEngagement - a.avgEngagement)[0]
+    : byHour.filter(h => h.count >= 1).sort((a, b) => b.count - a.count)[0];
+  const bestDay = hasEngagement
+    ? byDayOfWeek.filter(d => d.count >= 2).sort((a, b) => b.avgEngagement - a.avgEngagement)[0]
+    : byDayOfWeek.filter(d => d.count >= 1).sort((a, b) => b.count - a.count)[0];
 
   return NextResponse.json({
     empty: false,
