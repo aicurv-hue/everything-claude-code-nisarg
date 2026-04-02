@@ -7,7 +7,7 @@ import { AuthProvider } from "@/lib/context/auth";
 // Used for the image hook overlay text to match premium tech brand aesthetic
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
+  weight: ["400", "600", "700"],  // dropped 800 — saves one font file
   variable: "--font-jakarta",
   display: "swap",
 });
@@ -24,6 +24,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={plusJakarta.variable}>
+      <head>
+        {/* DNS + TLS pre-warmed before any API calls fire */}
+        <link rel="preconnect" href="https://openrouter.ai" />
+        <link rel="preconnect" href="https://firestore.googleapis.com" />
+        <link rel="preconnect" href="https://storage.googleapis.com" />
+        <link rel="dns-prefetch" href="https://api.linkedin.com" />
+        <link rel="dns-prefetch" href="https://media.licdn.com" />
+      </head>
       <body className="antialiased selection:bg-primary/20 selection:text-primary">
         <AuthProvider>
           {children}

@@ -135,7 +135,7 @@ function PostDetailModal({
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-3xl h-[88vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        className="relative w-full max-w-3xl h-[88vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-enter"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ── */}

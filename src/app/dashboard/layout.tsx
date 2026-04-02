@@ -314,7 +314,11 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen flex bg-slate-50 text-slate-900">
         <Sidebar onOpenGuide={() => setShowGuide(true)} failedCount={failedCount} />
         <main className="flex-1 overflow-auto min-h-screen">
-          {children}
+          {/* key={pathname} causes React to remount the page div on navigation,
+              triggering the CSS page-enter animation each time */}
+          <div key={pathname} className="animate-fade-in h-full">
+            {children}
+          </div>
         </main>
       </div>
       {showGuide && <OnboardingModal onClose={() => setShowGuide(false)} />}

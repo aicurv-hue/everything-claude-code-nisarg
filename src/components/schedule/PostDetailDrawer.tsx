@@ -134,7 +134,7 @@ export default function PostDetailDrawer({ post, onClose, onReschedule, onDelete
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 h-full w-[420px] bg-white shadow-2xl z-50 flex flex-col">
+      <div className="fixed right-0 top-0 h-full w-[420px] bg-white shadow-2xl z-50 flex flex-col drawer-enter">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
