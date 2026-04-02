@@ -61,36 +61,40 @@ export async function GET(req: NextRequest) {
     socialActionsResult = { error: e.message };
   }
 
-  // Test 2: /rest/reactions
-  let reactionsResult: any = {};
-  try {
-    const r = await fetch(`https://api.linkedin.com/rest/reactions?q=entity&entity=${encoded}&count=0`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "LinkedIn-Version": LI_VERSION,
-        "X-Restli-Protocol-Version": "2.0.0",
-      },
-    });
-    const text = await r.text();
-    reactionsResult = { status: r.status, body: tryParse(text) };
-  } catch (e: any) {
-    reactionsResult = { error: e.message };
+  // Test reactions with multiple API versions — find which one works
+  const reactionVersions = ["202505", "202504", "202502", "202412", "202604"];
+  const reactionsResults: Record<string, any> = {};
+  for (const ver of reactionVersions) {
+    try {
+      const r = await fetch(`https://api.linkedin.com/rest/reactions?q=entity&entity=${encoded}&count=0`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "LinkedIn-Version": ver,
+          "X-Restli-Protocol-Version": "2.0.0",
+        },
+      });
+      const text = await r.text();
+      reactionsResults[`reactions_${ver}`] = { status: r.status, body: tryParse(text) };
+      if (r.ok) break; // stop as soon as one works
+    } catch (e: any) {
+      reactionsResults[`reactions_${ver}`] = { error: (e as any).message };
+    }
   }
 
-  // Test 3: /rest/comments (correct endpoint)
-  let commentsResult: any = {};
+  // Test socialActions v2 with version header (our first test was missing it)
+  let socialActionsWithVersion: any = {};
   try {
-    const r = await fetch(`https://api.linkedin.com/rest/socialActions/${encoded}/comments?count=0`, {
+    const r = await fetch(`https://api.linkedin.com/v2/socialActions/${encoded}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        "LinkedIn-Version": LI_VERSION,
+        "LinkedIn-Version": "202505",
         "X-Restli-Protocol-Version": "2.0.0",
       },
     });
     const text = await r.text();
-    commentsResult = { status: r.status, body: tryParse(text) };
+    socialActionsWithVersion = { status: r.status, body: tryParse(text) };
   } catch (e: any) {
-    commentsResult = { error: e.message };
+    socialActionsWithVersion = { error: (e as any).message };
   }
 
   return NextResponse.json({
@@ -111,9 +115,9 @@ export async function GET(req: NextRequest) {
       has_refresh_token: !!tokenData.refresh_token,
     },
     tests: {
-      socialActions_v2:   socialActionsResult,
-      reactions_rest:     reactionsResult,
-      comments_rest:      commentsResult,
+      socialActions_v2_no_version: socialActionsResult,
+      socialActions_v2_with_version: socialActionsWithVersion,
+      ...reactionsResults,
     },
   });
   } catch (err: any) {
