@@ -828,7 +828,7 @@ export default function PostPreviewPage() {
                 </button>
 
                 <button
-                  onClick={() => { handleModeChange("upload"); fileInputRef.current?.click(); }}
+                  onClick={() => { handleModeChange("upload"); if (fileInputRef.current) { fileInputRef.current.value = ""; fileInputRef.current.click(); } }}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
                     imageMode === "upload" ? "border-[#0A66C2] bg-blue-50" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                   }`}
@@ -944,7 +944,7 @@ export default function PostPreviewPage() {
               {imageMode === "upload" && uploadedPreview && (
                 <div className="w-full">
                   <div className="relative">
-                    <img src={uploadedPreview} alt="Uploaded image" className="w-full rounded-xl object-cover aspect-square" />
+                    <img src={uploadedPreview} alt="Uploaded image" className="w-full rounded-xl object-contain max-h-[480px]" />
                     {imageHook && (
                       <div className="absolute inset-0 rounded-xl pointer-events-none"
                         style={{ background: "linear-gradient(105deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.38) 38%, transparent 58%)" }}>
@@ -962,7 +962,7 @@ export default function PostPreviewPage() {
                       </div>
                     )}
                     <button
-                      onClick={() => { setUploadedFile(null); setUploadedPreview(null); fileInputRef.current?.click(); }}
+                      onClick={() => { setUploadedFile(null); setUploadedPreview(null); if (fileInputRef.current) { fileInputRef.current.value = ""; fileInputRef.current.click(); } }}
                       className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-all"
                       title="Replace image"
                     >
