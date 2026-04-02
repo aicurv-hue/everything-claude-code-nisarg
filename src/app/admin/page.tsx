@@ -80,6 +80,67 @@ function statusBadge(status: string) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
+function EngagementDiagnostic({ adminFetch }: { adminFetch: (url: string, opts?: RequestInit) => Promise<Response> }) {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult]   = useState<any>(null);
+
+  const run = async () => {
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await adminFetch("/api/debug/engagement");
+      setResult(await res.json());
+    } catch (e: any) {
+      setResult({ error: e.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-slate-900 border border-white/[0.07] rounded-xl p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Activity className="w-4 h-4 text-blue-400" />
+          <h2 className="font-semibold text-white text-sm">Engagement API Diagnostic</h2>
+        </div>
+        <button
+          onClick={run}
+          disabled={loading}
+          className="flex items-center gap-1.5 text-xs bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
+          {loading ? "Testing…" : "Run Test"}
+        </button>
+      </div>
+      <p className="text-slate-500 text-xs mb-3">Tests all LinkedIn engagement API endpoints against your most recent published post. Shows raw responses so we can see exactly why likes/comments show 0.</p>
+      {result && (
+        <div className="mt-3 space-y-3">
+          {result.error && <p className="text-red-400 text-xs">{result.error}</p>}
+          {result.post && (
+            <div className="bg-white/[0.03] rounded-lg p-3 text-xs space-y-1">
+              <p className="text-slate-400 font-medium mb-1">Post being tested:</p>
+              <p className="text-slate-300"><span className="text-slate-500">linkedin_post_id:</span> {result.post.linkedin_post_id}</p>
+              <p className="text-slate-300"><span className="text-slate-500">encoded_urn:</span> {result.post.encoded_urn}</p>
+              <p className="text-slate-300"><span className="text-slate-500">current likes/comments:</span> {result.post.current_likes} / {result.post.current_comments}</p>
+              <p className="text-slate-300"><span className="text-slate-500">last synced:</span> {result.post.engagement_synced_at || "never"}</p>
+            </div>
+          )}
+          {result.tests && Object.entries(result.tests).map(([name, data]: [string, any]) => (
+            <div key={name} className={`rounded-lg p-3 text-xs border ${data.status === 200 ? "bg-green-500/5 border-green-500/20" : "bg-red-500/5 border-red-500/20"}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`font-bold ${data.status === 200 ? "text-green-400" : "text-red-400"}`}>{name}</span>
+                <span className={`px-1.5 py-0.5 rounded ${data.status === 200 ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>HTTP {data.status ?? "error"}</span>
+              </div>
+              <pre className="text-slate-400 overflow-x-auto text-[10px] whitespace-pre-wrap">{JSON.stringify(data.body ?? data.error, null, 2)}</pre>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function KpiCard({ label, value, sub, icon, accent = "text-blue-400", alert = false }: {
   label: string; value: string | number; sub?: string;
   icon: React.ReactNode; accent?: string; alert?: boolean;
@@ -676,6 +737,8 @@ export default function AdminPage() {
       {/* ── SYSTEM TAB ── */}
       {tab === "system" && (
         <div className="space-y-6">
+          {/* Engagement API diagnostic */}
+          <EngagementDiagnostic adminFetch={adminFetch} />
           {/* Users with failed posts */}
           <div className="bg-slate-900 border border-white/[0.07] rounded-xl overflow-hidden">
             <div className="px-6 py-4 border-b border-white/[0.07] flex items-center gap-2">
