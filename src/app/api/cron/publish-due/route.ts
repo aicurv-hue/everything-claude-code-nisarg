@@ -319,116 +319,12 @@ export async function POST(req: NextRequest) {
   const published = results.filter(r => r.status === "published").length;
   const failed    = results.filter(r => r.status === "failed").length;
 
-  // ── Hourly engagement sync — direct LinkedIn API calls using per-user tokens ──
-  try {
-    if (adminDb) {
-      const oneHourAgo    = Date.now() - 60 * 60 * 1000;
-      const fiveMinAgo    = Date.now() - 5 * 60 * 1000;
-      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-
-      const snap = await adminDb.collection("posts").where("status", "==", "published").get();
-      const allPublished: Post[] = snap.docs.map(d => ({ id: d.id, ...d.data() } as Post));
-
-      const toSync = allPublished.filter(p => {
-        if (!p.linkedin_post_id) return false;
-        const pubMs = (p.published_at?.seconds || 0) * 1000;
-        if (pubMs < thirtyDaysAgo) return false;
-        // Never synced → always pick up
-        if (!p.engagement_synced_at) return true;
-        // Zero engagement → retry every 5 min (more aggressive until we get data)
-        const hasNoData = !p.likes_count && !p.comments_count;
-        if (hasNoData) return p.engagement_synced_at < fiveMinAgo;
-        // Has data → re-check hourly
-        return p.engagement_synced_at < oneHourAgo;
-      }).slice(0, 20);
-
-      if (toSync.length > 0) {
-        console.log(`[cron] Syncing engagement for ${toSync.length} post(s)…`);
-
-        // Group by user, look up each user's token from Firestore directly
-        const byUser = new Map<string, Post[]>();
-        for (const p of toSync) {
-          const uid = p.user_id;
-          if (!uid) continue;
-          if (!byUser.has(uid)) byUser.set(uid, []);
-          byUser.get(uid)!.push(p);
-        }
-
-        for (const [uid, userPosts] of byUser) {
-          const tokenSnap = await adminDb.collection("tokens").doc(uid).get().catch(() => null);
-          const accessToken: string | undefined = tokenSnap?.exists ? tokenSnap.data()?.access_token : undefined;
-          if (!accessToken) continue;
-
-          for (const post of userPosts) {
-            try {
-              const postUrn = post.linkedin_post_id!;
-              const encoded = encodeURIComponent(postUrn);
-
-              // socialActions returns numLikes + numComments in one call
-              // Works with w_member_social scope (no Partner approval required)
-              const { signal: s1, clear: c1 } = withTimeout(10_000);
-              const actionsRes = await fetch(
-                `https://api.linkedin.com/v2/socialActions/${encoded}`,
-                {
-                  signal: s1,
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    "X-Restli-Protocol-Version": "2.0.0",
-                  },
-                }
-              );
-              c1();
-
-              let likes = 0;
-              let comments = 0;
-
-              if (actionsRes.ok) {
-                const actionsData = await actionsRes.json();
-                likes    = actionsData.numLikes    ?? actionsData.likesSummary?.totalLikes    ?? 0;
-                comments = actionsData.numComments ?? actionsData.commentsSummary?.totalFirstLevelComments ?? 0;
-              } else {
-                // Fallback: try /rest/reactions for likes count only
-                console.warn(`[cron/engagement] socialActions ${actionsRes.status} for ${postUrn} — trying reactions fallback`);
-                const { signal: s2, clear: c2 } = withTimeout(10_000);
-                const likesRes = await fetch(
-                  `https://api.linkedin.com/rest/reactions?q=entity&entity=${encoded}&count=0`,
-                  {
-                    signal: s2,
-                    headers: {
-                      Authorization: `Bearer ${accessToken}`,
-                      "LinkedIn-Version": LI_VERSION,
-                      "X-Restli-Protocol-Version": "2.0.0",
-                    },
-                  }
-                );
-                c2();
-                if (likesRes.ok) {
-                  const likesData = await likesRes.json();
-                  likes = likesData.paging?.total ?? likesData.total ?? 0;
-                } else {
-                  console.warn(`[cron/engagement] Reactions fallback ${likesRes.status} for ${postUrn}: ${await likesRes.text()}`);
-                }
-              }
-
-              await adminDb.collection("posts").doc(post.id!).update({
-                likes_count: likes,
-                comments_count: comments,
-                engagement_synced_at: Date.now(),
-                updated_at: FieldValue.serverTimestamp(),
-              }).catch(() => {});
-
-              console.log(`[cron/engagement] ${postUrn} → ${likes} likes, ${comments} comments`);
-            } catch (e: any) {
-              console.warn(`[cron/engagement] Failed for ${post.id}: ${e?.message}`);
-            }
-          }
-          console.log(`[cron] Engagement synced for user ${uid}: ${userPosts.length} post(s).`);
-        }
-      }
-    }
-  } catch (engErr: any) {
-    console.warn("[cron] Engagement sync failed (non-critical):", engErr?.message);
-  }
+  // ── Engagement sync disabled ──────────────────────────────────────────────
+  // LinkedIn moved all social engagement endpoints (reactions, comments, socialActions)
+  // to Partner API only in April 2025. All calls return 403/404 without Partner approval.
+  // Confirmed via diagnostic: partnerApiSocialActions.GET_ALL.20250401
+  // Re-enable this block if/when LinkedIn Partner access is granted.
+  console.log("[cron] Engagement sync skipped — requires LinkedIn Partner API access.");
 
   console.log(`[cron] Done. Published: ${published}, Failed: ${failed}`);
   return NextResponse.json({ processed: due.length, published, failed, results });

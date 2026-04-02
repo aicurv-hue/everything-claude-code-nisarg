@@ -200,11 +200,11 @@ export default function DashboardHomePage() {
     },
     {
       label: "Total Engagement",
-      value: totalEngagement,
+      value: totalEngagement > 0 ? totalEngagement : "N/A",
       icon: ThumbsUp,
       color: "text-rose-600",
       bg: "bg-rose-50",
-      sub: `${totalLikes} likes · ${totalComments} comments`,
+      sub: totalEngagement > 0 ? `${totalLikes} likes · ${totalComments} comments` : "Needs LinkedIn Partner API",
     },
   ] : [];
 
