@@ -47,6 +47,15 @@ body {
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Print / PDF styles */
+@media print {
+  body { background: #fff !important; color: #0f172a !important; }
+  .print\:hidden { display: none !important; }
+  aside, nav { display: none !important; }
+  main { overflow: visible !important; }
+  @page { margin: 18mm 16mm; }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

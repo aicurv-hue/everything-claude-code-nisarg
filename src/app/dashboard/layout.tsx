@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, Settings, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut } from "lucide-react";
+import { BarChart3, Settings, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut, BookOpen } from "lucide-react";
 import { SegmentProvider, useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
+import OnboardingModal from "@/components/ui/OnboardingModal";
 
 function BetaSignOutButton() {
   const { logOut } = useAuth();
@@ -21,7 +22,7 @@ function BetaSignOutButton() {
   );
 }
 
-function Sidebar() {
+function Sidebar({ onOpenGuide }: { onOpenGuide: () => void }) {
   const { setSegment, isIndividual, isCorporate } = useSegment();
   const { user, logOut } = useAuth();
   const pathname = usePathname();
@@ -124,6 +125,13 @@ function Sidebar() {
               <p className="text-white text-[11px] font-medium truncate">{user.displayName || "User"}</p>
               <p className="text-slate-500 text-[10px] truncate">{user.email}</p>
             </div>
+            <button
+              onClick={onOpenGuide}
+              className="text-slate-500 hover:text-blue-400 transition-colors shrink-0"
+              title="Getting Started Guide"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+            </button>
             <button
               onClick={async () => { await logOut(); router.replace("/login"); }}
               className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
@@ -249,18 +257,40 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+function DashboardShell({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const [showGuide, setShowGuide] = useState(false);
+
+  // Show guide automatically on first-ever login
+  useEffect(() => {
+    if (!user) return;
+    const key = `linkauto_guide_seen_${user.uid}`;
+    if (!localStorage.getItem(key)) {
+      setShowGuide(true);
+      localStorage.setItem(key, "1");
+    }
+  }, [user]);
+
   return (
-    <AuthGuard>
-    <SegmentProvider>
+    <>
       <CronPoller />
       <div className="min-h-screen flex bg-slate-50 text-slate-900">
-        <Sidebar />
+        <Sidebar onOpenGuide={() => setShowGuide(true)} />
         <main className="flex-1 overflow-auto min-h-screen">
           {children}
         </main>
       </div>
-    </SegmentProvider>
+      {showGuide && <OnboardingModal onClose={() => setShowGuide(false)} />}
+    </>
+  );
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthGuard>
+      <SegmentProvider>
+        <DashboardShell>{children}</DashboardShell>
+      </SegmentProvider>
     </AuthGuard>
   );
 }
