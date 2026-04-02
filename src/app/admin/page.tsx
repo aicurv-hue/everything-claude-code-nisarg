@@ -5,6 +5,7 @@ import {
   Users, FileText, Calendar, Linkedin, Trash2, Ban, CheckCircle,
   RefreshCw, AlertTriangle, TrendingUp, Activity, X, ChevronRight,
   Clock, Star, BarChart2, ShieldAlert, Copy, ExternalLink, Zap,
+  ShieldCheck, Plus, UserCheck, UserX,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -247,8 +248,10 @@ function UserDetailDrawer({ user, onClose, adminFetch }: {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "users" | "system";
+type Tab = "overview" | "users" | "system" | "beta";
 type SortKey = "lastSignIn" | "postCount" | "failedCount" | "createdAt";
+
+interface BetaEntry { email: string; added_at: string | null; }
 
 export default function AdminPage() {
   const [tab,        setTab]        = useState<Tab>("overview");
@@ -261,6 +264,13 @@ export default function AdminPage() {
   const [sortKey,    setSortKey]    = useState<SortKey>("lastSignIn");
   const [detailUser, setDetailUser] = useState<AdminUser | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+
+  // Beta access state
+  const [betaList,      setBetaList]      = useState<BetaEntry[]>([]);
+  const [betaLoading,   setBetaLoading]   = useState(false);
+  const [betaInput,     setBetaInput]     = useState("");
+  const [betaActionId,  setBetaActionId]  = useState<string | null>(null);
+  const [betaMsg,       setBetaMsg]       = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   const adminFetch = useCallback(async (url: string, options: RequestInit = {}) => {
     const { auth: firebaseAuth } = await import("@/lib/firebase");
@@ -311,6 +321,49 @@ export default function AdminPage() {
     } finally { setActionId(null); }
   }
 
+  // ── Beta access helpers ──
+  const loadBeta = useCallback(async () => {
+    setBetaLoading(true);
+    try {
+      const res = await adminFetch("/api/admin/beta-access");
+      const data = await res.json();
+      setBetaList(data.approved || []);
+    } catch { setBetaMsg({ type: "err", text: "Failed to load beta list." }); }
+    finally { setBetaLoading(false); }
+  }, [adminFetch]);
+
+  useEffect(() => { if (tab === "beta") loadBeta(); }, [tab, loadBeta]);
+
+  async function betaAdd() {
+    const email = betaInput.trim().toLowerCase();
+    if (!email) return;
+    setBetaActionId(email);
+    setBetaMsg(null);
+    try {
+      const res = await adminFetch("/api/admin/beta-access", { method: "POST", body: JSON.stringify({ email, action: "add" }) });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setBetaInput("");
+      setBetaMsg({ type: "ok", text: `✅ ${email} approved` });
+      await loadBeta();
+    } catch (e: any) {
+      setBetaMsg({ type: "err", text: e.message || "Failed" });
+    } finally { setBetaActionId(null); }
+  }
+
+  async function betaRemove(email: string) {
+    if (!confirm(`Remove ${email} from beta?`)) return;
+    setBetaActionId(email);
+    setBetaMsg(null);
+    try {
+      const res = await adminFetch("/api/admin/beta-access", { method: "POST", body: JSON.stringify({ email, action: "remove" }) });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setBetaMsg({ type: "ok", text: `Removed ${email}` });
+      await loadBeta();
+    } catch (e: any) {
+      setBetaMsg({ type: "err", text: e.message || "Failed" });
+    } finally { setBetaActionId(null); }
+  }
+
   // ── Filtered + sorted user list ──
   const filteredUsers = users
     .filter(u => {
@@ -330,6 +383,7 @@ export default function AdminPage() {
     { key: "overview", label: "Overview" },
     { key: "users",    label: `Users (${users.length})` },
     { key: "system",   label: "System" },
+    { key: "beta",     label: "Beta Access" },
   ];
 
   // ── System tab data ──
@@ -726,6 +780,104 @@ export default function AdminPage() {
               <p>Auth: <span className="text-slate-300">CRON_SECRET header (Bearer token)</span></p>
               <p className="text-slate-500 text-xs mt-3">The cron publishes all scheduled posts whose scheduled_at has passed. It handles token refresh automatically and retries are manual (retry button in History).</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── BETA ACCESS TAB ── */}
+      {tab === "beta" && (
+        <div className="space-y-5">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-[#0A66C2]" />
+            <h2 className="font-semibold text-white">Beta Access Management</h2>
+          </div>
+
+          {betaMsg && (
+            <div className={`text-sm px-4 py-3 rounded-xl border ${betaMsg.type === "ok" ? "bg-green-500/10 border-green-500/25 text-green-400" : "bg-red-500/10 border-red-500/25 text-red-400"}`}>
+              {betaMsg.text}
+            </div>
+          )}
+
+          {/* Add email */}
+          <div className="bg-slate-900 border border-white/[0.07] rounded-xl p-5">
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Approve a new user</p>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                placeholder="user@example.com"
+                value={betaInput}
+                onChange={e => setBetaInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && betaAdd()}
+                className="flex-1 bg-slate-800 border border-white/[0.07] rounded-lg px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#0A66C2]/60"
+              />
+              <button
+                onClick={betaAdd}
+                disabled={!betaInput.trim() || betaActionId === betaInput.trim().toLowerCase()}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0A66C2] hover:bg-[#0854a0] text-white text-sm font-medium transition-all disabled:opacity-40"
+              >
+                <Plus className="w-4 h-4" /> Approve
+              </button>
+            </div>
+            <p className="text-xs text-slate-600 mt-2">This lets the user sign in to LinkAuto. They must create an account separately.</p>
+          </div>
+
+          {/* Approved list */}
+          <div className="bg-slate-900 border border-white/[0.07] rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-white/[0.07] flex items-center justify-between">
+              <p className="text-xs text-slate-500 uppercase tracking-wider">Approved Emails</p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">{betaList.length} approved</span>
+                <button onClick={loadBeta} disabled={betaLoading} className="text-slate-500 hover:text-white transition-colors">
+                  <RefreshCw className={`w-3.5 h-3.5 ${betaLoading ? "animate-spin" : ""}`} />
+                </button>
+              </div>
+            </div>
+            {betaLoading ? (
+              <div className="py-10 flex justify-center">
+                <div className="w-5 h-5 border-2 border-[#0A66C2] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : betaList.length === 0 ? (
+              <div className="py-10 text-center text-slate-500 text-sm">No approved emails yet.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/[0.05] text-slate-400 text-xs uppercase tracking-wider">
+                    <th className="px-5 py-3 text-left font-medium">Email</th>
+                    <th className="px-5 py-3 text-left font-medium">Approved On</th>
+                    <th className="px-5 py-3 text-left font-medium">Has Account</th>
+                    <th className="px-5 py-3 text-left font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {betaList.map(b => {
+                    const hasAccount = users.some(u => u.email.toLowerCase() === b.email);
+                    return (
+                      <tr key={b.email} className="hover:bg-white/[0.02]">
+                        <td className="px-5 py-3 text-white">{b.email}</td>
+                        <td className="px-5 py-3 text-slate-400 text-xs">
+                          {b.added_at ? new Date(b.added_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                        </td>
+                        <td className="px-5 py-3">
+                          {hasAccount
+                            ? <span className="flex items-center gap-1 text-green-400 text-xs"><UserCheck className="w-3.5 h-3.5" /> Yes</span>
+                            : <span className="flex items-center gap-1 text-slate-500 text-xs"><UserX className="w-3.5 h-3.5" /> Not yet</span>}
+                        </td>
+                        <td className="px-5 py-3">
+                          <button
+                            onClick={() => betaRemove(b.email)}
+                            disabled={betaActionId === b.email}
+                            title="Revoke access"
+                            className="text-slate-500 hover:text-red-400 transition-colors disabled:opacity-40"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}
