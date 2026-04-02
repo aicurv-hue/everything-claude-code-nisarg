@@ -5,7 +5,7 @@ import { Sparkles, Check, X, RefreshCw } from "lucide-react";
 
 interface Props {
   field: string;
-  value: string;
+  value: string | undefined;
   context: Record<string, string>;
   profileType: string;
   onApply: (value: string) => void;
