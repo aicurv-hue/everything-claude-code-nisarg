@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/context/auth";
+import SplashHider from "@/components/SplashHider";
 
 // Plus Jakarta Sans — closest free alternative to OpenAI Sans / Söhne
 // Used for the image hook overlay text to match premium tech brand aesthetic
@@ -47,6 +48,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased selection:bg-primary/20 selection:text-primary">
         <AuthProvider>
+          <SplashHider />
           {children}
         </AuthProvider>
       </body>

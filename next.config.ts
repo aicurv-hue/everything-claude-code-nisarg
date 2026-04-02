@@ -1,27 +1,61 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  // Dramatically reduces bundle size — lucide-react ships ~500 icons, only import what's used
+import withPWA from "@ducanh2912/next-pwa";
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },
 
-  // Image optimization
   images: {
     remotePatterns: [
-      { protocol: "https", hostname: "media.licdn.com" },          // LinkedIn profile photos
-      { protocol: "https", hostname: "*.licdn.com" },              // LinkedIn CDN variants
-      { protocol: "https", hostname: "storage.googleapis.com" },   // Firebase Storage
-      { protocol: "https", hostname: "fal.media" },                // Fal.ai generated images
+      { protocol: "https", hostname: "media.licdn.com" },
+      { protocol: "https", hostname: "*.licdn.com" },
+      { protocol: "https", hostname: "storage.googleapis.com" },
+      { protocol: "https", hostname: "fal.media" },
       { protocol: "https", hostname: "*.fal.media" },
     ],
     formats: ["image/avif", "image/webp"],
   },
 
-  // Strip X-Powered-By header
   poweredByHeader: false,
-
-  // Enable compression
   compress: true,
 };
 
-export default nextConfig;
+export default withPWA({
+  dest: "public",
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  disable: process.env.NODE_ENV === "development",
+  workboxOptions: {
+    disableDevLogs: true,
+    // Cache static assets aggressively
+    runtimeCaching: [
+      {
+        urlPattern: /^https:\/\/fonts\.(?:gstatic|googleapis)\.com\/.*/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "google-fonts",
+          expiration: { maxEntries: 4, maxAgeSeconds: 365 * 24 * 60 * 60 },
+        },
+      },
+      {
+        urlPattern: /^https:\/\/storage\.googleapis\.com\/.*/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "firebase-storage",
+          expiration: { maxEntries: 50, maxAgeSeconds: 7 * 24 * 60 * 60 },
+        },
+      },
+      {
+        urlPattern: /\/api\/dashboard\/.*/i,
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "dashboard-api",
+          expiration: { maxEntries: 10, maxAgeSeconds: 60 },
+          networkTimeoutSeconds: 5,
+        },
+      },
+    ],
+  },
+})(nextConfig);

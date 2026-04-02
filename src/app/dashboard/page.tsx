@@ -206,10 +206,41 @@ export default function DashboardHomePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full min-h-[400px]">
-        <div className="flex flex-col items-center gap-3 text-slate-400">
-          <Activity className="w-7 h-7 animate-pulse" />
-          <p className="text-sm">Loading dashboard...</p>
+      <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-8">
+        {/* Header skeleton */}
+        <div className="flex justify-between items-start">
+          <div className="space-y-2">
+            <div className="h-7 w-32 bg-slate-200 rounded-lg shimmer" />
+            <div className="h-4 w-48 bg-slate-100 rounded shimmer" />
+          </div>
+          <div className="h-9 w-24 bg-slate-200 rounded-lg shimmer" />
+        </div>
+        {/* Stat cards skeleton */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="card p-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-slate-200 shimmer" />
+                <div className="h-4 w-24 bg-slate-200 rounded shimmer" />
+              </div>
+              <div className="h-8 w-16 bg-slate-200 rounded shimmer" />
+              <div className="h-3 w-32 bg-slate-100 rounded shimmer" />
+            </div>
+          ))}
+        </div>
+        {/* Recent posts skeleton */}
+        <div className="card p-5 space-y-4">
+          <div className="h-5 w-28 bg-slate-200 rounded shimmer" />
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3 py-2">
+              <div className="w-8 h-8 rounded-lg bg-slate-200 shimmer shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-3/4 bg-slate-200 rounded shimmer" />
+                <div className="h-3 w-1/2 bg-slate-100 rounded shimmer" />
+              </div>
+              <div className="h-5 w-16 bg-slate-100 rounded-full shimmer" />
+            </div>
+          ))}
         </div>
       </div>
     );
