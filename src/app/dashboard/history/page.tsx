@@ -135,7 +135,7 @@ function PostDetailModal({
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-3xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        className="relative w-full max-w-3xl h-[88vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ── */}
@@ -324,7 +324,7 @@ function PostDetailModal({
               {post.image_url && (
                 <div className="rounded-xl overflow-hidden border border-slate-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={post.image_url} alt="Post image" className="w-full max-h-40 object-cover" />
+                  <img src={post.image_url} alt="Post image" className="w-full h-44 object-cover" />
                   {post.image_hook && (
                     <div className="px-3 py-2 bg-slate-50 border-t border-slate-100">
                       <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-0.5">Image Hook</p>
@@ -341,7 +341,7 @@ function PostDetailModal({
               )}
 
               {/* Post content */}
-              <div className="bg-slate-50 rounded-xl border border-slate-100 p-3 max-h-64 overflow-y-auto">
+              <div className="bg-slate-50 rounded-xl border border-slate-100 p-3 flex-1 overflow-y-auto" style={{ minHeight: "8rem" }}>
                 <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{post.content}</p>
               </div>
 
