@@ -1,8 +1,10 @@
 /**
  * GET /api/analytics
  *
- * Returns aggregated post performance data for the authenticated user.
+ * Returns aggregated post activity data for the authenticated user.
  * Pure Firestore aggregation — no AI credits consumed.
+ * Note: LinkedIn Partner API required for engagement data (likes/comments) —
+ * not available. All metrics here are based on post volume/timing only.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
@@ -47,19 +49,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ empty: true });
   }
 
-  const now = Date.now();
   const startOfThisMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
   const startOfLastMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getTime();
 
   // ── Overview ──────────────────────────────────────────────────────────────
-  const totalLikes    = posts.reduce((s, p) => s + (p.likes_count    || 0), 0);
-  const totalComments = posts.reduce((s, p) => s + (p.comments_count || 0), 0);
-  const avgEngagement = posts.length ? +((totalLikes + totalComments) / posts.length).toFixed(1) : 0;
-
-  const bestPost = [...posts].sort((a, b) =>
-    ((b.likes_count || 0) + (b.comments_count || 0)) - ((a.likes_count || 0) + (a.comments_count || 0))
-  )[0];
-
   const thisMonth = posts.filter(p => toMs(p.published_at) >= startOfThisMonth).length;
   const lastMonth = posts.filter(p => {
     const ms = toMs(p.published_at);
@@ -67,77 +60,51 @@ export async function GET(req: NextRequest) {
   }).length;
 
   // ── Hour of day (0–23) ────────────────────────────────────────────────────
-  const hourBuckets: { count: number; totalEng: number }[] = Array.from({ length: 24 }, () => ({ count: 0, totalEng: 0 }));
+  const hourBuckets: number[] = Array(24).fill(0);
   posts.forEach(p => {
     const ms = toMs(p.published_at);
     if (!ms) return;
-    const h = new Date(ms).getHours();
-    hourBuckets[h].count++;
-    hourBuckets[h].totalEng += (p.likes_count || 0) + (p.comments_count || 0);
+    hourBuckets[new Date(ms).getHours()]++;
   });
-  const byHour = hourBuckets.map((b, h) => ({
-    hour: h,
-    count: b.count,
-    avgEngagement: b.count ? +(b.totalEng / b.count).toFixed(1) : 0,
-  }));
+  const byHour = hourBuckets.map((count, hour) => ({ hour, count }));
 
   // ── Day of week (0=Mon … 6=Sun) ───────────────────────────────────────────
   const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const dayBuckets: { count: number; totalEng: number }[] = Array.from({ length: 7 }, () => ({ count: 0, totalEng: 0 }));
+  const dayBuckets: number[] = Array(7).fill(0);
   posts.forEach(p => {
     const ms = toMs(p.published_at);
     if (!ms) return;
-    const d = (new Date(ms).getDay() + 6) % 7; // convert Sun=0 to Mon=0
-    dayBuckets[d].count++;
-    dayBuckets[d].totalEng += (p.likes_count || 0) + (p.comments_count || 0);
+    const d = (new Date(ms).getDay() + 6) % 7; // Sun=0 → Mon=0
+    dayBuckets[d]++;
   });
-  const byDayOfWeek = dayBuckets.map((b, i) => ({
-    day: i,
-    label: DAY_LABELS[i],
-    count: b.count,
-    avgEngagement: b.count ? +(b.totalEng / b.count).toFixed(1) : 0,
-  }));
+  const byDayOfWeek = dayBuckets.map((count, i) => ({ day: i, label: DAY_LABELS[i], count }));
 
-  // ── Tone vs engagement ────────────────────────────────────────────────────
-  const toneBuckets: Record<string, { count: number; totalEng: number }> = {};
+  // ── Tone distribution ─────────────────────────────────────────────────────
+  const toneBuckets: Record<string, number> = {};
   posts.forEach(p => {
     const tone = p.tone || "other";
-    if (!toneBuckets[tone]) toneBuckets[tone] = { count: 0, totalEng: 0 };
-    toneBuckets[tone].count++;
-    toneBuckets[tone].totalEng += (p.likes_count || 0) + (p.comments_count || 0);
+    toneBuckets[tone] = (toneBuckets[tone] || 0) + 1;
   });
-  const byTone = Object.entries(toneBuckets).map(([tone, b]) => ({
-    tone,
-    count: b.count,
-    avgEngagement: b.count ? +(b.totalEng / b.count).toFixed(1) : 0,
-  })).sort((a, b) => b.avgEngagement - a.avgEngagement);
+  const byTone = Object.entries(toneBuckets)
+    .map(([tone, count]) => ({ tone, count }))
+    .sort((a, b) => b.count - a.count);
 
-  // ── Post length vs engagement ─────────────────────────────────────────────
-  const lengthBuckets: Record<string, { count: number; totalEng: number }> = {
-    short: { count: 0, totalEng: 0 },
-    medium: { count: 0, totalEng: 0 },
-    long: { count: 0, totalEng: 0 },
-  };
+  // ── Post length distribution ──────────────────────────────────────────────
+  const lengthBuckets: Record<string, number> = { short: 0, medium: 0, long: 0 };
   posts.forEach(p => {
     const len = p.length || (
       (p.content?.length || 0) < 500 ? "short" :
       (p.content?.length || 0) < 1200 ? "medium" : "long"
     );
-    if (!lengthBuckets[len]) lengthBuckets[len] = { count: 0, totalEng: 0 };
-    lengthBuckets[len].count++;
-    lengthBuckets[len].totalEng += (p.likes_count || 0) + (p.comments_count || 0);
+    lengthBuckets[len] = (lengthBuckets[len] || 0) + 1;
   });
-  const byLength = Object.entries(lengthBuckets).map(([length, b]) => ({
-    length,
-    count: b.count,
-    avgEngagement: b.count ? +(b.totalEng / b.count).toFixed(1) : 0,
-  }));
+  const byLength = Object.entries(lengthBuckets).map(([length, count]) => ({ length, count }));
 
   // ── Weekly growth (last 8 weeks) ──────────────────────────────────────────
   const weeks: { label: string; startMs: number; endMs: number }[] = [];
   for (let i = 7; i >= 0; i--) {
     const d = new Date();
-    d.setDate(d.getDate() - d.getDay() - i * 7); // start of each week (Sun)
+    d.setDate(d.getDate() - d.getDay() - i * 7);
     d.setHours(0, 0, 0, 0);
     const startMs = d.getTime();
     const endMs = startMs + 7 * 24 * 60 * 60 * 1000;
@@ -152,11 +119,9 @@ export async function GET(req: NextRequest) {
     }).length,
   }));
 
-  // ── Top 5 posts ───────────────────────────────────────────────────────────
-  const topPosts = [...posts]
-    .sort((a, b) =>
-      ((b.likes_count || 0) + (b.comments_count || 0)) - ((a.likes_count || 0) + (a.comments_count || 0))
-    )
+  // ── Recent 5 posts (most recently published) ──────────────────────────────
+  const recentPosts = [...posts]
+    .sort((a, b) => toMs(b.published_at) - toMs(a.published_at))
     .slice(0, 5)
     .map(p => ({
       id: p.id,
@@ -164,43 +129,21 @@ export async function GET(req: NextRequest) {
       tone: p.tone || "—",
       segment: p.segment || "individual",
       publishedAt: toMs(p.published_at),
-      likes: p.likes_count || 0,
-      comments: p.comments_count || 0,
     }));
 
-  // ── Best posting time recommendation ─────────────────────────────────────
-  const hasEngagement = totalLikes + totalComments > 0;
-  // If engagement data exists, rank by avg engagement; otherwise rank by post count (most-posted hour)
-  const bestHour = hasEngagement
-    ? byHour.filter(h => h.count >= 2).sort((a, b) => b.avgEngagement - a.avgEngagement)[0]
-    : byHour.filter(h => h.count >= 1).sort((a, b) => b.count - a.count)[0];
-  const bestDay = hasEngagement
-    ? byDayOfWeek.filter(d => d.count >= 2).sort((a, b) => b.avgEngagement - a.avgEngagement)[0]
-    : byDayOfWeek.filter(d => d.count >= 1).sort((a, b) => b.count - a.count)[0];
+  // ── Best posting time (by post count) ────────────────────────────────────
+  const bestHour = byHour.filter(h => h.count >= 1).sort((a, b) => b.count - a.count)[0];
+  const bestDay  = byDayOfWeek.filter(d => d.count >= 1).sort((a, b) => b.count - a.count)[0];
 
   return NextResponse.json({
     empty: false,
-    overview: {
-      totalPosts: posts.length,
-      totalLikes,
-      totalComments,
-      avgEngagement,
-      bestPost: bestPost ? {
-        id: bestPost.id,
-        topic: bestPost.topic || "Untitled",
-        likes: bestPost.likes_count || 0,
-        comments: bestPost.comments_count || 0,
-        publishedAt: toMs(bestPost.published_at),
-      } : null,
-      thisMonth,
-      lastMonth,
-    },
+    overview: { totalPosts: posts.length, thisMonth, lastMonth },
     byHour,
     byDayOfWeek,
     byTone,
     byLength,
     weeklyGrowth,
-    topPosts,
+    recentPosts,
     recommendation: {
       bestHourLabel: bestHour ? formatHour(bestHour.hour) : null,
       bestDayLabel: bestDay?.label || null,

@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   BarChart3, Send, CheckCircle, Clock, TrendingUp,
   FileText, RefreshCw, Linkedin, Zap, Image, AlertTriangle,
-  Wifi, WifiOff, Activity, User, Building2, ThumbsUp, MessageCircle
+  Wifi, WifiOff, Activity, User, Building2, Calendar
 } from "lucide-react";
 import { Post } from "@/lib/db/posts";
 import { UserProfile } from "@/lib/db/profiles";
@@ -177,10 +177,6 @@ export default function DashboardHomePage() {
     return () => window.removeEventListener("message", handler);
   }, [user]);
 
-  const totalLikes    = allPosts.reduce((s, p) => s + (p.likes_count    ?? 0), 0);
-  const totalComments = allPosts.reduce((s, p) => s + (p.comments_count ?? 0), 0);
-  const totalEngagement = totalLikes + totalComments;
-
   const statCards = stats ? [
     {
       label: "Total Generated",
@@ -199,12 +195,12 @@ export default function DashboardHomePage() {
       sub: stats.published > 0 ? "Confirmed published" : "No posts published yet",
     },
     {
-      label: "Total Engagement",
-      value: totalEngagement > 0 ? totalEngagement : "N/A",
-      icon: ThumbsUp,
-      color: "text-rose-600",
-      bg: "bg-rose-50",
-      sub: totalEngagement > 0 ? `${totalLikes} likes · ${totalComments} comments` : "Needs LinkedIn Partner API",
+      label: "Last 7 Days",
+      value: stats.lastWeek,
+      icon: Calendar,
+      color: "text-violet-600",
+      bg: "bg-violet-50",
+      sub: stats.lastWeek > 0 ? "Posts published this week" : "No posts this week",
     },
   ] : [];
 
@@ -569,17 +565,6 @@ export default function DashboardHomePage() {
                         <span className="text-slate-300">·</span>
                         <span className="text-[11px] text-[#0A66C2] font-medium flex items-center gap-1">
                           <Linkedin className="w-2.5 h-2.5" /> Live
-                        </span>
-                      </>
-                    )}
-                    {post.status === "published" && (post.likes_count != null || post.comments_count != null) && (
-                      <>
-                        <span className="text-slate-300">·</span>
-                        <span className="text-[11px] text-slate-500 flex items-center gap-1">
-                          <ThumbsUp className="w-3 h-3 text-[#0A66C2]" />{post.likes_count ?? 0}
-                        </span>
-                        <span className="text-[11px] text-slate-500 flex items-center gap-1">
-                          <MessageCircle className="w-3 h-3 text-slate-400" />{post.comments_count ?? 0}
                         </span>
                       </>
                     )}
