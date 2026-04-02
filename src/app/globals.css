@@ -112,6 +112,19 @@ button:active:not(:disabled) {
   animation: modalEnter 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* ── Mobile safe-area (notch / home indicator) ───────────────────────── */
+.safe-area-top    { padding-top:    env(safe-area-inset-top);    }
+.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* ── Mobile: remove padding inside pages so content uses full width ──── */
+@media (max-width: 767px) {
+  /* Tighten page padding on small screens */
+  .max-w-6xl, .max-w-7xl { padding-left: 1rem !important; padding-right: 1rem !important; }
+}
+
+/* ── Touch scrolling ─────────────────────────────────────────────────── */
+main { -webkit-overflow-scrolling: touch; }
+
 /* ── Print ───────────────────────────────────────────────────────────── */
 @media print {
   body { background: #fff !important; color: #0f172a !important; }

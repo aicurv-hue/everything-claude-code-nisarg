@@ -162,11 +162,11 @@ export default function CreatePostPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8 animate-fade-in">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 animate-fade-in">
       <div className="max-w-5xl mx-auto">
 
         {/* Page Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6 md:mb-8">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Create Post</h1>
             <p className="text-sm text-slate-500 mt-0.5">AI research + generation in one flow</p>

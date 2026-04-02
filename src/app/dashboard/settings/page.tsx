@@ -225,7 +225,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-6 animate-fade-in">
+    <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6 animate-fade-in">
 
       {/* Header */}
       <div className="flex justify-between items-center">

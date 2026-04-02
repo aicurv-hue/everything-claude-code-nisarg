@@ -8,6 +8,8 @@ import { SegmentProvider, useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
 import OnboardingModal from "@/components/ui/OnboardingModal";
+import BottomNav from "@/components/mobile/BottomNav";
+import MobileHeader from "@/components/mobile/MobileHeader";
 
 function BetaSignOutButton() {
   const { logOut } = useAuth();
@@ -311,16 +313,29 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <CronPoller />
-      <div className="min-h-screen flex bg-slate-50 text-slate-900">
+
+      {/* ── Desktop layout: sidebar + main ── */}
+      <div className="min-h-screen hidden md:flex bg-slate-50 text-slate-900">
         <Sidebar onOpenGuide={() => setShowGuide(true)} failedCount={failedCount} />
         <main className="flex-1 overflow-auto min-h-screen">
-          {/* key={pathname} causes React to remount the page div on navigation,
-              triggering the CSS page-enter animation each time */}
           <div key={pathname} className="animate-fade-in h-full">
             {children}
           </div>
         </main>
       </div>
+
+      {/* ── Mobile layout: header + scrollable content + bottom nav ── */}
+      <div className="flex flex-col min-h-screen md:hidden bg-slate-50 text-slate-900">
+        <MobileHeader />
+        <main className="flex-1 overflow-auto pb-20">
+          {/* pb-20 = clears the 64px bottom nav */}
+          <div key={pathname} className="animate-fade-in h-full">
+            {children}
+          </div>
+        </main>
+        <BottomNav />
+      </div>
+
       {showGuide && <OnboardingModal onClose={() => setShowGuide(false)} />}
     </>
   );

@@ -207,7 +207,7 @@ export default function MemoryPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-8 space-y-8 animate-fade-in">
+    <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8 animate-fade-in">
 
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">

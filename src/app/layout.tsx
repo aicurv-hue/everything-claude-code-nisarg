@@ -15,6 +15,19 @@ const plusJakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "LinkAuto — LinkedIn Automation",
   description: "AI-powered LinkedIn content for personal branding and corporate growth.",
+  // PWA / mobile meta
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "LinkAuto",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",   // extends into notch area, safe-area CSS handles padding
+  },
+  themeColor: "#0f172a",
 };
 
 export default function RootLayout({

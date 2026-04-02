@@ -11,7 +11,7 @@ export default function BulkUploadPage() {
   const router      = useRouter();
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-6 animate-fade-in">
+    <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6 animate-fade-in">
 
       {/* Breadcrumb */}
       <div>

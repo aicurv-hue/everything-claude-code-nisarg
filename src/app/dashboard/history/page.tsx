@@ -135,7 +135,7 @@ function PostDetailModal({
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-3xl h-[88vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-enter"
+        className="relative w-full max-w-3xl h-[100dvh] md:h-[88vh] bg-white md:rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-enter"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ── */}
@@ -189,7 +189,7 @@ function PostDetailModal({
 
         {/* ── Scrollable body ── */}
         <div className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100 min-h-0">
 
             {/* LEFT — Inputs */}
             <div className="p-5 space-y-4">
@@ -604,7 +604,7 @@ export default function HistoryPage() {
 
   return (
     <>
-      <div className="max-w-6xl mx-auto p-8 space-y-6 animate-fade-in">
+      <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6 animate-fade-in">
 
         {/* Retry All banner */}
         {counts.failed > 0 && (
@@ -668,8 +668,41 @@ export default function HistoryPage() {
           ))}
         </div>
 
-        {/* Table */}
-        <div className="card overflow-hidden">
+        {/* ── Mobile card list (hidden on md+) ── */}
+        <div className="md:hidden space-y-3">
+          {isLoading ? (
+            [1,2,3].map(i => <div key={i} className="skeleton h-20 rounded-xl" />)
+          ) : filtered.length === 0 ? (
+            <div className="card px-5 py-12 text-center text-slate-400 text-sm">
+              {searchTerm || statusFilter !== "all" ? "No results for your filters." : "No history yet. Start by generating content!"}
+            </div>
+          ) : filtered.map((post, idx) => (
+            <div
+              key={post.id}
+              onClick={() => openModal(post, idx)}
+              className="card px-4 py-3.5 flex items-center gap-3 active:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${STATUS_ICON[post.status] || STATUS_ICON.draft}`}>
+                <FileText className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-800 line-clamp-1">{post.topic}</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {safeDate(post.created_at?.seconds)} · <span className="capitalize">{post.tone}</span>
+                </p>
+              </div>
+              <div className="shrink-0 flex flex-col items-end gap-1.5">
+                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border capitalize ${STATUS_BADGE[post.status] || STATUS_BADGE.draft}`}>
+                  {post.status}
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Desktop table (hidden on mobile) ── */}
+        <div className="hidden md:block card overflow-hidden">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-400 font-semibold">

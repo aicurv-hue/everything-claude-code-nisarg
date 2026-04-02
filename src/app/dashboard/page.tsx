@@ -236,7 +236,7 @@ export default function DashboardHomePage() {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-8 animate-fade-in">
+    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-8 animate-fade-in">
 
       {/* Header */}
       <div className="flex justify-between items-start">

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LinkAuto</string>
+    <string name="title_activity_main">LinkAuto</string>
+    <string name="package_name">com.linkauto.app</string>
+    <string name="custom_url_scheme">com.linkauto.app</string>
+</resources>
