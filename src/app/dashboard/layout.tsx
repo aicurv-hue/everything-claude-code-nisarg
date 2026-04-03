@@ -319,7 +319,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen hidden md:flex bg-slate-50 text-slate-900">
         <Sidebar onOpenGuide={() => setShowGuide(true)} failedCount={failedCount} />
         <main className="flex-1 overflow-auto min-h-screen">
-          <div key={pathname} className="animate-fade-in h-full">
+          <div key={pathname} className="h-full">
             {children}
           </div>
         </main>
@@ -330,7 +330,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         <MobileHeader />
         <main className="flex-1 overflow-auto pb-20">
           {/* pb-20 = clears the 64px bottom nav */}
-          <div key={pathname} className="animate-fade-in h-full">
+          <div key={pathname} className="h-full">
             {children}
           </div>
         </main>
