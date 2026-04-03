@@ -329,7 +329,12 @@ Start directly with the hook line. Output nothing else.`;
   const chatWithFallback = async (messages: any[], temperature: number) => {
     // Migrate old model IDs saved in user profiles before the -001 fix
     const raw = model || DEFAULT_MODEL;
-    const primary = raw === "google/gemini-2.0-flash" ? "google/gemini-2.0-flash-001" : raw;
+    const MODEL_ALIASES: Record<string, string> = {
+      "google/gemini-2.0-flash": "google/gemini-2.0-flash-001",
+      "google/gemini-2.5-flash": "google/gemini-2.5-flash-preview-05-20",
+      "anthropic/claude-haiku-4-5": "anthropic/claude-haiku-4-5-20251001",
+    };
+    const primary = MODEL_ALIASES[raw] ?? raw;
     try {
       const res = await openRouter.chat.completions.create({ model: primary, messages, temperature });
       return res;
