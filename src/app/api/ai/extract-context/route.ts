@@ -68,12 +68,23 @@ export async function POST(req: NextRequest) {
                 },
                 {
                   type: "text",
-                  text: "Describe what you see in this image in detail. Focus on: main subject, any text or data visible, charts/graphs if present, mood/tone, and how the content could relate to a LinkedIn post. Be specific and concise (max 200 words).",
+                  text: `You are an expert visual analyst helping a LinkedIn content writer understand a reference image.
+
+Analyse the image thoroughly and provide a structured description covering:
+
+1. **Main Subject**: What is the primary object, person, scene, or concept shown?
+2. **Visual Details**: Colours, materials, condition, scale, environment/setting, any branding or logos.
+3. **Text & Data**: Transcribe any visible text, labels, numbers, charts, or infographic data exactly.
+4. **Technical / Domain Context**: If the image shows machinery, equipment, products, or industrial components, identify the type, likely industry, purpose, and notable features (e.g. wear patterns, specifications, configurations).
+5. **Key Insights for a Post**: What story, problem, achievement, or insight does this image communicate? What emotions or professional themes does it evoke?
+6. **Suggested LinkedIn Angles**: Give 2–3 specific angles Neel could use to write a compelling LinkedIn post referencing this image.
+
+Be specific, factual, and thorough. Do not invent details not visible in the image.`,
                 },
               ],
             }],
-            temperature: 0.3,
-            max_tokens: 300,
+            temperature: 0.2,
+            max_tokens: 700,
           }),
         });
 
