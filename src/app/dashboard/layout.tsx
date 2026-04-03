@@ -167,7 +167,7 @@ function CronPoller() {
   useEffect(() => {
     if (!user) return;
     // Only poll when on the Schedule page — no need to hit the server from every dashboard page.
-    // Vercel Cron (hourly) is the safety net for all other times.
+    // cron-job.org fires every 1 hour; this 5-min client poll keeps the Schedule page fresh.
     if (!pathname.startsWith("/dashboard/schedule")) return;
     const run = async () => {
       try {

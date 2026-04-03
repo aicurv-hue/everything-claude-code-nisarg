@@ -5,8 +5,8 @@
  * to LinkedIn using the stored access tokens.
  *
  * Called by:
- *   • Vercel Cron (vercel.json) — every minute in production
- *   • Dashboard client poller   — every 60s in local dev
+ *   • cron-job.org — every 1 hour in production
+ *   • Dashboard client poller (/schedule page only) — every 5 min in browser
  *
  * Flow per post:
  *   1. Refresh token if access_token is expired (or within 5 min of expiry)
