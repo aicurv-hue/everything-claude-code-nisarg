@@ -369,9 +369,14 @@ export default function CreatePostPage() {
 
                   {/* Show extracted context preview */}
                   {sourceStatus === "ready" && sourceContext && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-1">
-                      <p className="text-[11px] font-semibold text-green-700 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Context extracted successfully</p>
-                      <p className="text-[11px] text-green-600 leading-relaxed line-clamp-3">{sourceContext.slice(0, 200)}…</p>
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-semibold text-green-700 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Context extracted successfully</p>
+                        <span className="text-[10px] text-green-500">{sourceContext.length.toLocaleString()} chars → Neel</span>
+                      </div>
+                      <div className="max-h-56 overflow-y-auto rounded border border-green-100 bg-white p-2">
+                        <p className="text-[11px] text-slate-600 leading-relaxed whitespace-pre-wrap">{sourceContext}</p>
+                      </div>
                     </div>
                   )}
 
