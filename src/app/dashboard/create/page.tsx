@@ -209,6 +209,7 @@ export default function CreatePostPage() {
 
       localStorage.setItem("latest_post", JSON.stringify({
         content, imagePrompt, research,
+        referenceImagePreview: sourceImage?.preview || null,
         metadata: { topic, tone, audience, length, segment, customInstructions: customInstructions.trim() || null, memoryUsed: memoryContext.length },
       }));
 

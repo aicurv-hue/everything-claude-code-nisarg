@@ -16,7 +16,7 @@ import { HelpTooltip } from "@/components/ui/HelpTooltip";
 // Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
 import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 
-type ImageMode = "ai" | "upload" | "none";
+type ImageMode = "ai" | "upload" | "reference" | "none";
 
 export default function PostPreviewPage() {
   const { user } = useAuth();
@@ -28,6 +28,7 @@ export default function PostPreviewPage() {
   const [imageError, setImageError]         = useState<string | null>(null);
   const [uploadedFile, setUploadedFile]     = useState<File | null>(null);
   const [uploadedPreview, setUploadedPreview] = useState<string | null>(null);
+  const [referenceImagePreview, setReferenceImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [editedContent, setEditedContent]   = useState("");
@@ -91,6 +92,10 @@ export default function PostPreviewPage() {
     setEditedContent(parsed.content);
     if (parsed.imagePrompt) setImagePrompt(parsed.imagePrompt);
     if (parsed.imageHook) setImageHook(parsed.imageHook);
+    if (parsed.referenceImagePreview) {
+      setReferenceImagePreview(parsed.referenceImagePreview);
+      setImageMode("reference");
+    }
 
     getAuthToken().then(tok =>
       fetch("/api/linkedin/status", tok ? { headers: { Authorization: `Bearer ${tok}` } } : {})
@@ -281,6 +286,17 @@ export default function PostPreviewPage() {
     if (mode !== "upload") { setUploadedFile(null); setUploadedPreview(null); }
   };
 
+  const handleRemoveReferenceImage = () => {
+    setReferenceImagePreview(null);
+    setImageMode("none");
+    const stored = localStorage.getItem("latest_post");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      delete parsed.referenceImagePreview;
+      localStorage.setItem("latest_post", JSON.stringify(parsed));
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -301,8 +317,9 @@ export default function PostPreviewPage() {
 
   /* Resolve final image URL for publishing */
   const finalImageUrl =
-    imageMode === "ai"     ? imageUrl :
-    imageMode === "upload" ? uploadedPreview :
+    imageMode === "ai"        ? imageUrl :
+    imageMode === "upload"    ? uploadedPreview :
+    imageMode === "reference" ? referenceImagePreview :
     null;
 
   /* ── Draft / Publish ── */
@@ -811,7 +828,25 @@ export default function PostPreviewPage() {
                   width="w-72"
                 />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className={`grid gap-3 ${referenceImagePreview ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+                {/* Your Photo — only shown if user uploaded a reference image on Create page */}
+                {referenceImagePreview && (
+                  <button
+                    onClick={() => handleModeChange("reference")}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
+                      imageMode === "reference" ? "border-green-500 bg-green-50" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="w-9 h-9 rounded-xl overflow-hidden border border-slate-200 shrink-0">
+                      <img src={referenceImagePreview} alt="Your photo" className="w-full h-full object-cover" />
+                    </div>
+                    <div>
+                      <p className={`text-xs font-semibold ${imageMode === "reference" ? "text-green-700" : "text-slate-700"}`}>Your Photo</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">The image you uploaded</p>
+                    </div>
+                  </button>
+                )}
+
                 <button
                   onClick={() => handleModeChange("ai")}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
@@ -970,6 +1005,38 @@ export default function PostPreviewPage() {
                     </button>
                   </div>
                   <p className="mt-2 text-[11px] text-slate-400 truncate">{uploadedFile?.name}</p>
+                </div>
+              )}
+
+              {imageMode === "reference" && referenceImagePreview && (
+                <div className="w-full">
+                  <div className="relative">
+                    <img src={referenceImagePreview} alt="Your uploaded photo" className="w-full rounded-xl object-contain max-h-[480px]" />
+                    {imageHook && (
+                      <div className="absolute inset-0 rounded-xl pointer-events-none"
+                        style={{ background: "linear-gradient(105deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.38) 38%, transparent 58%)" }}>
+                        <p className="absolute top-5 left-5 text-white leading-[1.12]"
+                          style={{
+                            width: "44%",
+                            fontFamily: "var(--font-jakarta), 'Plus Jakarta Sans', Inter, sans-serif",
+                            fontWeight: 800,
+                            fontSize: "clamp(1.15rem, 3.5vw, 1.9rem)",
+                            letterSpacing: "-0.02em",
+                            textShadow: "0 2px 16px rgba(0,0,0,0.8), 0 1px 4px rgba(0,0,0,0.95)",
+                          }}>
+                          {imageHook}
+                        </p>
+                      </div>
+                    )}
+                    <button
+                      onClick={handleRemoveReferenceImage}
+                      className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-all"
+                      title="Remove photo"
+                    >
+                      <X className="w-3 h-3 text-slate-500" />
+                    </button>
+                  </div>
+                  <p className="mt-2 text-[11px] text-green-600 font-medium">Your photo · will be attached to the post</p>
                 </div>
               )}
 
