@@ -15,7 +15,7 @@ function extractJSON(text: string): any {
 
 export async function POST(req: NextRequest) {
   try {
-    const { topic, options = {} } = await req.json();
+    const { topic, options = {}, sourceContext } = await req.json();
     if (!topic) return NextResponse.json({ error: "topic required" }, { status: 400 });
 
     const { segment = "individual", tone = "professional", audience = "general", length = "medium", clientProfile } = options;
@@ -27,6 +27,10 @@ export async function POST(req: NextRequest) {
     ].filter(Boolean) : [];
     const clientContext = profileLines.length > 0 ? `\nClient context:\n${profileLines.join("\n")}` : "";
 
+    const sourceBlock = sourceContext
+      ? `\n\nSOURCE MATERIAL PROVIDED BY USER — treat this as primary context for the research:\n"""\n${sourceContext}\n"""\nExtract insights, data points, and angles directly from this material where relevant.`
+      : "";
+
     const prompt = `You are an expert LinkedIn content researcher.
 
 Produce a research report to power a single LinkedIn post:
@@ -34,7 +38,7 @@ Produce a research report to power a single LinkedIn post:
 - Tone: ${tone}
 - Audience: ${audience}
 - Length: ${length}
-- Voice: ${segment === "individual" ? "personal brand, first-person" : "corporate brand"}${clientContext}
+- Voice: ${segment === "individual" ? "personal brand, first-person" : "corporate brand"}${clientContext}${sourceBlock}
 
 Rules: specific data-backed insights (numbers, companies, trends), prefer 2024-2026 data, no generic claims.
 

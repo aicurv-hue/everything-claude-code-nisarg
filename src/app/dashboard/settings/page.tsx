@@ -23,7 +23,7 @@ import { useAuth } from "@/lib/context/auth";
 import { HelpTooltip, FieldHint } from "@/components/ui/HelpTooltip";
 import { ProfileAIAssist } from "@/components/ui/ProfileAIAssist";
 
-export const DEFAULT_SYSTEM_PROMPT = `You are a world-class marketing copywriter and content strategist.
+const DEFAULT_SYSTEM_PROMPT = `You are a world-class marketing copywriter and content strategist.
 Your goal is to generate high-performing LinkedIn content that drives engagement and authority.
 Always follow the "Gold-Standard" LinkedIn format:
 1. Hook: A powerful first line that stops the scroll.

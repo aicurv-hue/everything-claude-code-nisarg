@@ -23,6 +23,7 @@ export interface PostRequest {
   memoryContext?: PostMemory[];   // Top-N relevant auto-saved past posts — injected by create page
   writingSamples?: PostMemory[];  // User-uploaded writing samples — style/voice ground truth
   imageStyle?: string;            // Layer 1: art style key (photo|illustration|abstract|3d|lineart|bw_photo)
+  sourceContext?: string;         // Extracted text from user-provided URL + image description
 }
 
 // ─── Image style prefix map (Layer 1 — Brand Consistency) ─────────────────────
@@ -219,7 +220,7 @@ function sanitizePost(raw: string): string {
  *   - marketing-skills-all: social-content (LinkedIn-specific structure, CTA, tone mapping)
  */
 export async function generatePost(request: PostRequest): Promise<GenerateResult> {
-  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, writingSamples, imageStyle } = request;
+  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, writingSamples, imageStyle, sourceContext } = request;
 
   const lengthSpec = LENGTH_SPEC[length] || LENGTH_SPEC.medium;
 
@@ -304,6 +305,10 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
     .map((ins, i) => `${i + 1}. ${ins.title}: ${ins.content}`)
     .join("\n");
 
+  const sourceBlock = sourceContext
+    ? `\nSource material (URL / image provided by user — use this as the primary factual foundation):\n"""\n${sourceContext.slice(0, 2000)}\n"""\n`
+    : "";
+
   const userPrompt = `Generate the LinkedIn post now.
 
 Topic:    ${topic}
@@ -311,7 +316,7 @@ Tone:     ${tone}
 Audience: ${audience}
 Length:   ${lengthSpec.words}
 Segment:  ${segment}
-
+${sourceBlock}
 Research summary:
 ${research.summary}
 

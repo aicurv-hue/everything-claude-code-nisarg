@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/context/auth";
 import { getIdToken } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
-import { Zap, Search, Brain, SlidersHorizontal, ChevronDown, ChevronUp, User, Building2, Sparkles } from "lucide-react";
+import { Zap, Search, Brain, SlidersHorizontal, ChevronDown, ChevronUp, User, Building2, Sparkles, Link2, ImagePlus, X, CheckCircle2 } from "lucide-react";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
 
 const TONES = [
@@ -41,9 +41,16 @@ export default function CreatePostPage() {
 
   const [userProfile, setUserProfile]       = useState<{ [key: string]: ProfileSegment } | null>(null);
   const [isGenerating, setIsGenerating]     = useState(false);
-  const [generatingStep, setGeneratingStep] = useState<"research" | "memory" | "writing" | null>(null);
+  const [generatingStep, setGeneratingStep] = useState<"source" | "research" | "memory" | "writing" | null>(null);
   const [customInstructions, setCustomInstructions] = useState("");
   const [showPromptPanel, setShowPromptPanel]       = useState(false);
+
+  // Source material
+  const [showSourcePanel, setShowSourcePanel]       = useState(false);
+  const [sourceUrl, setSourceUrl]                   = useState("");
+  const [sourceImage, setSourceImage]               = useState<{ base64: string; type: string; preview: string } | null>(null);
+  const [sourceContext, setSourceContext]           = useState<string | null>(null);
+  const [sourceStatus, setSourceStatus]             = useState<"idle" | "extracting" | "ready" | "error">("idle");
   const [memoryCount, setMemoryCount]   = useState<number | null>(null);
   const [sampleCount, setSampleCount]   = useState<number | null>(null);
   const [writingSamples, setWritingSamples] = useState<any[]>([]);
@@ -86,6 +93,52 @@ export default function CreatePostPage() {
     loadProfile();
   }, [segment, user]);
 
+  const handleImageFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      // dataUrl = "data:image/jpeg;base64,/9j/..."
+      const [meta, base64] = dataUrl.split(",");
+      const type = meta.replace("data:", "").replace(";base64", "");
+      setSourceImage({ base64, type, preview: dataUrl });
+      setSourceContext(null);
+      setSourceStatus("idle");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const extractSourceContext = async (): Promise<string | null> => {
+    if (!sourceUrl.trim() && !sourceImage) return null;
+    setSourceStatus("extracting");
+    try {
+      const res = await fetch("/api/ai/extract-context", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: sourceUrl.trim() || undefined,
+          imageBase64: sourceImage?.base64 || undefined,
+          imageType: sourceImage?.type || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Extraction failed");
+      }
+      const { urlContent, imageDescription } = await res.json();
+      const parts: string[] = [];
+      if (urlContent) parts.push(`[From URL: ${sourceUrl}]\n${urlContent}`);
+      if (imageDescription) parts.push(`[From image]\n${imageDescription}`);
+      const combined = parts.join("\n\n") || null;
+      setSourceContext(combined);
+      setSourceStatus(combined ? "ready" : "idle");
+      return combined;
+    } catch (e: any) {
+      setSourceStatus("error");
+      alert(`Source extraction failed: ${e?.message}`);
+      return null;
+    }
+  };
+
   const handleGenerate = async () => {
     if (!topic.trim()) return;
     setIsGenerating(true);
@@ -94,6 +147,13 @@ export default function CreatePostPage() {
     const selectedModel = activeProfile?.model || "google/gemini-2.0-flash-001";
 
     try {
+      // ── Extract source material (URL / image) if provided ──────────────────
+      let resolvedSourceContext = sourceContext; // use cached if already extracted
+      if (!resolvedSourceContext && (sourceUrl.trim() || sourceImage)) {
+        setGeneratingStep("source");
+        resolvedSourceContext = await extractSourceContext();
+      }
+
       // Get Firebase token once — used for all authenticated API calls
       const idToken = auth.currentUser ? await getIdToken(auth.currentUser) : null;
       const authHeaders: Record<string, string> = {
@@ -106,7 +166,7 @@ export default function CreatePostPage() {
       const researchRes = await fetch("/api/ai/research", {
         method: "POST",
         headers: authHeaders,
-        body: JSON.stringify({ topic, options: { segment, model: selectedModel, tone, audience, length, clientProfile: activeProfile } }),
+        body: JSON.stringify({ topic, options: { segment, model: selectedModel, tone, audience, length, clientProfile: activeProfile }, sourceContext: resolvedSourceContext || undefined }),
       });
       if (!researchRes.ok) throw new Error(`Research failed: ${await researchRes.text()}`);
       const research = await researchRes.json();
@@ -141,6 +201,7 @@ export default function CreatePostPage() {
           memoryContext:   memoryContext.length > 0   ? memoryContext   : undefined,
           writingSamples:  writingSamples.length > 0  ? writingSamples  : undefined,
           imageStyle: activeProfile?.imageStyle || undefined,
+          sourceContext: resolvedSourceContext || undefined,
         }),
       });
       if (!generateRes.ok) throw new Error(`Generation failed: ${await generateRes.text()}`);
@@ -199,6 +260,126 @@ export default function CreatePostPage() {
                   {topic.length}/500
                 </span>
               </div>
+            </div>
+
+            {/* Source Material (collapsible) */}
+            <div className="card overflow-hidden">
+              <button
+                onClick={() => setShowSourcePanel(!showSourcePanel)}
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all ${showSourcePanel ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-200"}`}>
+                    <Link2 className={`w-3.5 h-3.5 ${showSourcePanel ? "text-[#0A66C2]" : "text-slate-400"}`} />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                      Source Material
+                      <span className="text-[10px] font-normal text-slate-400 normal-case">optional — URL, article, or image</span>
+                      {sourceStatus === "ready" && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {sourceStatus === "ready"
+                        ? "✓ Context extracted — Neel will read it before writing"
+                        : sourceUrl || sourceImage
+                        ? "Source added — will be extracted on generate"
+                        : "Paste a URL or upload an image for Neel to read"}
+                    </p>
+                  </div>
+                </div>
+                {showSourcePanel
+                  ? <ChevronUp className="w-4 h-4 text-slate-400" />
+                  : <ChevronDown className="w-4 h-4 text-slate-400" />}
+              </button>
+
+              {showSourcePanel && (
+                <div className="px-5 pb-5 border-t border-slate-100 space-y-4 pt-4">
+                  {/* URL input */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Article / Page URL</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={sourceUrl}
+                        onChange={(e) => { setSourceUrl(e.target.value); setSourceContext(null); setSourceStatus("idle"); }}
+                        placeholder="https://example.com/article-to-post-about"
+                        className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] transition-all"
+                      />
+                      {sourceUrl.trim() && (
+                        <button
+                          onClick={() => { setSourceUrl(""); setSourceContext(null); setSourceStatus("idle"); }}
+                          className="p-2.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 transition-all"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400">Neel will read the page and extract key facts, data, and angles from it.</p>
+                  </div>
+
+                  {/* Image upload */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Reference Image</label>
+                    {sourceImage ? (
+                      <div className="flex items-start gap-3">
+                        <img src={sourceImage.preview} alt="Source" className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
+                        <div className="flex-1 space-y-1">
+                          <p className="text-xs text-slate-600">Image uploaded — Neel will analyse it with vision AI</p>
+                          <button
+                            onClick={() => { setSourceImage(null); setSourceContext(null); setSourceStatus("idle"); }}
+                            className="text-[11px] text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1"
+                          >
+                            <X className="w-3 h-3" /> Remove image
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="flex items-center gap-3 px-4 py-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 cursor-pointer hover:border-slate-400 hover:bg-white transition-all">
+                        <ImagePlus className="w-5 h-5 text-slate-400" />
+                        <span className="text-sm text-slate-500">Upload image (JPG, PNG, WebP)</span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="hidden"
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f); }}
+                        />
+                      </label>
+                    )}
+                    <p className="text-[10px] text-slate-400">Charts, screenshots, infographics — Neel will describe what it sees and weave it into the post.</p>
+                  </div>
+
+                  {/* Extract preview button */}
+                  {(sourceUrl.trim() || sourceImage) && sourceStatus !== "ready" && (
+                    <button
+                      onClick={extractSourceContext}
+                      disabled={sourceStatus === "extracting"}
+                      className={`w-full py-2.5 rounded-lg text-sm font-medium border transition-all flex items-center justify-center gap-2 ${
+                        sourceStatus === "extracting"
+                          ? "bg-slate-100 text-slate-400 cursor-wait border-slate-200"
+                          : `${accentBg} ${accentColor} hover:opacity-80`
+                      }`}
+                    >
+                      {sourceStatus === "extracting" ? (
+                        <><div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> Extracting…</>
+                      ) : (
+                        <><Search className="w-4 h-4" /> Preview extracted context</>
+                      )}
+                    </button>
+                  )}
+
+                  {/* Show extracted context preview */}
+                  {sourceStatus === "ready" && sourceContext && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-1">
+                      <p className="text-[11px] font-semibold text-green-700 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Context extracted successfully</p>
+                      <p className="text-[11px] text-green-600 leading-relaxed line-clamp-3">{sourceContext.slice(0, 200)}…</p>
+                    </div>
+                  )}
+
+                  {sourceStatus === "error" && (
+                    <p className="text-[11px] text-red-500">Extraction failed — check the URL and try again.</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Tone + Audience */}
@@ -352,12 +533,13 @@ export default function CreatePostPage() {
               <div className="card p-4 space-y-3">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Generating your post…</p>
                 {[
+                  ...(sourceUrl.trim() || sourceImage ? [{ step: "source", label: "Reading your URL / image", icon: "🔗" }] : []),
                   { step: "research", label: "Deep-researching your topic",    icon: "🔍" },
                   { step: "memory",   label: "Reading your past posts for style", icon: "🧠" },
                   { step: "writing",  label: "Writing your LinkedIn post",      icon: "✍️" },
                 ].map(({ step, label, icon }) => {
-                  const steps = ["research", "memory", "writing"];
-                  const currentIdx = steps.indexOf(generatingStep || "research");
+                  const steps = [...(sourceUrl.trim() || sourceImage ? ["source"] : []), "research", "memory", "writing"];
+                  const currentIdx = steps.indexOf(generatingStep || steps[0]);
                   const thisIdx = steps.indexOf(step);
                   const isDone    = thisIdx < currentIdx;
                   const isActive  = step === generatingStep;
@@ -393,6 +575,7 @@ export default function CreatePostPage() {
               {isGenerating ? (
                 <>
                   <Zap className="w-4 h-4 animate-pulse" />
+                  {generatingStep === "source"   && "Reading source…"}
                   {generatingStep === "research" && "Stage 1 — Researching…"}
                   {generatingStep === "memory"   && "Stage 2 — Loading memory…"}
                   {generatingStep === "writing"  && "Stage 3 — Writing post…"}
