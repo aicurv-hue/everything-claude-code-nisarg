@@ -1,5 +1,46 @@
 # LinkedIn Automation Tools — Feature Intelligence Report
-*40+ tools researched | March 2026*
+*40+ tools researched | Last updated: 2026-04-02*
+
+---
+
+## LinkAuto — What's Built (as of April 2026)
+
+### ✅ Live Features
+| Feature | Details |
+|---------|---------|
+| Two-stage AI pipeline | Research (sub-questions → synthesis) → Generate (9 layers of context) |
+| Persistent memory | Style fingerprint + summary + keywords injected into each new post |
+| Dual workspace | Individual (personal brand) + Corporate — fully separate data |
+| Editable preview | Always review before save; never auto-post |
+| Image picker | AI-generated (Fal.ai), upload own, or no image |
+| Single post scheduling | Date/time/timezone + AI best-time suggestions (3 scored slots) |
+| Bulk CSV upload | Up to 500 scheduled posts via 3-step wizard |
+| Content calendar | Month + list view, color-coded by status |
+| Post detail drawer | View, edit content, change image, reschedule, delete |
+| History viewer | Full input/output modal with prev/next navigation |
+| Memory bank | View + delete past post memories |
+| 5-tab profile settings | Identity, Audience, Branding, Voice, AI Config |
+| Onboarding gate | Mandatory fields before first post |
+| Admin dashboard | `/admin` — restricted by env var |
+| Beta access gate | `BETA_APPROVED_EMAILS` env var |
+| **Android APK** | Capacitor 8.3.0 live-server app (~3 MB, auto-updates via Vercel) |
+| **PWA service worker** | Static assets cached — repeat opens near-instant |
+| **Splash screen** | Dark splash held while WebView loads, fades on ready |
+| **Mobile navigation** | Bottom nav + mobile header — full mobile-first UI |
+| Skeleton loaders | Dashboard shows content shape while data loads |
+| Page transitions | `pageEnter` CSS animation on every route change |
+
+### ❌ Not Yet Built
+| Feature | Notes |
+|---------|-------|
+| LinkedIn API posting | OAuth token flow exists; posting blocked by LinkedIn Partner API |
+| Web Speech API | Voice-to-post (hands-free topic input) |
+| Analytics page | Engagement tracking placeholder |
+| iOS app | Android only currently |
+| Push notifications | Scheduled post status alerts |
+| E2E tests | No Playwright tests yet |
+
+---
 
 ---
 
