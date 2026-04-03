@@ -45,6 +45,13 @@ export default function DraftsPage() {
 
   useEffect(() => { loadDrafts(); }, [loadDrafts]);
 
+  // B2: Re-fetch when user returns to this tab (e.g. after publishing a draft)
+  useEffect(() => {
+    const handler = () => { if (!document.hidden) loadDrafts(); };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [loadDrafts]);
+
   const handleEdit = (draft: Post) => {
     localStorage.setItem("edit_draft", JSON.stringify(draft));
     router.push(`/dashboard/drafts/${draft.id}/edit`);

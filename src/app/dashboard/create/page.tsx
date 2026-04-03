@@ -54,7 +54,29 @@ export default function CreatePostPage() {
   const [memoryCount, setMemoryCount]   = useState<number | null>(null);
   const [sampleCount, setSampleCount]   = useState<number | null>(null);
   const [writingSamples, setWritingSamples] = useState<any[]>([]);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const router = useRouter();
+
+  // B1: Restore draft inputs from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("create_draft");
+      if (saved) {
+        const d = JSON.parse(saved);
+        if (d.topic)    setTopic(d.topic);
+        if (d.tone)     setTone(d.tone);
+        if (d.audience) setAudience(d.audience);
+        if (d.length)   setLength(d.length);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // B1: Auto-save draft inputs whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem("create_draft", JSON.stringify({ topic, tone, audience, length }));
+    } catch { /* ignore */ }
+  }, [topic, tone, audience, length]);
 
   const accentColor = isCorporate ? "text-violet-600" : "text-[#0A66C2]";
   const accentBg    = isCorporate ? "bg-violet-50 border-violet-200" : "bg-blue-50 border-blue-200";
@@ -142,6 +164,7 @@ export default function CreatePostPage() {
   const handleGenerate = async () => {
     if (!topic.trim()) return;
     setIsGenerating(true);
+    setGenerateError(null);
 
     const activeProfile: ProfileSegment | undefined = userProfile ? userProfile[segment] : undefined;
     const selectedModel = activeProfile?.model || "google/gemini-2.0-flash-001";
@@ -212,11 +235,13 @@ export default function CreatePostPage() {
         referenceImagePreview: sourceImage?.preview || null,
         metadata: { topic, tone, audience, length, segment, customInstructions: customInstructions.trim() || null, memoryUsed: memoryContext.length },
       }));
+      // Clear draft cache now that it's been used
+      localStorage.removeItem("create_draft");
 
       router.push("/dashboard/create/preview");
     } catch (error: any) {
       console.error("Failed to generate post:", error);
-      alert(error?.message || "Something went wrong during generation. Please try again.");
+      setGenerateError(error?.message || "Something went wrong during generation. Please try again.");
     } finally {
       setIsGenerating(false);
       setGeneratingStep(null);
@@ -563,6 +588,23 @@ export default function CreatePostPage() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* A4: Generation error with retry */}
+            {generateError && !isGenerating && (
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-200">
+                <CheckCircle2 className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-red-700 mb-1">Generation failed</p>
+                  <p className="text-xs text-red-600 leading-relaxed">{generateError}</p>
+                </div>
+                <button
+                  onClick={() => setGenerateError(null)}
+                  className="text-red-400 hover:text-red-600 shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             )}
 

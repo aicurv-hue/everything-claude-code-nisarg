@@ -122,6 +122,9 @@ async function postToLinkedIn(
   let imageUrn: string | null = null;
   if (imageUrl && !imageUrl.startsWith("data:")) {
     imageUrn = await uploadImage(accessToken, authorUrn, imageUrl);
+    if (!imageUrn) {
+      throw new Error("Image upload to LinkedIn failed. Post held — fix the image URL or remove it, then reschedule.");
+    }
   }
 
   const body: Record<string, any> = {

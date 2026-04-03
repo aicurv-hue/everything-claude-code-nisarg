@@ -63,6 +63,9 @@ export default function MemoryPage() {
 
   // ── Delete state ──────────────────────────────────────────────────────────
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // C3: Undo delete — holds a pending delete for 5 seconds before committing
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; type: "auto" | "user_upload"; label: string } | null>(null);
+  const pendingDeleteTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Upload modal state ────────────────────────────────────────────────────
   const [showModal,    setShowModal]    = useState(false);
@@ -123,9 +126,7 @@ export default function MemoryPage() {
     }
   }, [segment, user]);
 
-  const handleDelete = async (id: string, sourceType: "auto" | "user_upload") => {
-    const label = sourceType === "user_upload" ? "writing sample" : "memory entry";
-    if (!confirm(`Remove this ${label}? This cannot be undone.`)) return;
+  const commitDelete = async (id: string, sourceType: "auto" | "user_upload") => {
     setDeletingId(id);
     try {
       const token = await getAuthToken();
@@ -142,7 +143,22 @@ export default function MemoryPage() {
         setMemories((prev) => prev.filter((m) => m.id !== id));
       }
     } catch { /* silent */ }
-    finally { setDeletingId(null); }
+    finally { setDeletingId(null); setPendingDelete(null); }
+  };
+
+  // C3: Show undo toast, then commit after 5s
+  const handleDelete = (id: string, sourceType: "auto" | "user_upload") => {
+    const label = sourceType === "user_upload" ? "writing sample" : "memory entry";
+    if (pendingDeleteTimer.current) clearTimeout(pendingDeleteTimer.current);
+    setPendingDelete({ id, type: sourceType, label });
+    pendingDeleteTimer.current = setTimeout(() => {
+      commitDelete(id, sourceType);
+    }, 5000);
+  };
+
+  const handleUndoDelete = () => {
+    if (pendingDeleteTimer.current) clearTimeout(pendingDeleteTimer.current);
+    setPendingDelete(null);
   };
 
   // ── Upload handler ────────────────────────────────────────────────────────
@@ -208,6 +224,19 @@ export default function MemoryPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8 animate-fade-in">
+
+      {/* C3: Undo delete toast */}
+      {pendingDelete && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 bg-slate-900 text-white rounded-xl shadow-2xl text-sm font-medium animate-fade-in">
+          <span>Removed {pendingDelete.label}</span>
+          <button
+            onClick={handleUndoDelete}
+            className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all"
+          >
+            Undo
+          </button>
+        </div>
+      )}
 
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">

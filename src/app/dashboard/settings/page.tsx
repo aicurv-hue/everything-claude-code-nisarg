@@ -99,6 +99,17 @@ export default function SettingsPage() {
     );
   };
 
+  // B4: Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!hasChanges) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasChanges]);
+
   // Listen for postMessage from OAuth popup
   useEffect(() => {
     const handler = (e: MessageEvent) => {

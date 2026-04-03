@@ -463,6 +463,10 @@ export default function HistoryPage() {
   const [modalPost, setModalPost]   = useState<Post | null>(null);
   const [modalIndex, setModalIndex] = useState<number>(0);
 
+  // C2: Pagination
+  const PAGE_SIZE = 20;
+  const [page, setPage] = useState(0);
+
   const accentTab = isCorporate
     ? "bg-violet-50 border-violet-300 text-violet-700"
     : "bg-blue-50 border-blue-300 text-[#0A66C2]";
@@ -503,6 +507,12 @@ export default function HistoryPage() {
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => sortSecs(b) - sortSecs(a));
+
+  // Reset to page 0 when filters change
+  useEffect(() => { setPage(0); }, [searchTerm, statusFilter, segment]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated  = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const openModal = (post: Post, index: number) => {
     setModalPost(post);
@@ -693,10 +703,10 @@ export default function HistoryPage() {
             <div className="card px-5 py-12 text-center text-slate-400 text-sm">
               {searchTerm || statusFilter !== "all" ? "No results for your filters." : "No history yet. Start by generating content!"}
             </div>
-          ) : filtered.map((post, idx) => (
+          ) : paginated.map((post, idx) => (
             <div
               key={post.id}
-              onClick={() => openModal(post, idx)}
+              onClick={() => openModal(post, page * PAGE_SIZE + idx)}
               className="card px-4 py-3.5 flex items-center gap-3 active:bg-slate-50 transition-colors cursor-pointer"
             >
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${STATUS_ICON[post.status] || STATUS_ICON.draft}`}>
@@ -752,10 +762,10 @@ export default function HistoryPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((post, idx) => (
+                paginated.map((post, idx) => (
                   <tr
                     key={post.id}
-                    onClick={() => openModal(post, idx)}
+                    onClick={() => openModal(post, page * PAGE_SIZE + idx)}
                     className="hover:bg-slate-50 transition-colors group cursor-pointer"
                   >
                     {/* Topic */}
@@ -892,6 +902,32 @@ export default function HistoryPage() {
             </tbody>
           </table>
         </div>
+
+        {/* C2: Pagination controls */}
+        {totalPages > 1 && !isLoading && (
+          <div className="flex items-center justify-between px-1">
+            <p className="text-[11px] text-slate-400">
+              Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length} posts
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                ← Prev
+              </button>
+              <span className="text-xs text-slate-500">{page + 1} / {totalPages}</span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Hint */}
         {filtered.length > 0 && !isLoading && (

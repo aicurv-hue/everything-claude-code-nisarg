@@ -522,7 +522,15 @@ export default function PostPreviewPage() {
               </button>
 
               <button
-                onClick={() => linkedInConnected ? setShowSchedulePicker(true) : undefined}
+                onClick={() => {
+                  if (!linkedInConnected) return;
+                  // A2: Block corporate posts if org ID is missing
+                  if (postData?.metadata?.segment === "corporate" && !organizationId) {
+                    alert("Add your LinkedIn Organization ID in Settings → Identity (Corporate) before scheduling company posts.");
+                    return;
+                  }
+                  setShowSchedulePicker(true);
+                }}
                 disabled={scheduleStatus === "success" || linkedInConnected === false}
                 title={linkedInConnected === false ? "Connect LinkedIn first to schedule posts" : undefined}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"

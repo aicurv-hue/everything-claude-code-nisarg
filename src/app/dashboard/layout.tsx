@@ -163,11 +163,12 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
 
 function CronPoller() {
   const { user } = useAuth();
+  const pathname = usePathname();
   useEffect(() => {
     if (!user) return;
-    // Polls every 60s so scheduled posts go live in near real-time when
-    // the dashboard is open. Vercel Cron (6 AM IST daily) is the safety net
-    // for posts that fire while the dashboard is closed.
+    // Only poll when on the Schedule page — no need to hit the server from every dashboard page.
+    // Vercel Cron (hourly) is the safety net for all other times.
+    if (!pathname.startsWith("/dashboard/schedule")) return;
     const run = async () => {
       try {
         const token = await getAuthToken();
@@ -185,9 +186,9 @@ function CronPoller() {
       }
     };
     run();
-    const id = setInterval(run, 60_000); // 60s interval — checks every minute for due posts
+    const id = setInterval(run, 5 * 60_000); // 5-min interval — cron runs hourly, client poll is just a UI refresh
     return () => clearInterval(id);
-  }, [user]);
+  }, [user, pathname]);
   return null;
 }
 
