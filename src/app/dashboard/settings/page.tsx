@@ -583,11 +583,11 @@ export default function SettingsPage() {
                 onChange={(e) => handleFieldChange("model", e.target.value)}
                 className={inputClass}
               >
-                <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash — fastest &amp; cheapest (~$0.001/post)</option>
-                <option value="google/gemini-2.5-flash-preview-05-20">Gemini 2.5 Flash — better reasoning, still budget (~$0.003/post)</option>
-                <option value="anthropic/claude-haiku-4-5">Claude Haiku 4.5 — best quality/price balance (~$0.005/post)</option>
-                <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet — natural voice &amp; storytelling (~$0.015/post)</option>
-                <option value="openai/gpt-4o">GPT-4o — data-heavy &amp; structured posts (~$0.020/post)</option>
+                <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash — fast, reliable</option>
+                <option value="google/gemini-2.5-flash-preview-05-20">Gemini 2.5 Flash — smarter reasoning</option>
+                <option value="anthropic/claude-haiku-4-5">Claude Haiku 4.5 — nuanced, natural voice</option>
+                <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet — best storytelling</option>
+                <option value="openai/gpt-4o">GPT-4o — structured, data-heavy</option>
               </select>
             </div>
 
