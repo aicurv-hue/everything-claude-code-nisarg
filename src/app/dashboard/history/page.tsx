@@ -82,6 +82,7 @@ function PostDetailModal({
   const [researchOpen, setResearchOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState<"retry" | "repost" | "delete" | null>(null);
   const [repostResult, setRepostResult] = useState<"success" | "error" | null>(null);
+  const [mobileTab, setMobileTab] = useState<"input" | "output">("output");
 
   // Close on Escape, navigate on arrow keys
   useEffect(() => {
@@ -95,7 +96,7 @@ function PostDetailModal({
   }, [currentIndex, posts.length, onClose, onNavigate]);
 
   // Reset repost result when post changes
-  useEffect(() => { setRepostResult(null); setCopied(false); setResearchOpen(false); }, [post.id]);
+  useEffect(() => { setRepostResult(null); setCopied(false); setResearchOpen(false); setMobileTab("output"); }, [post.id]);
 
   const copyContent = () => {
     navigator.clipboard.writeText(post.content);
@@ -187,12 +188,28 @@ function PostDetailModal({
           </button>
         </div>
 
+        {/* ── Mobile tab switcher ── */}
+        <div className="flex md:hidden border-b border-slate-100 shrink-0">
+          <button
+            onClick={() => setMobileTab("output")}
+            className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${mobileTab === "output" ? "text-[#0A66C2] border-b-2 border-[#0A66C2]" : "text-slate-400"}`}
+          >
+            AI Output
+          </button>
+          <button
+            onClick={() => setMobileTab("input")}
+            className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${mobileTab === "input" ? "text-[#0A66C2] border-b-2 border-[#0A66C2]" : "text-slate-400"}`}
+          >
+            Your Input
+          </button>
+        </div>
+
         {/* ── Scrollable body ── */}
         <div className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100 min-h-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x divide-slate-100 min-h-0">
 
             {/* LEFT — Inputs */}
-            <div className="p-5 space-y-4">
+            <div className={`p-5 space-y-4 ${mobileTab === "input" ? "block" : "hidden"} md:block`}>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Your Input</p>
 
               {/* Topic */}
@@ -307,7 +324,7 @@ function PostDetailModal({
             </div>
 
             {/* RIGHT — Output */}
-            <div className="p-5 space-y-4">
+            <div className={`p-5 space-y-4 ${mobileTab === "output" ? "block" : "hidden"} md:block`}>
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">AI Output</p>
                 <button
@@ -341,7 +358,7 @@ function PostDetailModal({
               )}
 
               {/* Post content */}
-              <div className="bg-slate-50 rounded-xl border border-slate-100 p-3 flex-1 overflow-y-auto" style={{ minHeight: "8rem" }}>
+              <div className="bg-slate-50 rounded-xl border border-slate-100 p-3 overflow-y-auto" style={{ minHeight: "12rem", maxHeight: "40vh" }}>
                 <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{post.content}</p>
               </div>
 

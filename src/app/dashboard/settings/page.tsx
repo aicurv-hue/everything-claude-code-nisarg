@@ -255,31 +255,33 @@ export default function SettingsPage() {
       )}
 
       {/* LinkedIn Connection Card */}
-      <div className="card p-5 flex items-center gap-4">
-        <div className="w-10 h-10 rounded-xl bg-[#0A66C2] flex items-center justify-center shrink-0">
-          <Linkedin className="w-5 h-5 text-white" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-slate-800">LinkedIn Account</p>
+      <div className="card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-[#0A66C2] flex items-center justify-center shrink-0">
+            <Linkedin className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-slate-800">LinkedIn Account</p>
+              {liConnected ? (
+                <span className="flex items-center gap-1 text-[11px] font-medium text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full whitespace-nowrap">
+                  <CheckCircle2 className="w-3 h-3" /> Connected
+                </span>
+              ) : (
+                <span className="text-[11px] font-medium text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full whitespace-nowrap">
+                  Not connected
+                </span>
+              )}
+            </div>
             {liConnected ? (
-              <span className="flex items-center gap-1 text-[11px] font-medium text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
-                <CheckCircle2 className="w-3 h-3" /> Connected
-              </span>
+              <p className="text-xs text-slate-400 mt-0.5 truncate">
+                {liName}{liEmail ? ` · ${liEmail}` : ""}
+                {liExpiry ? ` · Token valid ${Math.max(0, Math.round((liExpiry - Date.now()) / 86400000))}d` : ""}
+              </p>
             ) : (
-              <span className="text-[11px] font-medium text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
-                Not connected
-              </span>
+              <p className="text-xs text-slate-400 mt-0.5">Connect LinkedIn to enable publishing.</p>
             )}
           </div>
-          {liConnected ? (
-            <p className="text-xs text-slate-400 mt-0.5 truncate">
-              {liName}{liEmail ? ` · ${liEmail}` : ""}
-              {liExpiry ? ` · Token valid ${Math.max(0, Math.round((liExpiry - Date.now()) / 86400000))}d` : ""}
-            </p>
-          ) : (
-            <p className="text-xs text-slate-400 mt-0.5">Connect LinkedIn to enable publishing and engagement tracking.</p>
-          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {liConnected && (
