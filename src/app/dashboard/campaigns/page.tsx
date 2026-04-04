@@ -43,14 +43,17 @@ export default function CampaignsPage() {
     e.stopPropagation();
     if (!confirm("Delete this campaign and all its posts?")) return;
     setDeleting(id);
-    const token = await getAuthToken();
-    await fetch("/api/campaigns", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ id }),
-    });
-    setCampaigns(prev => prev.filter(c => c.id !== id));
-    setDeleting(null);
+    try {
+      const token = await getAuthToken();
+      const res = await fetch("/api/campaigns", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) { alert("Failed to delete campaign. Please try again."); return; }
+      setCampaigns(prev => prev.filter(c => c.id !== id));
+    } catch { alert("Failed to delete campaign. Please try again."); }
+    finally { setDeleting(null); }
   };
 
   if (loading) {

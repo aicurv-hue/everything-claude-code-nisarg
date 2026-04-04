@@ -162,36 +162,8 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
   );
 }
 
-function CronPoller() {
-  const { user } = useAuth();
-  const pathname = usePathname();
-  useEffect(() => {
-    if (!user) return;
-    // Only poll when on the Schedule page — no need to hit the server from every dashboard page.
-    // cron-job.org fires every 1 hour; this 5-min client poll keeps the Schedule page fresh.
-    if (!pathname.startsWith("/dashboard/schedule")) return;
-    const run = async () => {
-      try {
-        const token = await getAuthToken();
-        const res = await fetch("/api/cron/publish-due", {
-          method: "POST",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        const ct = res.headers.get("content-type") || "";
-        if (!ct.includes("application/json")) return;
-        const data = await res.json();
-        if (!res.ok) console.warn("[CronPoller] Worker error:", data);
-        else console.log("[CronPoller] Worker result:", data);
-      } catch (err) {
-        console.warn("[CronPoller] Fetch failed:", err);
-      }
-    };
-    run();
-    const id = setInterval(run, 5 * 60_000); // 5-min interval — cron runs hourly, client poll is just a UI refresh
-    return () => clearInterval(id);
-  }, [user, pathname]);
-  return null;
-}
+// CronPoller removed — cron route now only accepts CRON_SECRET / Vercel cron header,
+// not Firebase user tokens, to prevent privilege escalation. cron-job.org handles triggering.
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -314,8 +286,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <CronPoller />
-
       {/* ── Desktop layout: sidebar + main ── */}
       <div className="min-h-screen hidden md:flex bg-slate-50 text-slate-900">
         <Sidebar onOpenGuide={() => setShowGuide(true)} failedCount={failedCount} />

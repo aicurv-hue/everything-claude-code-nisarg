@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ hasFace: true, quality: "good", message: "Validation skipped (no API key)" });
+      return NextResponse.json({ error: "Face validation unavailable — API key not configured" }, { status: 503 });
     }
 
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       console.error("[validate-face] OpenRouter error:", res.status);
-      return NextResponse.json({ hasFace: true, quality: "good", message: "Validation unavailable — proceeding." });
+      return NextResponse.json({ error: "Face validation service error — please try again" }, { status: 502 });
     }
 
     const data = await res.json();
@@ -63,16 +63,16 @@ export async function POST(req: NextRequest) {
     try {
       parsed = JSON.parse(content);
     } catch {
-      parsed = { hasFace: true, quality: "good", message: "Could not parse validation result." };
+      return NextResponse.json({ error: "Could not parse validation result — please try again" }, { status: 502 });
     }
 
     return NextResponse.json({
-      hasFace: parsed.hasFace ?? true,
-      quality: parsed.quality ?? "good",
+      hasFace: parsed.hasFace ?? false,
+      quality: parsed.quality ?? "none",
       message: parsed.message ?? "Photo processed.",
     });
   } catch (err: any) {
     console.error("[validate-face] Error:", err);
-    return NextResponse.json({ hasFace: true, quality: "good", message: "Validation error — proceeding." });
+    return NextResponse.json({ error: "Face validation failed — please try again" }, { status: 500 });
   }
 }

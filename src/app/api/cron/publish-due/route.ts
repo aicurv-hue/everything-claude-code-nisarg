@@ -159,16 +159,14 @@ async function postToLinkedIn(
 }
 
 export async function POST(req: NextRequest) {
-  // Auth: always require CRON_SECRET or Vercel cron header
-  // A valid Firebase ID token is also accepted for manual dashboard triggers
+  // Auth: only accept CRON_SECRET (from cron-job.org) or Vercel cron header.
+  // Firebase user tokens are NOT accepted — this route runs across all users' posts
+  // and must never be triggerable by an individual logged-in user.
   {
     const authHeader = req.headers.get("authorization") || "";
     const isVercelCron = req.headers.get("x-vercel-cron") === "1";
     const isCronSecret = !!CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`;
-    const isFirebaseUser = !isCronSecret && !isVercelCron && adminAuth && authHeader.startsWith("Bearer ")
-      ? await adminAuth.verifyIdToken(authHeader.slice(7)).then(() => true).catch(() => false)
-      : false;
-    if (!isVercelCron && !isCronSecret && !isFirebaseUser) {
+    if (!isVercelCron && !isCronSecret) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }

@@ -122,7 +122,14 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Not found or unauthorized" }, { status: 404 });
     }
 
-    const sanitized = { ...updates };
+    // Allowlist — only these fields can be patched by clients
+    const ALLOWED = new Set(["content", "topic", "tone", "audience", "length", "custom_instructions",
+      "image_url", "image_mode", "image_hook", "scheduled_at", "schedule_timezone",
+      "best_time_applied", "status", "failed_reason"]);
+    const sanitized: Record<string, any> = {};
+    for (const [k, v] of Object.entries(updates)) {
+      if (ALLOWED.has(k)) sanitized[k] = v;
+    }
     if (sanitized.scheduled_at) sanitized.scheduled_at = toFirestoreTimestamp(sanitized.scheduled_at);
     if (sanitized.published_at) sanitized.published_at = toFirestoreTimestamp(sanitized.published_at);
     await docRef.update({ ...sanitized, updated_at: FieldValue.serverTimestamp() });

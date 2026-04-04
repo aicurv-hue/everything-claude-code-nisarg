@@ -41,27 +41,34 @@ export default function CampaignDetailPage() {
   const handlePauseResume = async () => {
     if (!campaign) return;
     setActionLoading(true);
-    const token = await getAuthToken();
-    const newStatus = campaign.status === "active" ? "paused" : "active";
-    await fetch("/api/campaigns", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ id, status: newStatus }),
-    });
-    setCampaign(prev => prev ? { ...prev, status: newStatus } : prev);
-    setActionLoading(false);
+    try {
+      const token = await getAuthToken();
+      const newStatus = campaign.status === "active" ? "paused" : "active";
+      const res = await fetch("/api/campaigns", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ id, status: newStatus }),
+      });
+      if (!res.ok) { alert("Failed to update campaign status. Please try again."); return; }
+      setCampaign(prev => prev ? { ...prev, status: newStatus } : prev);
+    } catch { alert("Failed to update campaign status. Please try again."); }
+    finally { setActionLoading(false); }
   };
 
   const handleDelete = async () => {
     if (!confirm("Delete this campaign and all its posts?")) return;
     setActionLoading(true);
-    const token = await getAuthToken();
-    await fetch("/api/campaigns", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ id }),
-    });
-    router.push("/dashboard/campaigns");
+    try {
+      const token = await getAuthToken();
+      const res = await fetch("/api/campaigns", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) { alert("Failed to delete campaign. Please try again."); return; }
+      router.push("/dashboard/campaigns");
+    } catch { alert("Failed to delete campaign. Please try again."); }
+    finally { setActionLoading(false); }
   };
 
   if (loading) {
