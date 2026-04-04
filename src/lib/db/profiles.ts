@@ -45,6 +45,8 @@ export interface UserProfile {
   lastActiveSegment: "individual" | "corporate";
   individual: ProfileSegment;
   corporate: ProfileSegment;
+  profilePhotoUrl?: string;
+  profilePhotoHasFace?: boolean;
 }
 
 const COLLECTION_NAME = "profiles";

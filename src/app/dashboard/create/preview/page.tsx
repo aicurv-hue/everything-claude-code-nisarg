@@ -9,14 +9,14 @@ import { useAuth } from "@/lib/context/auth";
 import {
   CheckCircle, AlertCircle, Linkedin, FileText, Send,
   ImageIcon, RefreshCw, Download, Sparkles, Upload, X,
-  ArrowLeft, CalendarDays, RotateCcw, Wand2
+  ArrowLeft, CalendarDays, RotateCcw, Wand2, User
 } from "lucide-react";
 import SchedulePicker from "@/components/schedule/SchedulePicker";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
 // Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
 import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 
-type ImageMode = "ai" | "upload" | "reference" | "none";
+type ImageMode = "ai" | "upload" | "reference" | "face" | "none";
 
 export default function PostPreviewPage() {
   const { user } = useAuth();
@@ -44,6 +44,14 @@ export default function PostPreviewPage() {
   const [linkedInUser, setLinkedInUser]     = useState<{ name: string; picture: string; email: string } | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [profileName, setProfileName]       = useState<string | null>(null);
+
+  // "Use My Face" state
+  const [profilePhotoUrl, setProfilePhotoUrl]       = useState<string | null>(null);
+  const [profilePhotoHasFace, setProfilePhotoHasFace] = useState(false);
+  const [faceStyle, setFaceStyle]                   = useState<"professional" | "casual" | "minimal" | "creative">("professional");
+  const [isFaceGenerating, setIsFaceGenerating]     = useState(false);
+  const [faceGeneratedUrl, setFaceGeneratedUrl]     = useState<string | null>(null);
+  const [faceError, setFaceError]                   = useState<string | null>(null);
 
   // ── Image hook state (Layer 2 — text overlay) ───────────────────────────────
   const [imageHook, setImageHook]               = useState<string>("");
@@ -119,6 +127,10 @@ export default function PostPreviewPage() {
           if (seg === "corporate") {
             const orgId = p?.corporate?.linkedinOrganizationId;
             if (orgId) setOrganizationId(orgId);
+          }
+          if (p?.profilePhotoUrl) {
+            setProfilePhotoUrl(p.profilePhotoUrl);
+            setProfilePhotoHasFace(p.profilePhotoHasFace ?? true);
           }
         })
         .catch(() => {});
@@ -284,6 +296,29 @@ export default function PostPreviewPage() {
     setImageError(null);
     if (mode !== "ai") { setImageUrl(null); setIsGeneratingImage(false); }
     if (mode !== "upload") { setUploadedFile(null); setUploadedPreview(null); }
+    if (mode !== "face") { setFaceGeneratedUrl(null); setFaceError(null); }
+  };
+
+  const generateFaceImage = async () => {
+    if (!profilePhotoUrl || isFaceGenerating) return;
+    setIsFaceGenerating(true);
+    setFaceError(null);
+    setFaceGeneratedUrl(null);
+    try {
+      const token = await getAuthToken();
+      const res = await fetch("/api/image/face-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ backgroundStyle: faceStyle, postTopic: postData?.metadata?.topic || "" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Face image generation failed");
+      setFaceGeneratedUrl(data.url);
+    } catch (err: any) {
+      setFaceError(err.message || "Failed to generate face image");
+    } finally {
+      setIsFaceGenerating(false);
+    }
   };
 
   const handleRemoveReferenceImage = () => {
@@ -320,6 +355,7 @@ export default function PostPreviewPage() {
     imageMode === "ai"        ? imageUrl :
     imageMode === "upload"    ? uploadedPreview :
     imageMode === "reference" ? referenceImagePreview :
+    imageMode === "face"      ? faceGeneratedUrl :
     null;
 
   /* ── Draft / Publish ── */
@@ -836,7 +872,7 @@ export default function PostPreviewPage() {
                   width="w-72"
                 />
               </div>
-              <div className={`grid gap-3 ${referenceImagePreview ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+              <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
                 {/* Your Photo — only shown if user uploaded a reference image on Create page */}
                 {referenceImagePreview && (
                   <button
@@ -899,6 +935,42 @@ export default function PostPreviewPage() {
                     <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">Text-only post</p>
                   </div>
                 </button>
+
+                {/* Use My Face — Individual only */}
+                {postData?.metadata?.segment !== "corporate" && (
+                  <button
+                    onClick={() => profilePhotoHasFace && profilePhotoUrl && handleModeChange("face")}
+                    disabled={!profilePhotoHasFace || !profilePhotoUrl}
+                    title={
+                      !profilePhotoUrl
+                        ? "Upload a profile photo in Settings → Identity first"
+                        : !profilePhotoHasFace
+                        ? "No face detected in your profile photo. Update it in Settings → Identity"
+                        : undefined
+                    }
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center disabled:opacity-40 disabled:cursor-not-allowed ${
+                      imageMode === "face"
+                        ? "border-purple-500 bg-purple-50"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    {profilePhotoUrl ? (
+                      <div className="w-9 h-9 rounded-xl overflow-hidden border border-slate-200 shrink-0">
+                        <img src={profilePhotoUrl} alt="Your face" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100">
+                        <User className="w-4 h-4 text-slate-400" />
+                      </div>
+                    )}
+                    <div>
+                      <p className={`text-xs font-semibold ${imageMode === "face" ? "text-purple-700" : "text-slate-700"}`}>Use My Face</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                        {profilePhotoUrl ? "AI places you in a scene" : "Upload photo in Settings"}
+                      </p>
+                    </div>
+                  </button>
+                )}
               </div>
 
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
@@ -1045,6 +1117,65 @@ export default function PostPreviewPage() {
                     </button>
                   </div>
                   <p className="mt-2 text-[11px] text-green-600 font-medium">Your photo · will be attached to the post</p>
+                </div>
+              )}
+
+              {imageMode === "face" && (
+                <div className="flex flex-col items-center gap-4 text-center w-full">
+                  {!faceGeneratedUrl && !isFaceGenerating && (
+                    <>
+                      <div className="w-full">
+                        <p className="text-xs font-medium text-slate-600 mb-3">Choose a background style</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {([
+                            { id: "professional", label: "Professional", emoji: "💼" },
+                            { id: "casual",       label: "Casual",       emoji: "☕" },
+                            { id: "minimal",      label: "Minimal",      emoji: "⬜" },
+                            { id: "creative",     label: "Creative",     emoji: "🎨" },
+                          ] as const).map(s => (
+                            <button
+                              key={s.id}
+                              onClick={() => setFaceStyle(s.id)}
+                              className={`py-2.5 px-3 rounded-lg border text-xs font-medium transition-all ${
+                                faceStyle === s.id
+                                  ? "border-purple-500 bg-purple-50 text-purple-700"
+                                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                              }`}
+                            >
+                              {s.emoji} {s.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {faceError && <p className="text-sm text-red-500">{faceError}</p>}
+                      <button
+                        onClick={generateFaceImage}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium text-white transition-all"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        Generate with My Face
+                      </button>
+                    </>
+                  )}
+                  {isFaceGenerating && (
+                    <div className="flex flex-col items-center gap-3 text-slate-400">
+                      <div className="w-7 h-7 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
+                      <p className="text-xs">Generating your face image... (this takes ~30s)</p>
+                    </div>
+                  )}
+                  {faceGeneratedUrl && !isFaceGenerating && (
+                    <div className="w-full relative">
+                      <img src={faceGeneratedUrl} alt="Face generated image" className="w-full rounded-xl object-cover aspect-square" />
+                      <div className="mt-3 flex gap-2 justify-center">
+                        <button
+                          onClick={() => { setFaceGeneratedUrl(null); setFaceError(null); }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-600 hover:bg-slate-50 transition-all"
+                        >
+                          <RefreshCw className="w-3 h-3" /> Regenerate
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

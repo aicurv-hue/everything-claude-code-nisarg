@@ -6,6 +6,34 @@ import { getStorage, ref, uploadString, getDownloadURL, uploadBytes } from "fire
 import { app, isMock } from "@/lib/firebase";
 
 /**
+ * Upload a profile headshot (data: URL) to Firebase Storage.
+ * Stores at user-photos/{userId}/profile.jpg
+ * Returns download URL or null on failure.
+ */
+export async function uploadProfilePhotoToStorage(
+  dataUrl: string,
+  userId: string
+): Promise<string | null> {
+  if (isMock || !app || !dataUrl.startsWith("data:")) return null;
+
+  try {
+    const storage = getStorage(app as any);
+    const storageRef = ref(storage, `user-photos/${userId}/profile.jpg`);
+
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+
+    const snapshot = await uploadBytes(storageRef, blob, { contentType: "image/jpeg" });
+    const downloadUrl = await getDownloadURL(snapshot.ref);
+    console.log("[uploadProfilePhoto] Uploaded to Firebase Storage:", downloadUrl);
+    return downloadUrl;
+  } catch (err: any) {
+    console.error("[uploadProfilePhoto] Firebase Storage upload failed:", err?.message || err);
+    return null;
+  }
+}
+
+/**
  * Upload a data: URL string to Firebase Storage.
  * Returns a public HTTPS URL, or null if upload fails.
  */

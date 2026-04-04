@@ -98,6 +98,9 @@
   },
   "scripts": {
     "dev": "next dev",
+    "qa": "playwright test",
+    "qa:live": "QA_URL=https://linkedin-automation.vercel.app playwright test",
+    "qa:report": "playwright show-report tests/qa/report",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "next lint",
@@ -131,6 +134,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.2.1",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",

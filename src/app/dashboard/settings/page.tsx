@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
 import {
   AlertTriangle,
@@ -17,6 +17,8 @@ import {
   CheckCircle2,
   LogOut,
   Image as ImageIcon,
+  Camera,
+  Upload,
 } from "lucide-react";
 import { UserProfile, ProfileSegment, ImageStyle } from "@/lib/db/profiles";
 import { useAuth } from "@/lib/context/auth";
@@ -70,6 +72,13 @@ export default function SettingsPage() {
   const [liExpiry, setLiExpiry]       = useState<number | null>(null);
   const [liDisconnecting, setLiDisconnecting] = useState(false);
   const [liJustDisconnected, setLiJustDisconnected] = useState(false);
+
+  // Profile photo state (Individual only)
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoValidation, setPhotoValidation] = useState<{ quality: string; message: string } | null>(null);
+  const [photoHasFace, setPhotoHasFace] = useState<boolean | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getAuthToken().then(tok =>
@@ -177,6 +186,10 @@ export default function SettingsPage() {
             corporate:  { ...INITIAL_SEGMENT, ...cloudProfile.corporate }
           });
           setProfileType(cloudProfile.lastActiveSegment || "individual");
+          if (cloudProfile.profilePhotoUrl) {
+            setProfilePhoto(cloudProfile.profilePhotoUrl);
+            setPhotoHasFace(cloudProfile.profilePhotoHasFace ?? true);
+          }
         }
       } catch (err) {
         console.error("Failed to load settings:", err);
@@ -213,6 +226,59 @@ export default function SettingsPage() {
       [profileType]: { ...prev[profileType], [field]: value }
     }));
     setHasChanges(true);
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setPhotoUploading(true);
+    setPhotoValidation(null);
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const dataUrl = ev.target?.result as string;
+
+      // 1. Validate face via API
+      const token = await getAuthToken();
+      const validRes = await fetch("/api/image/validate-face", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ imageBase64: dataUrl }),
+      }).catch(() => null);
+
+      let hasFace = true;
+      if (validRes?.ok) {
+        const vd = await validRes.json();
+        hasFace = vd.hasFace === true;
+        setPhotoHasFace(hasFace);
+        setPhotoValidation({ quality: vd.quality, message: vd.message });
+      }
+
+      // 2. Upload to Firebase Storage
+      const { uploadProfilePhotoToStorage } = await import("@/lib/storage/uploadImage");
+      const url = await uploadProfilePhotoToStorage(dataUrl, user.uid);
+
+      if (url) {
+        setProfilePhoto(url);
+        if (token) {
+          await fetch("/api/profiles", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              profile: {
+                lastActiveSegment: profileType,
+                individual: segments.individual,
+                corporate: segments.corporate,
+                profilePhotoUrl: url,
+                profilePhotoHasFace: hasFace,
+              },
+            }),
+          });
+        }
+      }
+      setPhotoUploading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const currentProfile = segments[profileType];
@@ -375,6 +441,65 @@ export default function SettingsPage() {
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700 leading-relaxed">
               <strong>This tab tells Neel who you are.</strong> Every post will be written from this identity. The more specific you are here, the more authoritative and grounded your posts will sound.
             </div>
+
+            {/* Profile Photo — Individual only */}
+            {profileType === "individual" && (
+              <div className="p-4 border border-slate-200 rounded-xl bg-slate-50 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Camera className="w-4 h-4 text-[#0A66C2]" />
+                  <p className="text-sm font-semibold text-slate-700">Profile Photo for AI Face Images</p>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Upload a clear headshot to enable &quot;Use My Face&quot; image generation on posts.{" "}
+                  <strong>Requirements:</strong> Face forward, good lighting, no sunglasses, plain or simple background. A professional headshot works best.
+                </p>
+
+                {profilePhoto ? (
+                  <div className="flex items-center gap-4">
+                    <img src={profilePhoto} className="w-16 h-16 rounded-full object-cover border-2 border-[#0A66C2]/30" alt="Profile headshot" />
+                    <div className="flex-1">
+                      {photoValidation && (
+                        <div className={`text-xs px-3 py-1.5 rounded-lg mb-2 ${
+                          photoHasFace ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+                        }`}>
+                          {photoHasFace ? "✓ " : "⚠ "}{photoValidation.message}
+                        </div>
+                      )}
+                      {!photoValidation && photoHasFace !== null && (
+                        <div className={`text-xs px-3 py-1.5 rounded-lg mb-2 ${
+                          photoHasFace ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+                        }`}>
+                          {photoHasFace ? "✓ Face verified" : "⚠ No clear face detected"}
+                        </div>
+                      )}
+                      <button onClick={() => photoInputRef.current?.click()} className="text-xs text-[#0A66C2] hover:underline font-medium">
+                        Change photo
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={photoUploading}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 border-dashed border-slate-300 hover:border-[#0A66C2] bg-white text-sm text-slate-500 hover:text-[#0A66C2] transition-all w-full justify-center disabled:opacity-50"
+                  >
+                    {photoUploading ? (
+                      <><div className="w-4 h-4 border-2 border-[#0A66C2]/30 border-t-[#0A66C2] rounded-full animate-spin" /> Uploading...</>
+                    ) : (
+                      <><Upload className="w-4 h-4" /> Upload headshot</>
+                    )}
+                  </button>
+                )}
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handlePhotoUpload}
+                />
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-5">
               <div>
                 <label className={labelClass}>{profileType === "individual" ? "Full Name" : "Company Name"}</label>
