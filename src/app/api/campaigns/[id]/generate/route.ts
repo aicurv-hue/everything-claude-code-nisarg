@@ -25,11 +25,11 @@ async function callOpenRouter(messages: any[], model: string): Promise<string> {
   return data.choices?.[0]?.message?.content || "";
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const uid = await getUid(req);
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const campaignId = params.id;
+  const { id: campaignId } = await params;
   const campaignSnap = await adminDb!.collection("campaigns").doc(campaignId).get();
   if (!campaignSnap.exists || campaignSnap.data()?.user_id !== uid) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

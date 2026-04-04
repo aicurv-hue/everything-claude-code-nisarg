@@ -11,11 +11,11 @@ async function getUid(req: NextRequest): Promise<string | null> {
   } catch { return null; }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const uid = await getUid(req);
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const campaignId = params.id;
+  const { id: campaignId } = await params;
   const { start_date, timezone } = await req.json();
   if (!start_date) return NextResponse.json({ error: "start_date required" }, { status: 400 });
 
