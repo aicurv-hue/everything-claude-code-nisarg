@@ -38,6 +38,8 @@ export interface Post {
   image_mode?: "ai" | "upload" | "none";
   image_hook?: string;        // Short text overlay shown on the image (7-word hook/question)
   organization_id?: string;  // per-user org ID for corporate posts
+  campaign_id?: string;      // parent campaign (if part of a campaign sequence)
+  campaign_position?: number; // 1-based position in the campaign sequence
   created_at: any;
   updated_at?: any;
 }

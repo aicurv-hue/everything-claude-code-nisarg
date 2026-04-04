@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, Settings, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut, BookOpen, HelpCircle, TrendingUp } from "lucide-react";
+import { BarChart3, Settings, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut, BookOpen, HelpCircle, TrendingUp, Rocket } from "lucide-react";
 import { SegmentProvider, useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
@@ -34,8 +34,9 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
     { href: "/dashboard",          label: "Dashboard",   icon: <BarChart3 className="w-4 h-4" /> },
     { href: "/dashboard/create",   label: "Create Post", icon: <PenSquare className="w-4 h-4" /> },
     { href: "/dashboard/drafts",    label: "Drafts",      icon: <FileText className="w-4 h-4" /> },
-    { href: "/dashboard/schedule", label: "Schedule",    icon: <CalendarDays className="w-4 h-4" /> },
-    { href: "/dashboard/history",  label: "History",     icon: <Clock className="w-4 h-4" /> },
+    { href: "/dashboard/schedule",   label: "Schedule",    icon: <CalendarDays className="w-4 h-4" /> },
+    { href: "/dashboard/campaigns",  label: "Campaigns",   icon: <Rocket className="w-4 h-4" /> },
+    { href: "/dashboard/history",    label: "History",     icon: <Clock className="w-4 h-4" /> },
     { href: "/dashboard/analytics", label: "Analytics",  icon: <TrendingUp className="w-4 h-4" /> },
     { href: "/dashboard/memory",   label: "Memory",      icon: <Brain className="w-4 h-4" /> },
     { href: "/dashboard/settings", label: "Settings",    icon: <Settings className="w-4 h-4" /> },
