@@ -14,9 +14,11 @@ interface Props {
   startDate?: Date;
   onContentChange: (position: number, content: string) => void;
   onSave: (position: number) => Promise<void>;
+  autoSavingPositions?: Set<number>;
+  autoSavedPositions?: Set<number>;
 }
 
-export default function CampaignPostReview({ posts, frequencyDays, startDate, onContentChange, onSave }: Props) {
+export default function CampaignPostReview({ posts, frequencyDays, startDate, onContentChange, onSave, autoSavingPositions, autoSavedPositions }: Props) {
   const [expanded, setExpanded] = useState<number>(1);
   const [saving, setSaving] = useState<number | null>(null);
   const [saved, setSaved] = useState<Set<number>>(new Set());
@@ -71,13 +73,21 @@ export default function CampaignPostReview({ posts, frequencyDays, startDate, on
               />
               <div className="flex items-center justify-between">
                 <span className="text-[11px] text-slate-400">{post.content.length} characters · {post.content.split(/\s+/).filter(Boolean).length} words</span>
-                <button
-                  onClick={() => handleSave(post.campaign_position)}
-                  disabled={saving === post.campaign_position}
-                  className="px-4 py-1.5 bg-[#0A66C2] text-white text-xs font-medium rounded-lg hover:bg-[#0854a0] transition-all disabled:opacity-50"
-                >
-                  {saving === post.campaign_position ? "Saving..." : saved.has(post.campaign_position) ? "✓ Saved" : "Save Edits"}
-                </button>
+                <div className="flex items-center gap-2">
+                  {(autoSavingPositions?.has(post.campaign_position)) && (
+                    <span className="text-[10px] text-slate-400 italic">Saving...</span>
+                  )}
+                  {(!autoSavingPositions?.has(post.campaign_position) && autoSavedPositions?.has(post.campaign_position)) && (
+                    <span className="text-[10px] text-green-600 font-medium">✓ Saved</span>
+                  )}
+                  <button
+                    onClick={() => handleSave(post.campaign_position)}
+                    disabled={saving === post.campaign_position}
+                    className="px-4 py-1.5 bg-[#0A66C2] text-white text-xs font-medium rounded-lg hover:bg-[#0854a0] transition-all disabled:opacity-50"
+                  >
+                    {saving === post.campaign_position ? "Saving..." : saved.has(post.campaign_position) ? "✓ Saved" : "Save Edits"}
+                  </button>
+                </div>
               </div>
             </div>
           )}

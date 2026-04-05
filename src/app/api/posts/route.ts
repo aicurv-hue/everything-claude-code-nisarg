@@ -124,7 +124,7 @@ export async function PATCH(req: NextRequest) {
 
     // Allowlist — only these fields can be patched by clients
     const ALLOWED = new Set(["content", "topic", "tone", "audience", "length", "custom_instructions",
-      "image_url", "image_mode", "image_hook", "scheduled_at", "schedule_timezone",
+      "image_url", "image_mode", "image_hook", "image_prompt", "scheduled_at", "schedule_timezone",
       "best_time_applied", "status", "failed_reason"]);
     const sanitized: Record<string, any> = {};
     for (const [k, v] of Object.entries(updates)) {

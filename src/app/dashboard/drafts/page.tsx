@@ -152,6 +152,15 @@ export default function DraftsPage() {
                   <span className="text-[11px] font-medium px-2 py-0.5 rounded-md border bg-slate-50 text-slate-500 border-slate-200 capitalize">
                     {draft.segment}
                   </span>
+                  {draft.campaign_id && (
+                    <Link
+                      href={`/dashboard/campaigns/${draft.campaign_id}`}
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 transition-colors"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      Campaign
+                    </Link>
+                  )}
                 </div>
                 <span className="text-[11px] text-slate-400 flex items-center gap-1">
                   <Clock className="w-3 h-3" />

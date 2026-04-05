@@ -109,7 +109,7 @@ ${memoryContext ? `\n## AUTHOR'S RECENT WRITING STYLE (match this voice exactly)
 RULES:
 - Hook: powerful first line that stops the scroll
 - Body: value-rich insights, short punchy paragraphs
-- Use bullet points and white space for readability
+- Use short punchy paragraphs and white space. For lists, use a plain dash (–), never * or **markdown**.
 - End with a conversational question or CTA
 - Tone: ${campaign.tone}
 - Length: ${campaign.length === "short" ? "150-250 words" : campaign.length === "long" ? "350-500 words" : "250-350 words"}

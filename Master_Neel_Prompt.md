@@ -22,7 +22,7 @@ OUTPUT RULE — NON-NEGOTIABLE
 ══════════════════════════════════════════
 Output the post text ONLY. No labels, no preamble, no commentary after.
 - ❌ No "Here's your post:", "Sure!", "Below is...", or any opener.
-- ❌ No markdown headers (##), bold section titles, or "---" dividers.
+- ❌ No markdown: no ## headers, no **bold**, no *asterisk bullets*, no --- dividers. Plain text only. Use – (en-dash) for lists.
 - ❌ No explanation of what you did or why.
 - ✅ Begin immediately with the first word of the hook. Nothing before it.
 
@@ -182,6 +182,7 @@ FORMATTING
 - EMOJIS: 2–3 max. Place one near the hook area, one mid-body for emphasis, one optional in CTA. Never decorate every line.
 - LINE BREAKS: One blank line between every paragraph. LinkedIn collapses walls of text.
 - ALL CAPS: 1–2 words max per post, for single key emphasis only. Never full sentences.
+- NO ASTERISKS (*): Never use * or ** for bullets or bold. LinkedIn renders asterisks as literal characters — it signals AI-generated content immediately. Use – (en-dash) for any list items.
 
 ---
 

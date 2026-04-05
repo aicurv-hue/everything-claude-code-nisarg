@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/context/auth";
 import { useSegment } from "@/lib/context/segment";
@@ -40,8 +40,19 @@ export default function NewCampaignPage() {
   const [activating, setActivating] = useState(false);
   const [activateError, setActivateError] = useState<string | null>(null);
 
+  // Auto-save state
+  const saveTimersRef = useRef<Record<number, NodeJS.Timeout>>({});
+  const postsRef = useRef<PostDraft[]>([]); // ref to avoid stale closure in debounced saves
+  const [savingPositions, setSavingPositions] = useState<Set<number>>(new Set());
+  const [savedPositions, setSavedPositions] = useState<Set<number>>(new Set());
+  const [savingAll, setSavingAll] = useState(false);
+
   const handleGenerate = async () => {
     if (!user) return;
+    if (posts.length > 0) {
+      const confirmed = confirm("Regenerating will delete your current posts and any edits. Continue?");
+      if (!confirmed) return;
+    }
     setGenerating(true);
     setGenerateError(null);
     try {
@@ -62,6 +73,7 @@ export default function NewCampaignPage() {
       });
       const genData = await genRes.json().catch(() => ({}));
       if (!genRes.ok) throw new Error((genData as any).error || "Generation failed");
+      postsRef.current = genData.posts || [];
       setPosts(genData.posts || []);
       setStep(2);
     } catch (err: any) {
@@ -72,19 +84,48 @@ export default function NewCampaignPage() {
   };
 
   const handleContentChange = (position: number, content: string) => {
-    setPosts(prev => prev.map(p => p.campaign_position === position ? { ...p, content } : p));
+    setPosts(prev => {
+      const next = prev.map(p => p.campaign_position === position ? { ...p, content } : p);
+      postsRef.current = next; // keep ref in sync for debounced saves
+      return next;
+    });
+    // Auto-save debounce
+    if (saveTimersRef.current[position]) clearTimeout(saveTimersRef.current[position]);
+    saveTimersRef.current[position] = setTimeout(() => {
+      handleSavePost(position);
+    }, 1500);
   };
 
   const handleSavePost = async (position: number) => {
-    const post = posts.find(p => p.campaign_position === position);
+    const post = postsRef.current.find(p => p.campaign_position === position);
     if (!post?.id) return;
-    const token = await getAuthToken();
-    const res = await fetch("/api/posts", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ id: post.id, content: post.content }),
-    });
-    if (!res.ok) throw new Error("Failed to save post");
+    setSavingPositions(prev => new Set(prev).add(position));
+    try {
+      const token = await getAuthToken();
+      const res = await fetch("/api/posts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ id: post.id, content: post.content }),
+      });
+      if (!res.ok) throw new Error("Failed to save post");
+      setSavedPositions(prev => new Set(prev).add(position));
+      setTimeout(() => {
+        setSavedPositions(prev => { const next = new Set(prev); next.delete(position); return next; });
+      }, 2000);
+    } finally {
+      setSavingPositions(prev => { const next = new Set(prev); next.delete(position); return next; });
+    }
+  };
+
+  const handleSaveAndExit = async () => {
+    if (!campaignId) return;
+    setSavingAll(true);
+    try {
+      await Promise.all(posts.map(p => handleSavePost(p.campaign_position)));
+      router.push(`/dashboard/campaigns/${campaignId}`);
+    } finally {
+      setSavingAll(false);
+    }
   };
 
   const handleActivate = async () => {
@@ -163,18 +204,31 @@ export default function NewCampaignPage() {
               <p className="text-sm font-semibold text-slate-800">{params.name}</p>
               <p className="text-xs text-slate-500">{posts.length} posts generated · every {params.frequency_days} days</p>
             </div>
-            <button
-              onClick={() => setStep(3)}
-              className="px-4 py-2 bg-[#0A66C2] text-white text-sm font-semibold rounded-lg hover:bg-[#0854a0] transition-all"
-            >
-              Continue to Schedule &rarr;
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSaveAndExit}
+                disabled={savingAll}
+                className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg transition-all disabled:opacity-50"
+              >
+                {savingAll ? (
+                  <><div className="w-3.5 h-3.5 border-2 border-slate-400/30 border-t-slate-600 rounded-full animate-spin" /> Saving...</>
+                ) : "Save & Exit"}
+              </button>
+              <button
+                onClick={() => setStep(3)}
+                className="px-4 py-2 bg-[#0A66C2] text-white text-sm font-semibold rounded-lg hover:bg-[#0854a0] transition-all"
+              >
+                Continue to Schedule &rarr;
+              </button>
+            </div>
           </div>
           <CampaignPostReview
             posts={posts}
             frequencyDays={params.frequency_days}
             onContentChange={handleContentChange}
             onSave={handleSavePost}
+            autoSavingPositions={savingPositions}
+            autoSavedPositions={savedPositions}
           />
           <button
             onClick={() => setStep(3)}
