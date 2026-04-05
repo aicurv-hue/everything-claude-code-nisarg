@@ -51,17 +51,17 @@ export default function NewCampaignPage() {
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ ...params, segment }),
       });
-      const createData = await createRes.json();
-      if (!createRes.ok) throw new Error(createData.error || "Failed to create campaign");
-      const id = createData.id;
+      const createData = await createRes.json().catch(() => ({}));
+      if (!createRes.ok) throw new Error((createData as any).error || "Failed to create campaign");
+      const id = (createData as any).id;
       setCampaignId(id);
 
       const genRes = await fetch(`/api/campaigns/${id}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       });
-      const genData = await genRes.json();
-      if (!genRes.ok) throw new Error(genData.error || "Generation failed");
+      const genData = await genRes.json().catch(() => ({}));
+      if (!genRes.ok) throw new Error((genData as any).error || "Generation failed");
       setPosts(genData.posts || []);
       setStep(2);
     } catch (err: any) {
@@ -79,11 +79,12 @@ export default function NewCampaignPage() {
     const post = posts.find(p => p.campaign_position === position);
     if (!post?.id) return;
     const token = await getAuthToken();
-    await fetch("/api/posts", {
+    const res = await fetch("/api/posts", {
       method: "PATCH",
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ id: post.id, content: post.content }),
     });
+    if (!res.ok) throw new Error("Failed to save post");
   };
 
   const handleActivate = async () => {
@@ -97,8 +98,8 @@ export default function NewCampaignPage() {
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ start_date: new Date(startDate).toISOString(), timezone }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Activation failed");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((data as any).error || "Activation failed");
       router.push(`/dashboard/campaigns/${campaignId}`);
     } catch (err: any) {
       setActivateError(err.message || "Activation failed. Try again.");
