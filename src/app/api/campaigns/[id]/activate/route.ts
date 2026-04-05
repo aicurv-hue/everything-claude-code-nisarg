@@ -12,6 +12,7 @@ async function getUid(req: NextRequest): Promise<string | null> {
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
   const uid = await getUid(req);
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -26,13 +27,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
   const campaign = campaignSnap.data()!;
 
+  // Fetch all campaign posts then filter/sort in memory — avoids composite index requirement
   const postsSnap = await adminDb!.collection("posts")
     .where("campaign_id", "==", campaignId)
-    .where("status", "==", "draft")
-    .orderBy("campaign_position", "asc")
     .get();
 
-  if (postsSnap.docs.length === 0) {
+  const draftDocs = postsSnap.docs
+    .filter(d => d.data().status === "draft")
+    .sort((a, b) => (a.data().campaign_position ?? 0) - (b.data().campaign_position ?? 0));
+
+  if (draftDocs.length === 0) {
     return NextResponse.json({ error: "No draft posts found for this campaign. Generate posts first." }, { status: 400 });
   }
 
@@ -40,16 +44,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const frequencyMs = campaign.frequency_days * 24 * 60 * 60 * 1000;
 
   const batch = adminDb!.batch();
-  let scheduled = 0;
 
-  postsSnap.docs.forEach((d, i) => {
+  draftDocs.forEach((d, i) => {
     const scheduledAt = new Date(startMs + i * frequencyMs);
     batch.update(d.ref, {
       status: "scheduled",
       scheduled_at: Timestamp.fromDate(scheduledAt),
       updated_at: FieldValue.serverTimestamp(),
     });
-    scheduled++;
   });
 
   batch.update(campaignRef, {
@@ -60,5 +62,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   });
 
   await batch.commit();
-  return NextResponse.json({ scheduled });
+  return NextResponse.json({ scheduled: draftDocs.length });
+  } catch (err: any) {
+    console.error("[activate] Error:", err);
+    return NextResponse.json({ error: err.message || "Activation failed" }, { status: 500 });
+  }
 }
