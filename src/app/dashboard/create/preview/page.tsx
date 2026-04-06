@@ -276,9 +276,10 @@ export default function PostPreviewPage() {
     setImageError(null);
     setImageUrl(null);
     try {
+      const token = await getAuthToken();
       const res = await fetch("/api/image/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ prompt }),
       });
       const data = await res.json();
@@ -510,11 +511,11 @@ export default function PostPreviewPage() {
       setShowSchedulePicker(false);
 
       if (imageMode === "ai" && !immediateImageUrl && imagePrompt && saved?.id) {
-        fetch("/api/image/generate", {
+        getAuthToken().then(bgToken => fetch("/api/image/generate", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(bgToken ? { Authorization: `Bearer ${bgToken}` } : {}) },
           body: JSON.stringify({ prompt: imagePrompt }),
-        })
+        }))
           .then((r) => r.ok ? r.json() : null)
           .then((d) => {
             if (d?.url && saved.id) {
