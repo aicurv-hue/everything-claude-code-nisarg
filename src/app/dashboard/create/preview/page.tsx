@@ -153,9 +153,10 @@ export default function PostPreviewPage() {
       const storedProfileRegen = localStorage.getItem("client_profile");
       const imageStyleRegen = storedProfileRegen ? JSON.parse(storedProfileRegen).imageStyle : undefined;
 
+      const regenToken = await getAuthToken();
       const res = await fetch("/api/ai/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(regenToken ? { Authorization: `Bearer ${regenToken}` } : {}) },
         body: JSON.stringify({
           topic:              postData.metadata.topic,
           tone:               postData.metadata.tone,
@@ -201,9 +202,10 @@ export default function PostPreviewPage() {
       const storedProfile = localStorage.getItem("client_profile");
       const imageStyle = storedProfile ? JSON.parse(storedProfile).imageStyle : undefined;
 
+      const imagePromptToken = await getAuthToken();
       const res = await fetch("/api/ai/image-prompt", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(imagePromptToken ? { Authorization: `Bearer ${imagePromptToken}` } : {}) },
         body: JSON.stringify({
           topic:      postData.metadata.topic,
           segment:    postData.metadata.segment,
@@ -249,9 +251,10 @@ export default function PostPreviewPage() {
     if (!editedContent || isGeneratingHook) return;
     setIsGeneratingHook(true);
     try {
+      const hookToken = await getAuthToken();
       const res = await fetch("/api/ai/image-hook", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(hookToken ? { Authorization: `Bearer ${hookToken}` } : {}) },
         body: JSON.stringify({
           post: editedContent,
           topic: postData?.metadata?.topic,
