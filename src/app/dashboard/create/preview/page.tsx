@@ -397,22 +397,6 @@ export default function PostPreviewPage() {
 
     try {
       const authToken = await getAuthToken();
-      // Create the Firestore post first so we have a postDbId to link memory to
-      const postDbRecord = await createPost({
-        user_id: user!.uid, account_id: "personal-account",
-        status: "published",
-        content: editedContent, topic: postData.metadata.topic,
-        tone: postData.metadata.tone, audience: postData.metadata.audience,
-        length: postData.metadata.length,
-        custom_instructions: postData.metadata.customInstructions || undefined,
-        segment: postData.metadata.segment || "individual",
-        research_data: postData.research,
-        image_url: finalImageUrl || undefined,
-        image_hook: imageHook || undefined,
-        published_at: new Date().toISOString(),
-        created_at: null,
-      });
-      const postDbId = (postDbRecord as any)?.id || undefined;
 
       const res = await fetch("/api/linkedin/publish", {
         method: "POST",
@@ -428,38 +412,41 @@ export default function PostPreviewPage() {
           topic:    postData.metadata.topic    || "",
           audience: postData.metadata.audience || "",
           tone:     postData.metadata.tone     || "professional",
-          postDbId,
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         setPublishStatus("error");
-        setPublishMessage(data.error || "Publishing failed. Please try again.");
-        // Update the post we already created to draft status
-        if (postDbId && authToken) {
-          fetch("/api/posts", {
-            method: "PATCH",
-            headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ id: postDbId, status: "draft" }),
-          }).catch(() => {});
-        }
-      } else {
-        setPublishStatus("success");
-        setPublishMessage("Post published successfully to LinkedIn! 🎉");
-        // Update the post with the LinkedIn post ID
-        if (postDbId && authToken) {
-          fetch("/api/posts", {
-            method: "PATCH",
-            headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ id: postDbId, linkedin_post_id: data.postId || "unknown" }),
-          }).catch(() => {});
-        }
+        setPublishMessage((data as any).error || `Publishing failed (${res.status}). Please try again.`);
+        return;
       }
-    } catch {
+
+      setPublishStatus("success");
+      setPublishMessage("Post published successfully to LinkedIn! 🎉");
+
+      // Save to Firestore after successful publish — fire and forget
+      if (authToken) {
+        createPost({
+          user_id: user!.uid, account_id: "personal-account",
+          status: "published",
+          content: editedContent, topic: postData.metadata.topic,
+          tone: postData.metadata.tone, audience: postData.metadata.audience,
+          length: postData.metadata.length,
+          custom_instructions: postData.metadata.customInstructions || undefined,
+          segment: postData.metadata.segment || "individual",
+          research_data: postData.research,
+          image_url: finalImageUrl || undefined,
+          image_hook: imageHook || undefined,
+          linkedin_post_id: (data as any).postId || undefined,
+          published_at: new Date().toISOString(),
+          created_at: null,
+        }).catch(() => {});
+      }
+    } catch (err: any) {
       setPublishStatus("error");
-      setPublishMessage("Network error. Check your connection and try again.");
+      setPublishMessage(err?.message || "Publishing failed. Please try again.");
     } finally {
       setIsPublishing(false);
     }
