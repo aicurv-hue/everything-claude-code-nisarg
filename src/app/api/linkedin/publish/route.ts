@@ -219,11 +219,15 @@ export async function POST(request: NextRequest) {
     const errText = await res.text();
     console.error(`[linkedin/publish] Post failed (${segment}):`, errText);
 
-    // 422 on corporate = missing w_organization_social scope (requires LinkedIn Partner approval)
-    if (res.status === 422 && segment === "corporate") {
+    // 400/422 on corporate = missing w_organization_social scope (requires LinkedIn Partner approval)
+    const isOrgPermissionError = segment === "corporate" && (
+      res.status === 422 ||
+      (res.status === 400 && errText.toLowerCase().includes("organization permission"))
+    );
+    if (isOrgPermissionError) {
       return NextResponse.json(
         {
-          error: "Company page posting requires LinkedIn Partner approval. LinkedIn has not yet granted this app the w_organization_social permission. Apply at the LinkedIn Marketing Developer Platform, then reconnect LinkedIn once approved.",
+          error: "Company page posting requires LinkedIn Partner approval for the w_organization_social scope. Please use Schedule instead — scheduled posts will publish automatically once approved.",
           details: errText,
           code: "PARTNER_APPROVAL_REQUIRED",
         },
