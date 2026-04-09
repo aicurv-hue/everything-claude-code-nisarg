@@ -307,7 +307,7 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Profile</h1>
           <p className="text-sm text-slate-500 mt-0.5">Define your brand context for Individual and Corporate profiles.</p>
         </div>
         <button

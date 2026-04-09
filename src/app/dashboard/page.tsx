@@ -179,7 +179,7 @@ export default function DashboardHomePage() {
 
   const statCards = stats ? [
     {
-      label: "Total Generated",
+      label: "Total Generated Posts",
       value: stats.total,
       icon: BarChart3,
       color: "text-blue-600",
@@ -187,7 +187,7 @@ export default function DashboardHomePage() {
       sub: `${stats.drafts} drafts · ${stats.failed} failed`,
     },
     {
-      label: "Live on LinkedIn",
+      label: "Live Posts on LinkedIn",
       value: stats.published,
       icon: Send,
       color: "text-green-600",
@@ -195,7 +195,7 @@ export default function DashboardHomePage() {
       sub: stats.published > 0 ? "Confirmed published" : "No posts published yet",
     },
     {
-      label: "Last 7 Days",
+      label: "Published This Week",
       value: stats.lastWeek,
       icon: Calendar,
       color: "text-violet-600",
