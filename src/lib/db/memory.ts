@@ -41,10 +41,13 @@ export interface PostMemory {
    * How this memory was created:
    *   "auto"        — extracted automatically after a post went live via the tool
    *   "user_upload" — user manually pasted a post they wrote before using the tool
+   *   "user_url"    — user submitted a LinkedIn post URL; content fetched via Jina Reader
    */
-  source?: "auto" | "user_upload";
-  /** Original post text — only stored for user_upload entries */
+  source?: "auto" | "user_upload" | "user_url";
+  /** Original post text — only stored for user_upload / user_url entries */
   raw_content?: string;
+  /** Original URL — only stored for user_url entries */
+  source_url?: string;
   created_at: any;
 }
 
