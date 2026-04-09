@@ -150,8 +150,7 @@ export default function PostPreviewPage() {
     ].filter(Boolean).join("\n") || undefined;
 
     try {
-      const storedProfileRegen = localStorage.getItem("client_profile");
-      const imageStyleRegen = storedProfileRegen ? JSON.parse(storedProfileRegen).imageStyle : undefined;
+      const imageStyleRegen = postData.clientProfile?.imageStyle ?? undefined;
 
       const regenToken = await getAuthToken();
       const res = await fetch("/api/ai/generate", {
@@ -166,6 +165,15 @@ export default function PostPreviewPage() {
           research:           postData.research,
           customInstructions: effectiveInstructions,
           imageStyle:         imageStyleRegen,
+          // Full context — same as initial generation
+          model:              postData.metadata.model   ?? undefined,
+          clientProfile:      postData.clientProfile    ?? undefined,
+          systemPrompt:       postData.systemPrompt     ?? undefined,
+          memoryContext:      postData.memoryContext     ?? undefined,
+          writingSamples:     postData.writingSamples   ?? undefined,
+          sourceContext:      postData.sourceContext     ?? undefined,
+          // Pass current post so Neel iterates rather than restarts
+          previousPost:       editedContent             || undefined,
         }),
       });
       const data = await res.json();

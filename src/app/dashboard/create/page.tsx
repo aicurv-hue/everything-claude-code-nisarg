@@ -233,7 +233,12 @@ export default function CreatePostPage() {
       localStorage.setItem("latest_post", JSON.stringify({
         content, imagePrompt, research,
         referenceImagePreview: sourceImage?.preview || null,
-        metadata: { topic, tone, audience, length, segment, customInstructions: customInstructions.trim() || null, memoryUsed: memoryContext.length },
+        metadata: { topic, tone, audience, length, segment, customInstructions: customInstructions.trim() || null, memoryUsed: memoryContext.length, model: selectedModel },
+        clientProfile: activeProfile || null,
+        systemPrompt: activeProfile?.systemPrompt || null,
+        memoryContext: memoryContext.length > 0 ? memoryContext : null,
+        writingSamples: writingSamples.length > 0 ? writingSamples : null,
+        sourceContext: resolvedSourceContext || null,
       }));
       // Clear draft cache now that it's been used
       localStorage.removeItem("create_draft");

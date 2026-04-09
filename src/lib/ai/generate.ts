@@ -24,6 +24,7 @@ export interface PostRequest {
   writingSamples?: PostMemory[];  // User-uploaded writing samples — style/voice ground truth
   imageStyle?: string;            // Layer 1: art style key (photo|illustration|abstract|3d|lineart|bw_photo)
   sourceContext?: string;         // Extracted text from user-provided URL + image description
+  previousPost?: string;          // Current post content when regenerating — Neel iterates on this, not a blank slate
 }
 
 // ─── Image style prefix map (Layer 1 — Brand Consistency) ─────────────────────
@@ -220,7 +221,7 @@ function sanitizePost(raw: string): string {
  *   - marketing-skills-all: social-content (LinkedIn-specific structure, CTA, tone mapping)
  */
 export async function generatePost(request: PostRequest): Promise<GenerateResult> {
-  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, writingSamples, imageStyle, sourceContext } = request;
+  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, writingSamples, imageStyle, sourceContext, previousPost } = request;
 
   const lengthSpec = LENGTH_SPEC[length] || LENGTH_SPEC.medium;
 
@@ -296,6 +297,15 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
           `CUSTOM INSTRUCTIONS — highest priority, overrides everything above`,
           `══════════════════════════════════════════`,
           customInstructions,
+        ].join("\n")
+      : "",
+    previousPost
+      ? [
+          "",
+          `══════════════════════════════════════════`,
+          `CURRENT POST — user is iterating on this. Refine it per the direction above. Do NOT restart from scratch.`,
+          `══════════════════════════════════════════`,
+          previousPost,
         ].join("\n")
       : "",
   ].join("\n").trim();
