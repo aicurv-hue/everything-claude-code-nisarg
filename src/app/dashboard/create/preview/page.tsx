@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import SchedulePicker from "@/components/schedule/SchedulePicker";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
+import RichTextEditor from "@/components/preview/RichTextEditor";
+import LinkedInPostCard from "@/components/preview/LinkedInPostCard";
 // Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
 import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 
@@ -700,6 +702,10 @@ export default function PostPreviewPage() {
             </div>
           )}
 
+          {/* ── Post Editor + LinkedIn Preview grid ── */}
+          <div className="lg:grid lg:grid-cols-[1fr_380px] gap-6 items-start">
+          <div className="space-y-6">
+
           {/* ── Post Editor ── */}
           <div className="card overflow-hidden">
             {/* Card header with Regenerate controls */}
@@ -768,26 +774,22 @@ export default function PostPreviewPage() {
               </div>
             )}
 
-            {/* Textarea with loading overlay */}
-            <div className="relative">
+            {/* Rich text editor with loading overlay */}
+            <div className="relative p-4">
               {isRegeneratingPost && (
-                <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-10 gap-3">
+                <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-10 gap-3 rounded-xl">
                   <div className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: `${accentColor}40`, borderTopColor: accentColor }} />
                   <p className="text-sm text-slate-500 font-medium">Writing a new version...</p>
                   {regenHint && <p className="text-xs text-slate-400 italic">"{regenHint}"</p>}
                 </div>
               )}
-              <textarea
+              <RichTextEditor
                 value={editedContent}
-                onChange={(e) => setEditedContent(e.target.value)}
+                onChange={setEditedContent}
+                accentColor={accentColor}
+                maxLength={3000}
                 disabled={isRegeneratingPost}
-                className="w-full h-[500px] p-6 bg-white text-slate-800 leading-relaxed text-base focus:outline-none resize-none disabled:opacity-60"
-                spellCheck={false}
               />
-            </div>
-            <div className="px-6 pb-4 flex justify-between items-center border-t border-slate-100 pt-3">
-              <span className="text-[11px] text-slate-400">{editedContent.length} characters</span>
-              <span className="text-[11px] text-slate-400">{editedContent.split(/\s+/).filter(Boolean).length} words</span>
             </div>
           </div>
 
@@ -1216,6 +1218,20 @@ export default function PostPreviewPage() {
               </div>
             )}
           </div>
+
+          </div>{/* end space-y-6 left column */}
+
+          {/* LinkedIn Preview sticky panel */}
+          <div className="lg:sticky lg:top-6">
+            <LinkedInPostCard
+              name={linkedInUser?.name ?? profileName ?? 'You'}
+              avatarUrl={linkedInUser?.picture ?? profilePhotoUrl ?? ''}
+              content={editedContent}
+              imageUrl={finalImageUrl ?? undefined}
+            />
+          </div>
+
+          </div>{/* end grid */}
 
         </div>
       </div>
