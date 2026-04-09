@@ -704,7 +704,7 @@ export default function PostPreviewPage() {
 
           {/* ── Post Editor + LinkedIn Preview grid ── */}
           <div className="lg:grid lg:grid-cols-[1fr_380px] gap-6 items-start">
-          <div className="space-y-6">
+          <div className="space-y-6 min-w-0">
 
           {/* ── Post Editor ── */}
           <div className="card overflow-hidden">
@@ -793,7 +793,21 @@ export default function PostPreviewPage() {
             </div>
           </div>
 
-          {/* ── Image Section ── */}
+          </div>{/* end space-y-6 left column */}
+
+          {/* LinkedIn Preview sticky panel */}
+          <div className="lg:sticky lg:top-6">
+            <LinkedInPostCard
+              name={linkedInUser?.name ?? profileName ?? 'You'}
+              avatarUrl={linkedInUser?.picture ?? profilePhotoUrl ?? ''}
+              content={editedContent}
+              imageUrl={finalImageUrl ?? undefined}
+            />
+          </div>
+
+          </div>{/* end grid */}
+
+          {/* ── Image Section — full width ── */}
           <div className="card overflow-hidden">
             <div className="px-5 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1218,20 +1232,6 @@ export default function PostPreviewPage() {
               </div>
             )}
           </div>
-
-          </div>{/* end space-y-6 left column */}
-
-          {/* LinkedIn Preview sticky panel */}
-          <div className="lg:sticky lg:top-6">
-            <LinkedInPostCard
-              name={linkedInUser?.name ?? profileName ?? 'You'}
-              avatarUrl={linkedInUser?.picture ?? profilePhotoUrl ?? ''}
-              content={editedContent}
-              imageUrl={finalImageUrl ?? undefined}
-            />
-          </div>
-
-          </div>{/* end grid */}
 
         </div>
       </div>
