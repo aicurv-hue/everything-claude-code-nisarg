@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 interface LinkedInPostCardProps {
   name: string;
@@ -9,28 +9,15 @@ interface LinkedInPostCardProps {
   imageUrl?: string;
 }
 
-const SEE_MORE_LIMIT = 210;
-
 export default function LinkedInPostCard({
   name,
   avatarUrl,
   content,
   imageUrl,
 }: LinkedInPostCardProps) {
-  const [expanded, setExpanded] = useState(false);
-
-  useEffect(() => {
-    if (content.length <= SEE_MORE_LIMIT) setExpanded(false);
-  }, [content]);
-
   const initials = name
     ? name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
     : '?';
-
-  const needsTruncation = content.length > SEE_MORE_LIMIT;
-  const displayContent = needsTruncation && !expanded
-    ? content.slice(0, SEE_MORE_LIMIT)
-    : content;
 
   return (
     <div>
@@ -61,18 +48,7 @@ export default function LinkedInPostCard({
         {/* Body */}
         <div className="px-4 pb-3">
           <p className="text-sm text-gray-900 whitespace-pre-wrap break-words">
-            {displayContent}
-            {needsTruncation && !expanded && (
-              <>
-                <span>…</span>
-                <button
-                  onClick={() => setExpanded(true)}
-                  className="text-xs text-gray-500 hover:underline ml-1"
-                >
-                  see more
-                </button>
-              </>
-            )}
+            {content}
           </p>
         </div>
 
