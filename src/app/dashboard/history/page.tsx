@@ -631,7 +631,7 @@ export default function HistoryPage() {
 
   return (
     <>
-      <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6 animate-fade-in">
+      <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6 animate-fade-in">
 
         {/* Retry All banner */}
         {counts.failed > 0 && (

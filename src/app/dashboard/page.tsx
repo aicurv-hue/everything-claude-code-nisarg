@@ -206,7 +206,7 @@ export default function DashboardHomePage() {
 
   if (loading) {
     return (
-      <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-8">
+      <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
         {/* Header skeleton */}
         <div className="flex justify-between items-start">
           <div className="space-y-2">
@@ -267,7 +267,7 @@ export default function DashboardHomePage() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-8 animate-fade-in">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
 
       {/* Header */}
       <div className="flex justify-between items-start">

@@ -171,7 +171,7 @@ export default function AnalyticsPage() {
     : overview.thisMonth > 0 ? 100 : 0;
 
   return (
-    <div className="p-6 bg-slate-50 min-h-screen">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-900">Analytics</h1>
