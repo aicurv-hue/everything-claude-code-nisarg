@@ -89,7 +89,7 @@ Return JSON only.`;
     const parsed = JSON.parse(jsonStr);
 
     if (!parsed.summary || !Array.isArray(parsed.keywords)) {
-      console.warn("[Memory Extract] Unexpected shape:", parsed);
+      console.error("[Memory Extract] Unexpected shape:", parsed);
       return null;
     }
 
@@ -103,7 +103,7 @@ Return JSON only.`;
     };
   } catch (err) {
     // Silent failure — memory extraction is always optional
-    console.warn("[Memory Extract] Failed (non-critical):", err);
+    console.error("[Memory Extract] Failed:", err);
     return null;
   }
 }

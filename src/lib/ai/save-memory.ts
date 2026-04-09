@@ -28,7 +28,11 @@ export async function savePostMemory({
 }): Promise<void> {
   try {
     const extract = await extractMemory(content, topic, audience, tone);
-    if (!extract) return;
+
+    // Fallback: even when AI extraction fails, save the raw post so memory is never lost
+    const summary     = extract?.summary     ?? content.slice(0, 300);
+    const keywords    = extract?.keywords    ?? [];
+    const style_notes = extract?.style_notes ?? "";
 
     if (adminDb) {
       // Server-side path — Admin SDK bypasses Firestore security rules
@@ -39,9 +43,9 @@ export async function savePostMemory({
         topic,
         audience,
         tone,
-        summary:     extract.summary,
-        keywords:    extract.keywords,
-        style_notes: extract.style_notes || "",
+        summary,
+        keywords,
+        style_notes,
         post_id:     postId || null,
         created_at:  FieldValue.serverTimestamp(),
       });
@@ -54,9 +58,9 @@ export async function savePostMemory({
         topic,
         audience,
         tone,
-        summary:     extract.summary,
-        keywords:    extract.keywords,
-        style_notes: extract.style_notes || undefined,
+        summary,
+        keywords,
+        style_notes: style_notes || undefined,
       });
     }
 

@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
       segment:  segment as "individual" | "corporate",
       userId:   firebaseUid,
       postId:   postDbId || undefined,
-    }).catch(() => {});
+    }).catch((err) => console.error('[Memory] savePostMemory failed:', err));
   }
 
   return NextResponse.json({

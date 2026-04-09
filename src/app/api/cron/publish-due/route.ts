@@ -300,7 +300,7 @@ export async function POST(req: NextRequest) {
         segment:  (post.segment as "individual" | "corporate") || "individual",
         userId,
         postId:   post.id,
-      }).catch(() => {});
+      }).catch((err) => console.error('[Memory] savePostMemory failed:', err));
 
       results.push({ id: post.id, status: "published" });
 
