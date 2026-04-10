@@ -160,13 +160,36 @@ function UserDetailDrawer({ user, onClose, adminFetch }: {
 }) {
   const [detail, setDetail] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [grantingBeta, setGrantingBeta] = useState(false);
+  const [betaGranted, setBetaGranted] = useState(false);
 
   useEffect(() => {
     adminFetch(`/api/admin/users/${user.uid}`)
-      .then(r => r.json())
-      .then(setDetail)
+      .then(r => {
+        if (!r.ok) throw new Error(`${r.status}`);
+        return r.json();
+      })
+      .then(data => {
+        if (data?.error) throw new Error(data.error);
+        setDetail(data);
+      })
+      .catch(err => console.error("[Admin] user detail fetch failed:", err))
       .finally(() => setLoading(false));
   }, [user.uid]);
+
+  async function handleGrantBeta() {
+    setGrantingBeta(true);
+    try {
+      const res = await adminFetch("/api/admin/beta-access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email, action: "add" }),
+      });
+      if (res.ok) setBetaGranted(true);
+    } finally {
+      setGrantingBeta(false);
+    }
+  }
 
   const copyUid = () => { navigator.clipboard.writeText(user.uid); };
 
@@ -190,7 +213,16 @@ function UserDetailDrawer({ user, onClose, adminFetch }: {
             <div className="w-6 h-6 border-2 border-[#0A66C2] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : !detail ? (
-          <div className="p-6 text-red-400 text-sm">Failed to load user detail.</div>
+          <div className="p-6 space-y-4">
+            <p className="text-red-400 text-sm">Could not load full user details.</p>
+            <button
+              onClick={handleGrantBeta}
+              disabled={grantingBeta || betaGranted}
+              className="flex items-center gap-1.5 text-xs bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/30 rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
+            >
+              {betaGranted ? "✓ Beta Granted" : grantingBeta ? "Granting..." : "Grant Beta Access"}
+            </button>
+          </div>
         ) : (
           <div className="p-6 space-y-6">
             {/* Stats strip */}
@@ -298,6 +330,13 @@ function UserDetailDrawer({ user, onClose, adminFetch }: {
                 className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white border border-white/[0.08] rounded-lg px-3 py-2 transition-colors"
               >
                 <Copy className="w-3 h-3" /> Copy UID
+              </button>
+              <button
+                onClick={handleGrantBeta}
+                disabled={grantingBeta || betaGranted}
+                className="flex items-center gap-1.5 text-xs bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/30 rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
+              >
+                {betaGranted ? "✓ Beta Granted" : grantingBeta ? "Granting..." : "Grant Beta Access"}
               </button>
             </div>
           </div>
