@@ -32,6 +32,7 @@ interface AdminUser {
   totalLikes: number; totalComments: number;
   linkedInConnected: boolean; tokenExpiresAt: number | null;
   tokenExpired: boolean; linkedInName: string | null; linkedInEmail: string | null;
+  betaApproved: boolean;
 }
 
 interface UserDetail {
@@ -155,13 +156,13 @@ function KpiCard({ label, value, sub, icon, accent = "text-blue-400", alert = fa
   );
 }
 
-function UserDetailDrawer({ user, onClose, adminFetch }: {
-  user: AdminUser; onClose: () => void; adminFetch: (url: string, opts?: RequestInit) => Promise<Response>;
+function UserDetailDrawer({ user, onClose, adminFetch, onBetaGranted }: {
+  user: AdminUser; onClose: () => void; adminFetch: (url: string, opts?: RequestInit) => Promise<Response>; onBetaGranted: () => void;
 }) {
   const [detail, setDetail] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [grantingBeta, setGrantingBeta] = useState(false);
-  const [betaGranted, setBetaGranted] = useState(false);
+  const [betaGranted, setBetaGranted] = useState(user.betaApproved);
 
   useEffect(() => {
     adminFetch(`/api/admin/users/${user.uid}`)
@@ -185,7 +186,7 @@ function UserDetailDrawer({ user, onClose, adminFetch }: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: user.email, action: "add" }),
       });
-      if (res.ok) setBetaGranted(true);
+      if (res.ok) { setBetaGranted(true); onBetaGranted(); }
     } finally {
       setGrantingBeta(false);
     }
@@ -743,9 +744,14 @@ export default function AdminPage() {
                           )}
                         </td>
                         <td className="px-5 py-4">
-                          {u.disabled
-                            ? <span className="bg-red-500/10 text-red-400 text-xs px-2 py-0.5 rounded-full border border-red-500/20">Disabled</span>
-                            : <span className="bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-500/20">Active</span>}
+                          <div className="flex flex-col gap-1 items-start">
+                            {u.disabled
+                              ? <span className="bg-red-500/10 text-red-400 text-xs px-2 py-0.5 rounded-full border border-red-500/20">Disabled</span>
+                              : <span className="bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-500/20">Active</span>}
+                            {u.betaApproved && (
+                              <span className="bg-blue-500/10 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-500/20">Beta</span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-5 py-4" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center gap-2">
@@ -990,6 +996,11 @@ export default function AdminPage() {
           user={detailUser}
           onClose={() => setDetailUser(null)}
           adminFetch={adminFetch}
+          onBetaGranted={() =>
+            setUsers(prev =>
+              prev.map(u => u.uid === detailUser.uid ? { ...u, betaApproved: true } : u)
+            )
+          }
         />
       )}
     </div>

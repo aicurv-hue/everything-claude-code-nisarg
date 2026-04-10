@@ -29,10 +29,11 @@ export async function GET(req: NextRequest) {
     const now = Date.now();
 
     // Fetch all posts + all tokens in 2 reads — no per-user loops
-    const [listResult, postsSnap, tokensSnap] = await Promise.all([
+    const [listResult, postsSnap, tokensSnap, betaSnap] = await Promise.all([
       adminAuth.listUsers(1000),
       adminDb.collection("posts").get(),
       adminDb.collection("tokens").get(),
+      adminDb.collection("beta_access").where("approved", "==", true).get(),
     ]);
 
     // Build per-user post stats map
@@ -62,6 +63,11 @@ export async function GET(req: NextRequest) {
       const secs = p.created_at?.seconds ?? p.created_at?._seconds ?? 0;
       if (secs * 1000 > s.lastPostAt) s.lastPostAt = secs * 1000;
     }
+
+    // Build beta access set
+    const approvedEmails = new Set(
+      betaSnap.docs.map(d => (d.data().email as string).toLowerCase())
+    );
 
     // Build token map
     const tokenByUid = new Map<string, any>();
@@ -102,6 +108,7 @@ export async function GET(req: NextRequest) {
         tokenExpired:      token?.expires_at ? token.expires_at < now : false,
         linkedInName:      token?.user_name  ?? null,
         linkedInEmail:     token?.user_email ?? null,
+        betaApproved:      approvedEmails.has((u.email || "").toLowerCase()),
       };
     });
 
