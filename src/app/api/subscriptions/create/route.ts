@@ -6,12 +6,6 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export const runtime = "nodejs";
 
-const VALID_PLAN_IDS = [
-  process.env.RAZORPAY_PLAN_STARTER!,
-  process.env.RAZORPAY_PLAN_PRO!,
-  process.env.RAZORPAY_PLAN_BUSINESS!,
-];
-
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get("authorization") || "";
@@ -20,8 +14,13 @@ export async function POST(req: NextRequest) {
     const userId = decoded.uid;
 
     const { planId } = await req.json();
-    if (!VALID_PLAN_IDS.includes(planId)) {
-      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+    const VALID_PLAN_IDS = [
+      process.env.RAZORPAY_PLAN_STARTER,
+      process.env.RAZORPAY_PLAN_PRO,
+      process.env.RAZORPAY_PLAN_BUSINESS,
+    ].filter(Boolean);
+    if (!planId || !VALID_PLAN_IDS.includes(planId)) {
+      return NextResponse.json({ error: `Invalid plan ID: "${planId}". Valid: ${VALID_PLAN_IDS.join(", ")}` }, { status: 400 });
     }
 
     const trialEndsAt = Math.floor(Date.now() / 1000) + 14 * 24 * 60 * 60;
@@ -67,8 +66,17 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ subscriptionId: subId });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Failed";
     console.error("[subscriptions/create]", err);
+    // Razorpay throws plain objects, not Error instances
+    let message = "Failed to create subscription";
+    if (err instanceof Error) {
+      message = err.message;
+    } else if (err && typeof err === "object") {
+      const e = err as Record<string, unknown>;
+      message = (e.error as Record<string, unknown>)?.description as string
+        || (e.message as string)
+        || JSON.stringify(err);
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
