@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PricingCards from "@/components/PricingCards";
 
 export default function HomePage() {
   return (
@@ -108,6 +109,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Pricing */}
+      <div id="pricing"><PricingCards /></div>
 
       {/* CTA Banner */}
       <section className="py-20 bg-[#0A66C2]">
