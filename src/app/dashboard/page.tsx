@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   BarChart3, Send, CheckCircle, Clock, TrendingUp,
   FileText, RefreshCw, Linkedin, Zap, Image, AlertTriangle,
-  Wifi, WifiOff, Activity, User, Building2, Calendar
+  Wifi, WifiOff, Activity, User, Building2, Calendar, X
 } from "lucide-react";
 import { Post } from "@/lib/db/posts";
 import { UserProfile } from "@/lib/db/profiles";
@@ -101,6 +102,21 @@ const STATUS_ICON_BG: Record<string, string> = {
 export default function DashboardHomePage() {
   const { user } = useAuth();
   const { segment, isIndividual, isCorporate } = useSegment();
+  const searchParams = useSearchParams();
+  const [welcomeDismissed, setWelcomeDismissed] = useState(true); // default hidden until checked
+  const welcomePlan = searchParams.get("plan") || "Pro";
+
+  useEffect(() => {
+    const isWelcome = searchParams.get("welcome") === "true";
+    const alreadyDismissed = sessionStorage.getItem("cridl_welcome_dismissed") === "1";
+    setWelcomeDismissed(!isWelcome || alreadyDismissed);
+  }, [searchParams]);
+
+  const dismissWelcome = () => {
+    sessionStorage.setItem("cridl_welcome_dismissed", "1");
+    setWelcomeDismissed(true);
+  };
+
   const [stats, setStats]         = useState<DashboardStats | null>(null);
   const [system, setSystem]       = useState<SystemStatus | null>(null);
   const [linkedin, setLinkedIn]   = useState<LinkedInInfo | null>(null);
@@ -268,6 +284,19 @@ export default function DashboardHomePage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
+
+      {/* Welcome banner — shown after payment */}
+      {!welcomeDismissed && (
+        <div className="flex items-center gap-3 px-5 py-3.5 rounded-xl bg-green-50 border border-green-200">
+          <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+          <p className="flex-1 text-sm text-green-800">
+            You&apos;re on the <strong>{welcomePlan}</strong> plan — your 14-day free trial has started. No charge until it ends.
+          </p>
+          <button onClick={dismissWelcome} className="text-green-500 hover:text-green-700 transition-colors shrink-0">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex justify-between items-start">

@@ -9,12 +9,15 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
           <span className="font-bold text-xl text-slate-900">Cridl</span>
           <div className="flex gap-3">
+            <a href="#pricing" className="text-sm text-slate-600 hover:text-slate-900 px-4 py-2 rounded-lg">
+              Pricing
+            </a>
             <Link href="/login" className="text-sm text-slate-600 hover:text-slate-900 px-4 py-2 rounded-lg">
               Sign in
             </Link>
-            <Link href="/dashboard" className="text-sm bg-[#0A66C2] text-white px-4 py-2 rounded-lg hover:bg-[#0854a0] transition-colors">
+            <a href="#pricing" className="text-sm bg-[#0A66C2] text-white px-4 py-2 rounded-lg hover:bg-[#0854a0] transition-colors">
               Get started free
-            </Link>
+            </a>
           </div>
         </div>
       </nav>
@@ -31,9 +34,9 @@ export default function HomePage() {
               Cridl researches, writes, and schedules LinkedIn posts in your voice — so you show up consistently without the effort.
             </p>
             <div className="flex gap-4">
-              <Link href="/dashboard" className="bg-[#0A66C2] text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-[#0854a0] transition-colors">
+              <a href="#pricing" className="bg-[#0A66C2] text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-[#0854a0] transition-colors">
                 Start writing free
-              </Link>
+              </a>
               <Link href="/login" className="border border-slate-200 text-slate-700 px-6 py-3 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
                 Sign in
               </Link>
@@ -118,9 +121,9 @@ export default function HomePage() {
         <div className="max-w-2xl mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold text-white mb-4">Start building your LinkedIn presence today.</h2>
           <p className="text-blue-100 mb-8">Free to start. No credit card required.</p>
-          <Link href="/dashboard" className="bg-white text-[#0A66C2] px-8 py-3 rounded-lg font-medium hover:bg-blue-50 transition-colors inline-block">
+          <a href="#pricing" className="bg-white text-[#0A66C2] px-8 py-3 rounded-lg font-medium hover:bg-blue-50 transition-colors inline-block">
             Get started free
-          </Link>
+          </a>
         </div>
       </section>
 

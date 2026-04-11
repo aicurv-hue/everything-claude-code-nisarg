@@ -51,10 +51,19 @@ export async function POST(req: NextRequest) {
       updatedAt: now,
     });
 
+    const userEmail = decoded.email || "";
+
     await adminDb.collection("users").doc(userId).set(
-      { plan: planName, planStatus: "trialing", subscriptionId: subId },
+      { plan: planName, planStatus: "trialing", subscriptionId: subId, betaApproved: true },
       { merge: true }
     );
+
+    if (userEmail) {
+      await adminDb.collection("beta_access").doc(userEmail).set(
+        { email: userEmail, approved: true, approvedAt: new Date().toISOString() },
+        { merge: true }
+      );
+    }
 
     return NextResponse.json({ subscriptionId: subId });
   } catch (err: unknown) {

@@ -10,6 +10,84 @@ import { getAuthToken } from "@/lib/utils/getAuthToken";
 import OnboardingModal from "@/components/ui/OnboardingModal";
 import BottomNav from "@/components/mobile/BottomNav";
 import MobileHeader from "@/components/mobile/MobileHeader";
+import { auth as firebaseAuth } from "@/lib/firebase";
+
+interface PlanBadgeInfo {
+  plan: string;
+  status: string;
+  trialEndsAt?: string;
+}
+
+function PlanBadge() {
+  const [info, setInfo] = useState<PlanBadgeInfo | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      const user = firebaseAuth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken();
+      const res = await fetch("/api/subscriptions/status", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setInfo(await res.json());
+    }
+    load();
+  }, []);
+
+  if (!info) return null;
+
+  const isTrial = info.status === "trialing" || info.status === "created" || info.status === "authenticated";
+  const isActive = info.status === "active";
+  const isFree = !info.plan || info.plan === "free";
+
+  const trialDaysLeft = info.trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(info.trialEndsAt).getTime() - Date.now()) / 86400000))
+    : 0;
+
+  const planLabel = info.plan
+    ? info.plan.charAt(0).toUpperCase() + info.plan.slice(1)
+    : "Free";
+
+  if (isFree) {
+    return (
+      <div className="px-3 pt-2">
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+          <span className="text-[10px] font-semibold text-amber-400">Free plan</span>
+          <a href="/dashboard/settings?tab=billing" className="text-[10px] text-amber-400 hover:text-amber-200 underline underline-offset-2 transition-colors">
+            Upgrade
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (isTrial) {
+    return (
+      <div className="px-3 pt-2">
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+          <span className="text-[10px] font-semibold text-blue-400">
+            Trial{trialDaysLeft > 0 ? ` — ${trialDaysLeft}d left` : ""}
+          </span>
+          <a href="/dashboard/settings?tab=billing" className="text-[10px] text-blue-400 hover:text-blue-200 underline underline-offset-2 transition-colors">
+            Upgrade
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (isActive) {
+    return (
+      <div className="px-3 pt-2">
+        <div className="px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
+          <span className="text-[10px] font-semibold text-green-400">{planLabel} plan</span>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
 
 function BetaSignOutButton() {
   const { logOut } = useAuth();
@@ -119,6 +197,9 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
           );
         })}
       </nav>
+
+      {/* Plan badge */}
+      <PlanBadge />
 
       {/* Bottom — user + logout */}
       <div className="px-3 pb-4 pt-3 border-t border-white/[0.07] space-y-2">
