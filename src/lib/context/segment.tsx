@@ -18,7 +18,7 @@ const SegmentContext = createContext<SegmentContextValue>({
   isCorporate: false,
 });
 
-const STORAGE_KEY = "linkauto_active_segment";
+const STORAGE_KEY = "cridl_active_segment";
 
 export function SegmentProvider({ children }: { children: React.ReactNode }) {
   const [segment, setSegmentState] = useState<Segment>("individual");

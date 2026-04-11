@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.linkauto.app',
-  appName: 'LinkAuto',
+  appName: 'Cridl',
   webDir: 'out',
 
   // ─── Live-server mode ─────────────────────────────────────────────────

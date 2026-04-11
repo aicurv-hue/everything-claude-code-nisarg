@@ -20,7 +20,7 @@ const STEPS: Step[] = [
     badge: "Step 1",
     body: (
       <div className="space-y-3 text-sm text-slate-600">
-        <p>LinkAuto is currently in <strong className="text-slate-800">closed beta</strong>. Your email must be approved before you can use the platform.</p>
+        <p>Cridl is currently in <strong className="text-slate-800">closed beta</strong>. Your email must be approved before you can use the platform.</p>
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-1.5">
           <p className="font-semibold text-[#0A66C2] text-xs uppercase tracking-wide">How to get access</p>
           <ol className="list-decimal list-inside space-y-1 text-slate-700">

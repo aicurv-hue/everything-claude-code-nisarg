@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 test.describe('Landing Page', () => {
   test('loads and shows key UI', async ({ page }) => {
     await page.goto('/')
-    await expect(page).toHaveTitle(/LinkAuto|LinkedIn/i)
+    await expect(page).toHaveTitle(/Cridl|LinkedIn/i)
     await page.screenshot({ path: 'tests/qa/results/landing.png', fullPage: true })
   })
 

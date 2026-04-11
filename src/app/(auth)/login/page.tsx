@@ -38,7 +38,7 @@ export default function LoginPage() {
   return (
     <div className="bg-slate-900 border border-white/[0.07] rounded-2xl p-8 shadow-2xl">
       <h1 className="text-white text-2xl font-bold mb-1">Welcome back</h1>
-      <p className="text-slate-400 text-sm mb-7">Sign in to your LinkAuto account</p>
+      <p className="text-slate-400 text-sm mb-7">Sign in to your Cridl account</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

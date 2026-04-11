@@ -1,7 +1,7 @@
-# LinkAuto Master Documentation Index
+# Cridl Master Documentation Index
 _Last updated: 2026-04-02_
 
-Welcome to the official documentation hub for **LinkAuto — LinkedIn Automation Portal**.
+Welcome to the official documentation hub for **Cridl — LinkedIn Automation Portal**.
 
 ## Product & Vision
 - [Product Specs](.claude/docs/product_specs.md) — Features, requirements, KPIs
@@ -28,4 +28,4 @@ Welcome to the official documentation hub for **LinkAuto — LinkedIn Automation
 | `push-all.sh` | Always use this to deploy |
 | `capacitor.config.ts` | Mobile app config (live Vercel URL, splash screen) |
 | `android/app/release/app-release.apk` | Signed Android APK (~3 MB) |
-| `C:\Users\USER\Desktop\linkauto-key.jks` | Android signing keystore |
+| `C:\Users\USER\Desktop\cridl-key.jks` | Android signing keystore |

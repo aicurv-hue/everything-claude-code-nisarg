@@ -26,7 +26,7 @@ export default function MobileHeader() {
   const router      = useRouter();
   const { isCorporate } = useSegment();
 
-  const title    = TITLES[pathname] ?? TITLES[Object.keys(TITLES).find(k => pathname.startsWith(k)) ?? ""] ?? "LinkAuto";
+  const title    = TITLES[pathname] ?? TITLES[Object.keys(TITLES).find(k => pathname.startsWith(k)) ?? ""] ?? "Cridl";
   const backHref = Object.keys(BACK_ROUTES).find(k => pathname.startsWith(k));
   const accentColor = isCorporate ? "#7C3AED" : "#0A66C2";
 

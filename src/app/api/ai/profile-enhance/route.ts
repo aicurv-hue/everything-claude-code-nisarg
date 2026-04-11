@@ -108,7 +108,7 @@ ${fieldPrompt}`;
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
-        "X-Title": "LinkAuto Profile Enhancer",
+        "X-Title": "Cridl Profile Enhancer",
       },
       body: JSON.stringify({
         model: "google/gemini-2.0-flash-001",

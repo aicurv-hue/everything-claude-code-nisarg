@@ -37,7 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#0A66C2] to-[#0854a0] flex items-center justify-center">
             <span className="text-white font-bold text-xs">L</span>
           </div>
-          <span className="font-semibold text-sm">LinkAuto</span>
+          <span className="font-semibold text-sm">Cridl</span>
           <span className="text-slate-500 text-sm">/</span>
           <span className="text-slate-300 text-sm font-medium">Admin</span>
         </div>

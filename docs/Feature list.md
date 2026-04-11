@@ -3,7 +3,7 @@
 
 ---
 
-## LinkAuto — What's Built (as of April 2026)
+## Cridl — What's Built (as of April 2026)
 
 ### ✅ Live Features
 | Feature | Details |
@@ -123,7 +123,7 @@ No single tool dominates all categories. **Taplio is the closest all-in-one for 
 
 ---
 
-## Competitive Gaps (Opportunities for LinkAuto)
+## Competitive Gaps (Opportunities for Cridl)
 
 | Gap | Status Across Competitors |
 |-----|--------------------------|

@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       }
       try {
         const pageRes = await fetch(url, {
-          headers: { "User-Agent": "Mozilla/5.0 (compatible; LinkAuto/1.0)" },
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; Cridl/1.0)" },
           signal: AbortSignal.timeout(8000),
         });
         if (pageRes.ok) {
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
             "Authorization": `Bearer ${apiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
-            "X-Title": "LinkAuto",
+            "X-Title": "Cridl",
           },
           body: JSON.stringify({
             model: "google/gemini-2.0-flash-001",

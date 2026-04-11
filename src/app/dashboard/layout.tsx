@@ -53,7 +53,7 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#0A66C2] to-[#0854a0] flex items-center justify-center shrink-0">
             <span className="text-white font-bold text-xs">L</span>
           </div>
-          <span className="text-white font-semibold text-sm tracking-tight">LinkAuto</span>
+          <span className="text-white font-semibold text-sm tracking-tight">Cridl</span>
         </div>
       </div>
 
@@ -232,7 +232,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
           </div>
           <h1 className="text-white text-xl font-bold mb-2">Beta Access Required</h1>
           <p className="text-slate-400 text-sm leading-relaxed mb-6">
-            LinkAuto is currently in closed beta. Your account (<span className="text-slate-300">{user.email}</span>) is not yet on the approved list.
+            Cridl is currently in closed beta. Your account (<span className="text-slate-300">{user.email}</span>) is not yet on the approved list.
           </p>
           <p className="text-slate-500 text-sm mb-6">
             Contact <span className="text-[#0A66C2]">nisarg2526@gmail.com</span> to request access.
@@ -255,7 +255,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   // Redirect first-time users to onboarding page
   useEffect(() => {
     if (!user) return;
-    const key = `linkauto_guide_seen_${user.uid}`;
+    const key = `cridl_guide_seen_${user.uid}`;
     if (!localStorage.getItem(key)) {
       // Don't redirect if already on onboarding (avoids loop)
       if (!pathname.startsWith("/onboarding")) {

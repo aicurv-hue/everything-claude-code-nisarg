@@ -1,4 +1,4 @@
-# QA Visual Tests — LinkAuto
+# QA Visual Tests — Cridl
 
 Playwright tests that open a real Chrome browser, check UI, and save screenshots.
 

@@ -13,7 +13,7 @@ const steps = [
     bg: "bg-blue-50",
     border: "border-blue-200",
     title: "Get Beta Access",
-    desc: "LinkAuto is in closed beta. Your email must be approved before you can sign up.",
+    desc: "Cridl is in closed beta. Your email must be approved before you can sign up.",
     items: [
       "Contact the admin (Nisarg) with your email address",
       "Your email gets added to the approved beta list",
@@ -133,7 +133,7 @@ export default function GuidePage() {
         <div className="flex items-center gap-3 mb-2">
           <BookOpen className="w-7 h-7 text-[#0A66C2]" />
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">LinkAuto — Getting Started</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Cridl — Getting Started</h1>
             <p className="text-sm text-slate-500">Complete user guide · LinkedIn Automation Portal</p>
           </div>
         </div>
@@ -198,7 +198,7 @@ export default function GuidePage() {
 
         {/* Footer */}
         <div className="mt-8 pt-4 border-t border-slate-200 flex items-center justify-between text-xs text-slate-400">
-          <span>LinkAuto · linkedin-automation-chi.vercel.app</span>
+          <span>Cridl · linkedin-automation-chi.vercel.app</span>
           <span>For support contact: nisarg2526@gmail.com</span>
         </div>
       </div>

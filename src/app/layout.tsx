@@ -14,14 +14,14 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "LinkAuto — LinkedIn Automation",
+  title: "Cridl — LinkedIn Automation",
   description: "AI-powered LinkedIn content for personal branding and corporate growth.",
   // PWA / mobile meta
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "LinkAuto",
+    title: "Cridl",
   },
   viewport: {
     width: "device-width",

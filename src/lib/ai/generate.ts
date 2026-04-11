@@ -421,7 +421,7 @@ export async function generateImagePrompt(topic: string, segment: string, post: 
       "Authorization": `Bearer ${apiKey}`,
       "Content-Type": "application/json",
       "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
-      "X-Title": "LinkAuto",
+      "X-Title": "Cridl",
     },
     body: JSON.stringify({
       model: "google/gemini-2.0-flash-001",
@@ -455,7 +455,7 @@ export async function generateImageHook(post: string, topic: string): Promise<st
       "Authorization": `Bearer ${apiKey}`,
       "Content-Type": "application/json",
       "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
-      "X-Title": "LinkAuto",
+      "X-Title": "Cridl",
     },
     body: JSON.stringify({
       model: "google/gemini-2.0-flash-001",

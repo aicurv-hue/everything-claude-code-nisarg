@@ -11,7 +11,7 @@ export const openRouter = new OpenAI({
   apiKey: apiKey || "mock-key",
   defaultHeaders: {
     "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://linkedin-automation-chi.vercel.app",
-    "X-Title": "LinkAuto - LinkedIn Automation Portal",
+    "X-Title": "Cridl - LinkedIn Automation Portal",
   }
 });
 

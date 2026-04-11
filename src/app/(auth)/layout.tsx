@@ -9,7 +9,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0A66C2] to-[#0854a0] flex items-center justify-center shadow-lg">
             <span className="text-white font-bold text-base">L</span>
           </div>
-          <span className="text-white font-bold text-xl tracking-tight">LinkAuto</span>
+          <span className="text-white font-bold text-xl tracking-tight">Cridl</span>
         </div>
         {children}
       </div>

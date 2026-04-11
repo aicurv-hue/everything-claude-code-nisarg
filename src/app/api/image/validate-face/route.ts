@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://linkauto.app",
-        "X-Title": "LinkAuto",
+        "HTTP-Referer": "https://app.cridl.com",
+        "X-Title": "Cridl",
       },
       body: JSON.stringify({
         model: "google/gemini-2.0-flash-001",

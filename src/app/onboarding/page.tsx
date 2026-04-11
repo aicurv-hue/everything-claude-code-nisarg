@@ -158,7 +158,7 @@ export default function OnboardingPage() {
 
   const handleDone = () => {
     // Mark onboarding as seen
-    if (user) localStorage.setItem(`linkauto_guide_seen_${user.uid}`, "1");
+    if (user) localStorage.setItem(`cridl_guide_seen_${user.uid}`, "1");
     router.replace("/dashboard/settings");
   };
 
@@ -178,7 +178,7 @@ export default function OnboardingPage() {
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0A66C2] to-[#0854a0] flex items-center justify-center">
           <span className="text-white font-bold text-sm">L</span>
         </div>
-        <span className="text-slate-900 font-bold text-lg tracking-tight">LinkAuto</span>
+        <span className="text-slate-900 font-bold text-lg tracking-tight">Cridl</span>
       </div>
 
       <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
@@ -186,7 +186,7 @@ export default function OnboardingPage() {
         {/* Header */}
         <div className="flex items-center gap-2.5 px-6 pt-5 pb-4 border-b border-slate-100">
           <BookOpen className="w-5 h-5 text-[#0A66C2]" />
-          <span className="font-bold text-slate-900 text-sm">Getting Started — Welcome to LinkAuto</span>
+          <span className="font-bold text-slate-900 text-sm">Getting Started — Welcome to Cridl</span>
         </div>
 
         {/* Progress */}

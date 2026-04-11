@@ -278,7 +278,7 @@ export default function MemoryPage() {
               </span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Paste real posts you wrote before using LinkAuto. Neel uses these as your voice bible — making every post sound unmistakably like you.
+              Paste real posts you wrote before using Cridl. Neel uses these as your voice bible — making every post sound unmistakably like you.
             </p>
           </div>
           <button
@@ -396,7 +396,7 @@ export default function MemoryPage() {
             <span className="text-xs font-normal text-slate-400 ml-1">({memories.length})</span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Automatically built from every post that went live via LinkAuto. Neel reads these to avoid repeating the same angles.
+            Automatically built from every post that went live via Cridl. Neel reads these to avoid repeating the same angles.
           </p>
         </div>
 

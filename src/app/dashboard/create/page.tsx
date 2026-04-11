@@ -705,7 +705,7 @@ export default function CreatePostPage() {
                     <Sparkles className={`w-3.5 h-3.5 ${accentColor}`} />
                     <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide">Sample Memory</p>
                     <HelpTooltip
-                      text="Paste real posts you have written before using LinkAuto. Neel studies them to calibrate your exact voice, sentence rhythm, and vocabulary — making every post sound unmistakably like you."
+                      text="Paste real posts you have written before using Cridl. Neel studies them to calibrate your exact voice, sentence rhythm, and vocabulary — making every post sound unmistakably like you."
                       example="Upload 3–5 of your best past LinkedIn posts for the strongest voice match."
                       position="left"
                     />

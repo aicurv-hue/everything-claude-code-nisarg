@@ -1,6 +1,6 @@
 # NEEL — Complete Pipeline Documentation
 
-> Neel is the AI author powering LinkAuto. This document covers every input layer that reaches Neel, how each one influences the output, where it is set, and what happens when it is missing.
+> Neel is the AI author powering Cridl. This document covers every input layer that reaches Neel, how each one influences the output, where it is set, and what happens when it is missing.
 >
 > **Purpose:** Single source of truth for building user SOPs, internal onboarding, and future feature design. Keep this updated whenever `generate.ts`, `research.ts`, memory, profiles, settings, or the create/preview pages change.
 

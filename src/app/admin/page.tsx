@@ -926,7 +926,7 @@ export default function AdminPage() {
                 <Plus className="w-4 h-4" /> Approve
               </button>
             </div>
-            <p className="text-xs text-slate-600 mt-2">This lets the user sign in to LinkAuto. They must create an account separately.</p>
+            <p className="text-xs text-slate-600 mt-2">This lets the user sign in to Cridl. They must create an account separately.</p>
           </div>
 
           {/* Approved list */}

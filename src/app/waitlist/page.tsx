@@ -26,7 +26,7 @@ export default function WaitlistPage() {
         {/* Heading */}
         <h1 className="text-white text-2xl font-bold mb-2">You&apos;re on the waitlist</h1>
         <p className="text-slate-400 text-sm leading-relaxed mb-3">
-          LinkAuto is currently in <span className="text-white font-medium">closed beta</span>.
+          Cridl is currently in <span className="text-white font-medium">closed beta</span>.
           Your account has been created but access is not yet approved.
         </p>
 
