@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 
 const PLANS = [
@@ -29,14 +29,24 @@ const PLANS = [
 ];
 
 export default function PricingCards() {
+  return (
+    <Suspense fallback={null}>
+      <PricingCardsInner />
+    </Suspense>
+  );
+}
+
+function PricingCardsInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function handleStartTrial(plan: (typeof PLANS)[0]) {
     const user = auth.currentUser;
     if (!user) {
-      router.push("/login");
+      const redirect = encodeURIComponent(`/?plan=${plan.name.toLowerCase()}#pricing`);
+      router.push(`/login?plan=${plan.name.toLowerCase()}&redirect=${redirect}`);
       return;
     }
 
@@ -59,7 +69,7 @@ export default function PricingCards() {
         name: "Cridl",
         description: `${plan.name} Plan — 14-day free trial`,
         handler: function () {
-          router.push("/dashboard?welcome=true");
+          router.push(`/dashboard?welcome=true&plan=${plan.name.toLowerCase()}`);
         },
         prefill: {
           name: user.displayName || "",
@@ -72,7 +82,7 @@ export default function PricingCards() {
       const RazorpayClass = (window as any).Razorpay;
       if (!RazorpayClass) throw new Error("Payment SDK not loaded. Please refresh the page.");
       const rzp = new RazorpayClass(options);
-      rzp.on("payment.failed", function (response: { error?: { description?: string } }) {  // eslint-disable-line @typescript-eslint/no-explicit-any
+      rzp.on("payment.failed", function (response: { error?: { description?: string } }) {
         setError(response.error?.description || "Payment failed");
       });
       rzp.open();
@@ -82,6 +92,18 @@ export default function PricingCards() {
       setLoading(null);
     }
   }
+
+  // Auto-trigger checkout if ?plan= param is in URL (user came back after login)
+  useEffect(() => {
+    const autoPlan = searchParams.get("plan");
+    if (!autoPlan) return;
+    const match = PLANS.find(p => p.name.toLowerCase() === autoPlan.toLowerCase());
+    if (!match) return;
+    // Wait for Firebase auth to resolve
+    const timer = setTimeout(() => handleStartTrial(match), 600);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <section className="py-20 bg-white">

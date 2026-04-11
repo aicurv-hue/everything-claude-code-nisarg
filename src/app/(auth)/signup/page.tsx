@@ -1,13 +1,24 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/context/auth";
 
 export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupForm />
+    </Suspense>
+  );
+}
+
+function SignupForm() {
   const { signUp } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
+  const planHint = searchParams.get("plan");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -33,6 +44,10 @@ export default function SignupPage() {
           body: JSON.stringify({ displayName: name.trim() }),
         }).catch(() => {});
       }
+      if (redirectTo) {
+        router.replace(redirectTo);
+        return;
+      }
       // Check beta access before sending to dashboard
       const res = await fetch(`/api/beta/check?email=${encodeURIComponent(email.toLowerCase().trim())}`);
       const { approved } = await res.json();
@@ -44,10 +59,20 @@ export default function SignupPage() {
     }
   }
 
+  const loginHref = redirectTo
+    ? `/login?redirect=${encodeURIComponent(redirectTo)}${planHint ? `&plan=${planHint}` : ""}`
+    : "/login";
+
   return (
     <div className="bg-slate-900 border border-white/[0.07] rounded-2xl p-8 shadow-2xl">
       <h1 className="text-white text-2xl font-bold mb-1">Create your account</h1>
-      <p className="text-slate-400 text-sm mb-7">Start building your LinkedIn presence today</p>
+      <p className="text-slate-400 text-sm mb-5">Start building your LinkedIn presence today</p>
+
+      {planHint && (
+        <div className="mb-5 text-center text-xs text-[#0A66C2] bg-[#0A66C2]/10 border border-[#0A66C2]/20 rounded-lg py-2 px-3">
+          Create your account to start your <span className="font-semibold capitalize">{planHint}</span> plan free trial
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -115,7 +140,7 @@ export default function SignupPage() {
 
       <p className="text-slate-500 text-sm text-center mt-6">
         Already have an account?{" "}
-        <Link href="/login" className="text-[#0A66C2] hover:underline font-medium">
+        <Link href={loginHref} className="text-[#0A66C2] hover:underline font-medium">
           Sign in
         </Link>
       </p>
