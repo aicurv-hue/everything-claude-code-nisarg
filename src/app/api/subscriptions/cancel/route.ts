@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
-import { razorpay } from "@/lib/razorpay";
+import { getRazorpay } from "@/lib/razorpay";
 import { FieldValue } from "firebase-admin/firestore";
 
 export const runtime = "nodejs";
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    await razorpay.subscriptions.cancel(subscriptionId, { cancel_at_cycle_end: true } as never);
+    await getRazorpay().subscriptions.cancel(subscriptionId, { cancel_at_cycle_end: true } as never);
 
     const now = FieldValue.serverTimestamp();
     await adminDb.collection("subscriptions").doc(subscriptionId).update({

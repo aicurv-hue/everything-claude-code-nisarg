@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
-import { razorpay } from "@/lib/razorpay";
+import { getRazorpay } from "@/lib/razorpay";
 import { PLAN_IDS } from "@/lib/checkSubscription";
 import { FieldValue } from "firebase-admin/firestore";
 
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     const trialEndsAt = Math.floor(Date.now() / 1000) + 14 * 24 * 60 * 60;
     const planName = PLAN_IDS[planId];
 
-    const subscription = await razorpay.subscriptions.create({
+    const subscription = await getRazorpay().subscriptions.create({
       plan_id: planId,
       total_count: 120,
       start_at: trialEndsAt,
