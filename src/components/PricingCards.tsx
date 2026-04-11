@@ -68,8 +68,11 @@ export default function PricingCards() {
         theme: { color: "#0A66C2" },
       };
 
-      const rzp = new (window as unknown as { Razorpay: new (opts: typeof options) => { on: (event: string, cb: (r: { error?: { description?: string } }) => void) => void; open: () => void } }).Razorpay(options);
-      rzp.on("payment.failed", function (response: { error?: { description?: string } }) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const RazorpayClass = (window as any).Razorpay;
+      if (!RazorpayClass) throw new Error("Payment SDK not loaded. Please refresh the page.");
+      const rzp = new RazorpayClass(options);
+      rzp.on("payment.failed", function (response: { error?: { description?: string } }) {  // eslint-disable-line @typescript-eslint/no-explicit-any
         setError(response.error?.description || "Payment failed");
       });
       rzp.open();

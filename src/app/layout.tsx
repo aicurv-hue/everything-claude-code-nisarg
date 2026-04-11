@@ -52,7 +52,7 @@ export default function RootLayout({
           <SplashHider />
           {children}
         </AuthProvider>
-        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="beforeInteractive" />
       </body>
     </html>
   );
