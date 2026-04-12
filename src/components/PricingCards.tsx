@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 const FREE_PLAN = {
@@ -107,8 +108,17 @@ function PricingCardsInner() {
     if (!autoPlan || autoPlan === "free") return;
     const match = PAID_PLANS.find(p => p.name.toLowerCase() === autoPlan.toLowerCase());
     if (!match) return;
-    const timer = setTimeout(() => handleCheckout(match), 600);
-    return () => clearTimeout(timer);
+
+    const unsub = onAuthStateChanged(auth, (user) => {
+      unsub(); // fire once only
+      if (user) {
+        handleCheckout(match);
+      } else {
+        const redirect = encodeURIComponent(`/?plan=${autoPlan}#pricing`);
+        router.push(`/login?plan=${autoPlan}&redirect=${redirect}`);
+      }
+    });
+    return unsub;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

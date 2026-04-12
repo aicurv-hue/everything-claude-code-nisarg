@@ -46,9 +46,9 @@ function PlanBadge() {
       <div className="px-3 pt-2">
         <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
           <span className="text-[10px] font-semibold text-amber-400">Free plan</span>
-          <a href="/#pricing" className="text-[10px] text-amber-400 hover:text-amber-200 underline underline-offset-2 transition-colors">
+          <Link href="/dashboard/billing" className="text-[10px] text-amber-400 hover:text-amber-200 underline underline-offset-2 transition-colors">
             Upgrade
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -69,9 +69,9 @@ function PlanBadge() {
     <div className="px-3 pt-2">
       <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
         <span className="text-[10px] font-semibold text-blue-400">{planLabel} — pending</span>
-        <a href="/#pricing" className="text-[10px] text-blue-400 hover:text-blue-200 underline underline-offset-2 transition-colors">
+        <Link href="/dashboard/billing" className="text-[10px] text-blue-400 hover:text-blue-200 underline underline-offset-2 transition-colors">
           Manage
-        </a>
+        </Link>
       </div>
     </div>
   );

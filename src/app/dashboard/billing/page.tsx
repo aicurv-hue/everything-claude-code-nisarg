@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import SubscriptionStatus from "@/components/SubscriptionStatus";
+import UpgradePlans from "@/components/UpgradePlans";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
 
 interface UsageData {
@@ -83,9 +84,24 @@ export default function BillingPage() {
             {usage.plan === "free" && (
               <p className="text-xs text-gray-400 pt-1">
                 Usage resets on the 1st of each month.{" "}
-                <a href="/#pricing" className="text-[#0A66C2] hover:underline">Upgrade for more.</a>
+                <a href="#upgrade" className="text-[#0A66C2] hover:underline">Upgrade for more.</a>
               </p>
             )}
+          </div>
+        )}
+        {usage && usage.plan === "free" && (
+          <div id="upgrade" className="pt-2">
+            <p className="font-semibold text-gray-900 mb-4">Upgrade your plan</p>
+            <UpgradePlans />
+          </div>
+        )}
+        {usage && usage.plan !== "free" && (
+          <div className="rounded-xl border border-green-200 bg-green-50 p-5">
+            <p className="font-semibold text-green-800 mb-1">Paid plan active</p>
+            <p className="text-sm text-green-700">
+              You are on the <span className="font-medium capitalize">{usage.plan}</span> plan. To change or cancel your subscription, contact{" "}
+              <a href="mailto:support@cridl.com" className="underline hover:text-green-900">support@cridl.com</a>.
+            </p>
           </div>
         )}
       </div>
