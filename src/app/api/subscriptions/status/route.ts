@@ -27,10 +27,10 @@ export async function GET(req: NextRequest) {
             plan: "starter",
             status: "trial",
             trialEndsAt: new Date(trialExpiry).toISOString(),
-          });
+          }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=30" } });
         }
       }
-      return NextResponse.json({ plan: "free", status: "free" });
+      return NextResponse.json({ plan: "free", status: "free" }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=30" } });
     }
 
     const subDoc = await adminDb.collection("subscriptions").doc(subscriptionId).get();
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       subscriptionId,
       trialEndsAt: sub.trialEndsAt?.toDate?.()?.toISOString() || null,
       currentPeriodEnd: sub.currentPeriodEnd?.toDate?.()?.toISOString() || null,
-    });
+    }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=30" } });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed";
     console.error("[subscriptions/status]", err);

@@ -10,86 +10,52 @@ import { getAuthToken } from "@/lib/utils/getAuthToken";
 import OnboardingModal from "@/components/ui/OnboardingModal";
 import BottomNav from "@/components/mobile/BottomNav";
 import MobileHeader from "@/components/mobile/MobileHeader";
-import { auth as firebaseAuth, db as firebaseDb } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
-
-interface PlanBadgeInfo {
-  plan: string;
-  status: string;
-}
+import { PlanStatusProvider, usePlanStatus } from "@/lib/context/planStatus";
 
 function PlanBadge() {
-  const [info, setInfo] = useState<PlanBadgeInfo | null>(null);
+  const { plan, status, loading } = usePlanStatus();
+  if (loading) return null;
 
-  useEffect(() => {
-    async function load() {
-      const user = firebaseAuth.currentUser;
-      if (!user) return;
-      const token = await user.getIdToken();
-      const res = await fetch("/api/subscriptions/status", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) setInfo(await res.json());
-    }
-    load();
-  }, []);
-
-  if (!info) return null;
-
-  const isFree   = !info.plan || info.plan === "free";
-  const isTrial  = info.status === "trial";
-  const isActive = info.status === "active";
-  const planLabel = info.plan
-    ? info.plan.charAt(0).toUpperCase() + info.plan.slice(1)
-    : "Free";
+  const isFree   = !plan || plan === "free";
+  const isTrial  = status === "trial";
+  const isActive = status === "active";
+  const planLabel = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : "Free";
 
   if (isFree) {
     return (
       <div className="px-3 pt-2">
         <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
           <span className="text-[10px] font-semibold text-amber-400">Free plan</span>
-          <Link href="/dashboard/billing" className="text-[10px] text-amber-400 hover:text-amber-200 underline underline-offset-2 transition-colors">
-            Upgrade
-          </Link>
+          <Link href="/dashboard/billing" className="text-[10px] text-amber-400 hover:text-amber-200 underline underline-offset-2 transition-colors">Upgrade</Link>
         </div>
       </div>
     );
   }
-
   if (isTrial) {
     return (
       <div className="px-3 pt-2">
         <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
           <span className="text-[10px] font-semibold text-violet-400">Trial active</span>
-          <Link href="/dashboard/billing" className="text-[10px] text-violet-400 hover:text-violet-200 underline underline-offset-2 transition-colors">
-            View
-          </Link>
+          <Link href="/dashboard/billing" className="text-[10px] text-violet-400 hover:text-violet-200 underline underline-offset-2 transition-colors">View</Link>
         </div>
       </div>
     );
   }
-
   if (isActive) {
     return (
       <div className="px-3 pt-2">
         <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
           <span className="text-[10px] font-semibold text-green-400">{planLabel} plan</span>
-          <Link href="/dashboard/billing" className="text-[10px] text-green-400 hover:text-green-200 underline underline-offset-2 transition-colors">
-            Usage
-          </Link>
+          <Link href="/dashboard/billing" className="text-[10px] text-green-400 hover:text-green-200 underline underline-offset-2 transition-colors">Usage</Link>
         </div>
       </div>
     );
   }
-
-  // pending/created/authenticated
   return (
     <div className="px-3 pt-2">
       <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
         <span className="text-[10px] font-semibold text-blue-400">{planLabel} — pending</span>
-        <Link href="/dashboard/billing" className="text-[10px] text-blue-400 hover:text-blue-200 underline underline-offset-2 transition-colors">
-          Manage
-        </Link>
+        <Link href="/dashboard/billing" className="text-[10px] text-blue-400 hover:text-blue-200 underline underline-offset-2 transition-colors">Manage</Link>
       </div>
     </div>
   );
@@ -266,6 +232,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { status: planStatus, trialEndsAt } = usePlanStatus();
   const router = useRouter();
   const pathname = usePathname();
   const [showGuide, setShowGuide] = useState(false);
@@ -273,20 +240,16 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
   useEffect(() => {
-    const currentUser = firebaseAuth.currentUser;
-    if (!currentUser || !firebaseDb) return;
-    getDoc(doc(firebaseDb, "users", currentUser.uid)).then(snap => {
-      if (!snap.exists()) return;
-      const data = snap.data();
-      if (data.trialActive === true) {
-        const expiryMillis = data.trialExpiresAt?.toMillis ? data.trialExpiresAt.toMillis() : 0;
-        if (expiryMillis > Date.now()) {
-          const daysRemaining = Math.ceil((expiryMillis - Date.now()) / 86400000);
-          setTrialBanner({ daysRemaining });
-        }
+    if (planStatus === "trial" && trialEndsAt) {
+      const ms = new Date(trialEndsAt).getTime() - Date.now();
+      if (ms > 0) {
+        const daysRemaining = Math.ceil(ms / 86400000);
+        setTrialBanner({ daysRemaining });
       }
-    }).catch(() => {});
-  }, [user]);
+    } else {
+      setTrialBanner(null);
+    }
+  }, [planStatus, trialEndsAt]);
 
   // Redirect first-time users to onboarding page
   useEffect(() => {
@@ -365,7 +328,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <AuthGuard>
       <SegmentProvider>
-        <DashboardShell>{children}</DashboardShell>
+        <PlanStatusProvider>
+          <DashboardShell>{children}</DashboardShell>
+        </PlanStatusProvider>
       </SegmentProvider>
     </AuthGuard>
   );

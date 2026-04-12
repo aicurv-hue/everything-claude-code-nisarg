@@ -7,8 +7,7 @@ import {
 } from "lucide-react";
 import UpgradePlans from "@/components/UpgradePlans";
 import { useAuth } from "@/lib/context/auth";
-import { db as firebaseDb } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { usePlanStatus } from "@/lib/context/planStatus";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -68,6 +67,7 @@ const PLAN_COLORS: Record<string, { bg: string; text: string; border: string }> 
 
 export default function BillingPage() {
   const { user, loading: authLoading } = useAuth();
+  const { plan: ctxPlan, status: ctxStatus, trialEndsAt: ctxTrialEndsAt, loading: planLoading } = usePlanStatus();
   const [usage,   setUsage]   = useState<UsageData | null>(null);
   const [sub,     setSub]     = useState<SubStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,37 +78,18 @@ export default function BillingPage() {
   const [redeemError,   setRedeemError]   = useState<string | null>(null);
   const [redeemSuccess, setRedeemSuccess] = useState<{ daysRemaining: number } | null>(null);
 
-  // Trial info (from Firestore directly for accuracy)
   const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
 
   useEffect(() => {
-    if (authLoading) return; // wait for auth to initialise
+    if (authLoading) return;
     if (!user) { setLoading(false); return; }
 
     async function load() {
       setLoading(true);
       try {
         const tok = await user!.getIdToken();
-
-        const [usageRes, subRes] = await Promise.all([
-          fetch("/api/usage/me",              { headers: { Authorization: `Bearer ${tok}` } }),
-          fetch("/api/subscriptions/status",  { headers: { Authorization: `Bearer ${tok}` } }),
-        ]);
-
-        if (usageRes.ok)  setUsage(await usageRes.json());
-        if (subRes.ok)    setSub(await subRes.json());
-
-        // Firestore direct read for trial days
-        if (firebaseDb) {
-          const snap = await getDoc(doc(firebaseDb, "users", user!.uid));
-          if (snap.exists()) {
-            const d = snap.data();
-            if (d.trialActive === true) {
-              const exp = d.trialExpiresAt?.toMillis ? d.trialExpiresAt.toMillis() : 0;
-              if (exp > Date.now()) setTrialDaysLeft(Math.ceil((exp - Date.now()) / 86400000));
-            }
-          }
-        }
+        const usageRes = await fetch("/api/usage/me", { headers: { Authorization: `Bearer ${tok}` } });
+        if (usageRes.ok) setUsage(await usageRes.json());
       } catch (err) {
         console.error("[BillingPage] load error", err);
       } finally {
@@ -117,6 +98,15 @@ export default function BillingPage() {
     }
     load();
   }, [user, authLoading]);
+
+  useEffect(() => {
+    if (planLoading) return;
+    setSub({ plan: ctxPlan, status: ctxStatus, trialEndsAt: ctxTrialEndsAt });
+    if (ctxStatus === "trial" && ctxTrialEndsAt) {
+      const ms = new Date(ctxTrialEndsAt).getTime() - Date.now();
+      if (ms > 0) setTrialDaysLeft(Math.ceil(ms / 86400000));
+    }
+  }, [ctxPlan, ctxStatus, ctxTrialEndsAt, planLoading]);
 
   async function handleRedeem() {
     setRedeemError(null);

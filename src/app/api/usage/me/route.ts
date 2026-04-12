@@ -22,5 +22,5 @@ export async function GET(req: NextRequest) {
   const [usage, plan] = await Promise.all([getMonthlyUsage(uid), getUserPlan(uid)]);
   const limits = PLAN_LIMITS[plan];
 
-  return NextResponse.json({ ...usage, plan, limits });
+  return NextResponse.json({ ...usage, plan, limits }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=15" } });
 }
