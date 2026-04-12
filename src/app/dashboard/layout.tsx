@@ -10,7 +10,8 @@ import { getAuthToken } from "@/lib/utils/getAuthToken";
 import OnboardingModal from "@/components/ui/OnboardingModal";
 import BottomNav from "@/components/mobile/BottomNav";
 import MobileHeader from "@/components/mobile/MobileHeader";
-import { auth as firebaseAuth } from "@/lib/firebase";
+import { auth as firebaseAuth, db as firebaseDb } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 interface PlanBadgeInfo {
   plan: string;
@@ -250,6 +251,24 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [showGuide, setShowGuide] = useState(false);
+  const [trialBanner, setTrialBanner] = useState<{ daysRemaining: number } | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  useEffect(() => {
+    const currentUser = firebaseAuth.currentUser;
+    if (!currentUser || !firebaseDb) return;
+    getDoc(doc(firebaseDb, "users", currentUser.uid)).then(snap => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      if (data.trialActive === true) {
+        const expiryMillis = data.trialExpiresAt?.toMillis ? data.trialExpiresAt.toMillis() : 0;
+        if (expiryMillis > Date.now()) {
+          const daysRemaining = Math.ceil((expiryMillis - Date.now()) / 86400000);
+          setTrialBanner({ daysRemaining });
+        }
+      }
+    }).catch(() => {});
+  }, [user]);
 
   // Redirect first-time users to onboarding page
   useEffect(() => {
@@ -289,6 +308,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen hidden md:flex bg-slate-50 text-slate-900">
         <Sidebar onOpenGuide={() => setShowGuide(true)} failedCount={failedCount} />
         <main className="flex-1 overflow-auto min-h-screen">
+          {trialBanner && !bannerDismissed && (
+            <div className="bg-amber-500 text-black text-sm font-medium px-4 py-2 flex items-center justify-between">
+              <span>Trial active — {trialBanner.daysRemaining} day{trialBanner.daysRemaining !== 1 ? "s" : ""} remaining</span>
+              <button onClick={() => setBannerDismissed(true)} className="ml-4 font-bold hover:opacity-70">×</button>
+            </div>
+          )}
           <div key={pathname} className="h-full">
             {children}
           </div>
@@ -300,6 +325,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         <MobileHeader />
         <main className="flex-1 overflow-auto pb-20">
           {/* pb-20 = clears the 64px bottom nav */}
+          {trialBanner && !bannerDismissed && (
+            <div className="bg-amber-500 text-black text-sm font-medium px-4 py-2 flex items-center justify-between">
+              <span>Trial active — {trialBanner.daysRemaining} day{trialBanner.daysRemaining !== 1 ? "s" : ""} remaining</span>
+              <button onClick={() => setBannerDismissed(true)} className="ml-4 font-bold hover:opacity-70">×</button>
+            </div>
+          )}
           <div key={pathname} className="h-full">
             {children}
           </div>

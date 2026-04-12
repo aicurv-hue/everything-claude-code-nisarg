@@ -349,10 +349,16 @@ function UserDetailDrawer({ user, onClose, adminFetch, onBetaGranted }: {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "users" | "system" | "beta";
+type Tab = "overview" | "users" | "system" | "beta" | "promos";
 type SortKey = "lastSignIn" | "postCount" | "failedCount" | "createdAt";
 
 interface BetaEntry { email: string; added_at: string | null; }
+
+interface PromoCode {
+  code: string; label: string; trialDays: number;
+  maxUses: number | null; usesCount: number;
+  expiresAt: string | null; isActive: boolean; createdAt: string | null;
+}
 
 export default function AdminPage() {
   const [tab,        setTab]        = useState<Tab>("overview");
@@ -365,6 +371,16 @@ export default function AdminPage() {
   const [sortKey,    setSortKey]    = useState<SortKey>("lastSignIn");
   const [detailUser, setDetailUser] = useState<AdminUser | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+
+  // Promo code state
+  const [promos,        setPromos]        = useState<PromoCode[]>([]);
+  const [promosLoading, setPromosLoading] = useState(false);
+  const [promoMsg,      setPromoMsg]      = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [promoForm,     setPromoForm]     = useState({ trialDays: 15, maxUses: "", expiresAt: "", label: "" });
+  const [promoGenerating, setPromoGenerating] = useState(false);
+  const [editingPromo,  setEditingPromo]  = useState<string | null>(null);
+  const [editForm,      setEditForm]      = useState<{ trialDays: number; expiresAt: string; label: string }>({ trialDays: 15, expiresAt: "", label: "" });
+  const [copiedCode,    setCopiedCode]    = useState<string | null>(null);
 
   // Beta access state
   const [betaList,      setBetaList]      = useState<BetaEntry[]>([]);
@@ -420,6 +436,82 @@ export default function AdminPage() {
       setUsers(prev => prev.filter(u => u.uid !== uid));
       if (detailUser?.uid === uid) setDetailUser(null);
     } finally { setActionId(null); }
+  }
+
+  // ── Promo code helpers ──
+  const loadPromos = useCallback(async () => {
+    setPromosLoading(true);
+    try {
+      const res = await adminFetch("/api/admin/promo-codes");
+      const data = await res.json();
+      setPromos(data.codes || []);
+    } catch { setPromoMsg({ type: "err", text: "Failed to load promo codes." }); }
+    finally { setPromosLoading(false); }
+  }, [adminFetch]);
+
+  useEffect(() => { if (tab === "promos") loadPromos(); }, [tab, loadPromos]);
+
+  async function promoGenerate() {
+    setPromoGenerating(true);
+    setPromoMsg(null);
+    try {
+      const body = {
+        trialDays: Number(promoForm.trialDays) || 15,
+        maxUses: promoForm.maxUses !== "" ? Number(promoForm.maxUses) : null,
+        expiresAt: promoForm.expiresAt || null,
+        label: promoForm.label,
+      };
+      const res = await adminFetch("/api/admin/promo-codes", { method: "POST", body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setPromoMsg({ type: "ok", text: `Generated: ${data.code}` });
+      setPromoForm({ trialDays: 15, maxUses: "", expiresAt: "", label: "" });
+      await loadPromos();
+    } catch (e: any) {
+      setPromoMsg({ type: "err", text: e.message || "Failed" });
+    } finally { setPromoGenerating(false); }
+  }
+
+  async function promoSaveEdit(code: string) {
+    try {
+      const res = await adminFetch("/api/admin/promo-codes", {
+        method: "PATCH",
+        body: JSON.stringify({ code, trialDays: editForm.trialDays, expiresAt: editForm.expiresAt || null, label: editForm.label }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setEditingPromo(null);
+      setPromoMsg({ type: "ok", text: `Updated ${code}` });
+      await loadPromos();
+    } catch (e: any) {
+      setPromoMsg({ type: "err", text: e.message || "Failed to update" });
+    }
+  }
+
+  async function promoToggleActive(code: string, isActive: boolean) {
+    try {
+      await adminFetch("/api/admin/promo-codes", { method: "PATCH", body: JSON.stringify({ code, isActive: !isActive }) });
+      setPromos(prev => prev.map(p => p.code === code ? { ...p, isActive: !isActive } : p));
+    } catch (e: any) {
+      setPromoMsg({ type: "err", text: e.message || "Failed to toggle" });
+    }
+  }
+
+  async function promoDelete(code: string) {
+    if (!confirm(`Delete promo code ${code}? This cannot be undone.`)) return;
+    try {
+      const res = await adminFetch("/api/admin/promo-codes", { method: "DELETE", body: JSON.stringify({ code }) });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setPromos(prev => prev.filter(p => p.code !== code));
+      setPromoMsg({ type: "ok", text: `Deleted ${code}` });
+    } catch (e: any) {
+      setPromoMsg({ type: "err", text: e.message || "Failed to delete" });
+    }
+  }
+
+  function promoCopy(code: string) {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
   }
 
   // ── Beta access helpers ──
@@ -485,6 +577,7 @@ export default function AdminPage() {
     { key: "users",    label: `Users (${users.length})` },
     { key: "system",   label: "System" },
     { key: "beta",     label: "Beta Access" },
+    { key: "promos",   label: "Promo Codes" },
   ];
 
   // ── System tab data ──
@@ -985,6 +1078,226 @@ export default function AdminPage() {
                   })}
                 </tbody>
               </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── PROMO CODES TAB ── */}
+      {tab === "promos" && (
+        <div className="space-y-6">
+          <div className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-violet-400" />
+            <h2 className="font-semibold text-white">Promo Codes</h2>
+          </div>
+
+          {promoMsg && (
+            <div className={`text-sm px-4 py-3 rounded-xl border ${promoMsg.type === "ok" ? "bg-green-500/10 border-green-500/25 text-green-400" : "bg-red-500/10 border-red-500/25 text-red-400"}`}>
+              {promoMsg.text}
+            </div>
+          )}
+
+          {/* Generate form */}
+          <div className="bg-slate-900 border border-white/[0.07] rounded-xl p-5">
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-4">Generate New Code</p>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Trial Days</label>
+                <input
+                  type="number" min={1} max={365}
+                  value={promoForm.trialDays}
+                  onChange={e => setPromoForm(f => ({ ...f, trialDays: Number(e.target.value) }))}
+                  className="w-full bg-slate-800 border border-white/[0.07] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0A66C2]/60"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Max Uses <span className="text-slate-600">(blank = unlimited)</span></label>
+                <input
+                  type="number" min={1}
+                  value={promoForm.maxUses}
+                  placeholder="Unlimited"
+                  onChange={e => setPromoForm(f => ({ ...f, maxUses: e.target.value }))}
+                  className="w-full bg-slate-800 border border-white/[0.07] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#0A66C2]/60"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Code Expires On <span className="text-slate-600">(optional)</span></label>
+                <input
+                  type="date"
+                  value={promoForm.expiresAt}
+                  onChange={e => setPromoForm(f => ({ ...f, expiresAt: e.target.value }))}
+                  className="w-full bg-slate-800 border border-white/[0.07] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0A66C2]/60"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Label / Note</label>
+                <input
+                  type="text"
+                  value={promoForm.label}
+                  placeholder="e.g. Influencer batch April"
+                  onChange={e => setPromoForm(f => ({ ...f, label: e.target.value }))}
+                  className="w-full bg-slate-800 border border-white/[0.07] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#0A66C2]/60"
+                />
+              </div>
+            </div>
+            <button
+              onClick={promoGenerate}
+              disabled={promoGenerating}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              {promoGenerating ? "Generating…" : "Generate Code"}
+            </button>
+          </div>
+
+          {/* Codes table */}
+          <div className="bg-slate-900 border border-white/[0.07] rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-white/[0.07] flex items-center justify-between">
+              <p className="text-xs text-slate-500 uppercase tracking-wider">All Codes</p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">{promos.length} codes</span>
+                <button onClick={loadPromos} disabled={promosLoading} className="text-slate-500 hover:text-white transition-colors">
+                  <RefreshCw className={`w-3.5 h-3.5 ${promosLoading ? "animate-spin" : ""}`} />
+                </button>
+              </div>
+            </div>
+
+            {promosLoading ? (
+              <div className="py-10 flex justify-center">
+                <div className="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : promos.length === 0 ? (
+              <div className="py-10 text-center text-slate-500 text-sm">No promo codes yet. Generate one above.</div>
+            ) : (
+              <div className="divide-y divide-white/[0.04]">
+                {promos.map(p => (
+                  <div key={p.code} className="px-5 py-4">
+                    {editingPromo === p.code ? (
+                      /* ── Inline edit row ── */
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-mono text-sm text-violet-300 font-semibold">{p.code}</span>
+                          <span className="text-xs text-slate-500">editing</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">Trial Days</label>
+                            <input
+                              type="number" min={1}
+                              value={editForm.trialDays}
+                              onChange={e => setEditForm(f => ({ ...f, trialDays: Number(e.target.value) }))}
+                              className="w-full bg-slate-800 border border-white/[0.07] rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-violet-500/60"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">Expires On</label>
+                            <input
+                              type="date"
+                              value={editForm.expiresAt}
+                              onChange={e => setEditForm(f => ({ ...f, expiresAt: e.target.value }))}
+                              className="w-full bg-slate-800 border border-white/[0.07] rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-violet-500/60"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">Label</label>
+                            <input
+                              type="text"
+                              value={editForm.label}
+                              onChange={e => setEditForm(f => ({ ...f, label: e.target.value }))}
+                              className="w-full bg-slate-800 border border-white/[0.07] rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-violet-500/60"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => promoSaveEdit(p.code)}
+                            className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium transition-colors"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingPromo(null)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* ── Normal row ── */
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-2 min-w-[180px]">
+                          <span className="font-mono text-sm text-violet-300 font-semibold">{p.code}</span>
+                          <button
+                            onClick={() => promoCopy(p.code)}
+                            title="Copy code"
+                            className="text-slate-500 hover:text-white transition-colors"
+                          >
+                            {copiedCode === p.code
+                              ? <CheckCircle className="w-3.5 h-3.5 text-green-400" />
+                              : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <Clock className="w-3 h-3 text-slate-500" />
+                          <span className="text-white font-medium">{p.trialDays}d</span>
+                          <span className="text-slate-500">trial</span>
+                        </div>
+
+                        <div className="text-xs text-slate-400">
+                          {p.usesCount}/{p.maxUses ?? "∞"} uses
+                        </div>
+
+                        {p.expiresAt && (
+                          <div className="text-xs text-slate-500">
+                            expires {new Date(p.expiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                          </div>
+                        )}
+
+                        {p.label && (
+                          <div className="text-xs text-slate-500 italic truncate max-w-[160px]">{p.label}</div>
+                        )}
+
+                        <div className="ml-auto flex items-center gap-2">
+                          <button
+                            onClick={() => promoToggleActive(p.code, p.isActive)}
+                            title={p.isActive ? "Deactivate" : "Activate"}
+                            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                              p.isActive
+                                ? "bg-green-500/15 text-green-400 border-green-500/30 hover:bg-red-500/15 hover:text-red-400 hover:border-red-500/30"
+                                : "bg-slate-500/15 text-slate-400 border-slate-500/30 hover:bg-green-500/15 hover:text-green-400 hover:border-green-500/30"
+                            }`}
+                          >
+                            {p.isActive ? "Active" : "Inactive"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingPromo(p.code);
+                              setEditForm({
+                                trialDays: p.trialDays,
+                                expiresAt: p.expiresAt ? p.expiresAt.slice(0, 10) : "",
+                                label: p.label,
+                              });
+                            }}
+                            title="Edit"
+                            className="text-slate-500 hover:text-white transition-colors"
+                          >
+                            <Star className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => promoDelete(p.code)}
+                            title="Delete"
+                            className="text-slate-500 hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

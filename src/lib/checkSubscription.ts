@@ -18,7 +18,17 @@ export const PLAN_IDS: Record<string, PlanName> = {
 export async function getUserPlan(userId: string): Promise<PlanName> {
   const doc = await adminDb.collection("users").doc(userId).get();
   if (!doc.exists) return "free";
-  return (doc.data()?.plan as PlanName) || "free";
+  const data = doc.data() || {};
+
+  // Active trial overrides whatever plan is stored
+  if (data.trialActive === true) {
+    const trialExpiry = data.trialExpiresAt?.toMillis ? data.trialExpiresAt.toMillis() : (data.trialExpiresAt || 0);
+    if (trialExpiry > Date.now()) {
+      return "starter";
+    }
+  }
+
+  return (data.plan as PlanName) || "free";
 }
 
 export async function getUserLimits(userId: string) {

@@ -41,9 +41,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="text-slate-500 text-sm">/</span>
           <span className="text-slate-300 text-sm font-medium">Admin</span>
         </div>
-        <a href="/dashboard" className="text-slate-400 hover:text-white text-sm transition-colors">
-          ← Back to dashboard
-        </a>
+        <div className="flex items-center gap-4">
+          <a href="/admin/promo-codes" className="text-slate-400 hover:text-white text-sm transition-colors">
+            Promo Codes
+          </a>
+          <a href="/dashboard" className="text-slate-400 hover:text-white text-sm transition-colors">
+            ← Back to dashboard
+          </a>
+        </div>
       </header>
       <main className="max-w-7xl mx-auto px-8 py-8">{children}</main>
     </div>

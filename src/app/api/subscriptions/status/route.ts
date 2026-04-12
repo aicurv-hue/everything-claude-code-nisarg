@@ -16,7 +16,20 @@ export async function GET(req: NextRequest) {
     const planStatus = userData.planStatus || "free";
     const subscriptionId = userData.subscriptionId || null;
 
+    // Check active promo trial before falling back to "free"
     if (!subscriptionId) {
+      if (userData.trialActive === true) {
+        const trialExpiry = userData.trialExpiresAt?.toMillis
+          ? userData.trialExpiresAt.toMillis()
+          : (userData.trialExpiresAt || 0);
+        if (trialExpiry > Date.now()) {
+          return NextResponse.json({
+            plan: "starter",
+            status: "trial",
+            trialEndsAt: new Date(trialExpiry).toISOString(),
+          });
+        }
+      }
       return NextResponse.json({ plan: "free", status: "free" });
     }
 
