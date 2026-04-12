@@ -259,7 +259,31 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
   const hookKey = `HOOK_${tone.toUpperCase()}` as const;
   const segmentKey = segment === "individual" ? "SEGMENT_INDIVIDUAL" : "SEGMENT_CORPORATE";
 
+  // For personal topics: inject a hard override at the very top — before any other instruction.
+  // This ensures it is the first thing Neel reads and cannot be overridden by memory or brand context.
+  const personalTopOverride = !isProfessional
+    ? [
+        `══════════════════════════════════════════`,
+        `⛔ CRITICAL OVERRIDE — READ THIS FIRST`,
+        `══════════════════════════════════════════`,
+        `The user's topic is a PERSONAL STORY or REFLECTION (not a product or service post).`,
+        ``,
+        `ABSOLUTE RULES for this generation:`,
+        `1. Write ONLY about the topic the user described. Stay on that topic from hook to CTA.`,
+        `2. Do NOT mention, reference, or connect to: the author's product, service, business, automation, AI tools, LinkedIn strategy, content creation, or any industry niche.`,
+        `3. Do NOT add statistics about AI, automation, marketing, or technology unless the user's topic explicitly contains them.`,
+        `4. Do NOT end with a business CTA. End with a human question or reflection relevant to the story.`,
+        `5. The brand profile below provides ONLY writing voice and style — not subject matter.`,
+        `6. Ignore past posts in memory as topic inspiration — use them ONLY to match writing style.`,
+        ``,
+        `Violation of any rule above makes this generation a failure.`,
+        `══════════════════════════════════════════`,
+        ``,
+      ].join("\n")
+    : "";
+
   const systemInstructions = [
+    personalTopOverride,
     section("IDENTITY"),
     "",
     section("INTENT_DETECTION"),
@@ -300,7 +324,10 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
       ? `\n\n${buildWritingSamplesBlock(writingSamples)}`
       : "",
     memoryContext && memoryContext.length > 0
-      ? `\n\n${buildMemoryBlock(memoryContext)}`
+      ? !isProfessional
+        // Personal topics: only pass style_notes from memory — topic/summary stripped to prevent brand contamination
+        ? `\n\n══════════════════════════════════════════\nWRITING STYLE REFERENCE (from past posts — use for voice/style ONLY, not topic inspiration)\n══════════════════════════════════════════\n${memoryContext.filter((m: any) => m.style_notes).map((m: any) => `- ${m.style_notes}`).join("\n")}`
+        : `\n\n${buildMemoryBlock(memoryContext)}`
       : "",
     customInstructions
       ? [

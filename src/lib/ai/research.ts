@@ -119,12 +119,15 @@ export async function performResearch(
 
   // ── Single combined research call — merges sub-questions + synthesis into 1 ─
   // Two sequential AI calls exceeded Vercel's 60s limit; one call fixes it.
-  const combinedPrompt = `You are an expert LinkedIn content researcher and market analyst.
+  const researcherRole = intentType === "personal"
+    ? `You are a research journalist and cultural analyst.`
+    : `You are an expert LinkedIn content researcher and market analyst.`;
+
+  const combinedPrompt = `${researcherRole}
 
 Produce a research report to power a single LinkedIn post with these parameters:
 - Topic: "${topic}"
-- Tone: ${tone}
-- Target audience: ${audience}
+- Tone: ${tone}${intentType === "professional" ? `\n- Target audience: ${audience}` : ""}
 - Post length: ${length}
 - Segment: ${segment === "individual" ? "personal brand, first-person" : "corporate brand, company voice"}
 ${clientContext}
