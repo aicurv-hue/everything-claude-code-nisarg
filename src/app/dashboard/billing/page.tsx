@@ -6,8 +6,8 @@ import {
   BarChart2, ChevronRight, Sparkles, Clock,
 } from "lucide-react";
 import UpgradePlans from "@/components/UpgradePlans";
-import { getAuthToken } from "@/lib/utils/getAuthToken";
-import { auth as firebaseAuth, db as firebaseDb } from "@/lib/firebase";
+import { useAuth } from "@/lib/context/auth";
+import { db as firebaseDb } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -67,6 +67,7 @@ const PLAN_COLORS: Record<string, { bg: string; text: string; border: string }> 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function BillingPage() {
+  const { user, loading: authLoading } = useAuth();
   const [usage,   setUsage]   = useState<UsageData | null>(null);
   const [sub,     setSub]     = useState<SubStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,11 +82,13 @@ export default function BillingPage() {
   const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
 
   useEffect(() => {
+    if (authLoading) return; // wait for auth to initialise
+    if (!user) { setLoading(false); return; }
+
     async function load() {
       setLoading(true);
       try {
-        const tok = await getAuthToken();
-        if (!tok) return;
+        const tok = await user!.getIdToken();
 
         const [usageRes, subRes] = await Promise.all([
           fetch("/api/usage/me",              { headers: { Authorization: `Bearer ${tok}` } }),
@@ -96,9 +99,8 @@ export default function BillingPage() {
         if (subRes.ok)    setSub(await subRes.json());
 
         // Firestore direct read for trial days
-        const user = firebaseAuth.currentUser;
-        if (user && firebaseDb) {
-          const snap = await getDoc(doc(firebaseDb, "users", user.uid));
+        if (firebaseDb) {
+          const snap = await getDoc(doc(firebaseDb, "users", user!.uid));
           if (snap.exists()) {
             const d = snap.data();
             if (d.trialActive === true) {
@@ -114,7 +116,7 @@ export default function BillingPage() {
       }
     }
     load();
-  }, []);
+  }, [user, authLoading]);
 
   async function handleRedeem() {
     setRedeemError(null);
@@ -122,7 +124,7 @@ export default function BillingPage() {
     if (!promoCode.trim()) { setRedeemError("Enter a promo code."); return; }
     setRedeemLoading(true);
     try {
-      const tok = await getAuthToken();
+      const tok = await user!.getIdToken();
       const res = await fetch("/api/promo/redeem", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
