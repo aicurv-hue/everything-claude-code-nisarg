@@ -10,9 +10,9 @@ export const PLAN_LIMITS = {
 } as const;
 
 export const PLAN_IDS: Record<string, PlanName> = {
-  [process.env.RAZORPAY_PLAN_STARTER!]: "starter",
-  [process.env.RAZORPAY_PLAN_PRO!]: "pro",
-  [process.env.RAZORPAY_PLAN_BUSINESS!]: "business",
+  [(process.env.RAZORPAY_PLAN_STARTER || "").trim()]: "starter",
+  [(process.env.RAZORPAY_PLAN_PRO || "").trim()]: "pro",
+  [(process.env.RAZORPAY_PLAN_BUSINESS || "").trim()]: "business",
 };
 
 export async function getUserPlan(userId: string): Promise<PlanName> {
