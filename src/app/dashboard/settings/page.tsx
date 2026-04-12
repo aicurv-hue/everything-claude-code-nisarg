@@ -19,7 +19,6 @@ import {
   Image as ImageIcon,
   Camera,
   Upload,
-  Tag,
 } from "lucide-react";
 import { UserProfile, ProfileSegment, ImageStyle } from "@/lib/db/profiles";
 import { useAuth } from "@/lib/context/auth";
@@ -77,12 +76,6 @@ export default function SettingsPage() {
 
   // Plan state (for feature gating)
   const [userPlan, setUserPlan] = useState<string>("free");
-
-  // Redeem promo code state
-  const [promoCode, setPromoCode] = useState("");
-  const [redeemLoading, setRedeemLoading] = useState(false);
-  const [redeemError, setRedeemError] = useState<string | null>(null);
-  const [redeemSuccess, setRedeemSuccess] = useState<{ daysRemaining: number } | null>(null);
 
   // Profile photo state (Individual only)
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
@@ -299,32 +292,6 @@ export default function SettingsPage() {
 
   const currentProfile = segments[profileType];
 
-  const handleRedeem = async () => {
-    setRedeemError(null);
-    setRedeemSuccess(null);
-    if (!promoCode.trim()) { setRedeemError("Please enter a promo code."); return; }
-    setRedeemLoading(true);
-    try {
-      const token = await getAuthToken();
-      const res = await fetch("/api/promo/redeem", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ code: promoCode.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setRedeemError(data.error || "Failed to redeem code."); return; }
-      setRedeemSuccess({ daysRemaining: data.daysRemaining });
-      setPromoCode("");
-    } catch {
-      setRedeemError("Network error. Please try again.");
-    } finally {
-      setRedeemLoading(false);
-    }
-  };
-
   const tabs = [
     { id: "identity", label: "Identity",       icon: User },
     { id: "audience", label: "Audience",       icon: Users },
@@ -333,7 +300,6 @@ export default function SettingsPage() {
     { id: "ai",       label: "AI Config",      icon: ShieldCheck },
     { id: "image",    label: "Image Style",    icon: ImageIcon },
     { id: "billing",  label: "Billing",        icon: ShieldCheck },
-    { id: "redeem",   label: "Redeem Code",    icon: Tag },
   ];
 
   const IMAGE_STYLES: Array<{ id: ImageStyle; label: string; description: string; emoji: string }> = [
@@ -880,41 +846,6 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {activeTab === "redeem" && (
-          <div className="space-y-5">
-            <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700 leading-relaxed">
-              <strong>Redeem Code</strong> — activate a promo code to start a free trial.
-            </div>
-            <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4">
-              <h3 className="text-sm font-semibold text-slate-900">Enter your promo code</h3>
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={promoCode}
-                  onChange={e => setPromoCode(e.target.value.toUpperCase())}
-                  placeholder="CRIDL-XXXXXXXX"
-                  className={inputClass + " flex-1 font-mono tracking-wider"}
-                  onKeyDown={e => { if (e.key === "Enter") handleRedeem(); }}
-                />
-                <button
-                  onClick={handleRedeem}
-                  disabled={redeemLoading}
-                  className="px-5 py-2.5 bg-[#0A66C2] hover:bg-[#0854a0] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
-                >
-                  {redeemLoading ? "Activating..." : "Activate"}
-                </button>
-              </div>
-              {redeemError && (
-                <p className="text-sm text-red-600 font-medium">{redeemError}</p>
-              )}
-              {redeemSuccess && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 font-medium">
-                  Promo code activated! Your Starter plan trial is active for {redeemSuccess.daysRemaining} more day{redeemSuccess.daysRemaining !== 1 ? "s" : ""}.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

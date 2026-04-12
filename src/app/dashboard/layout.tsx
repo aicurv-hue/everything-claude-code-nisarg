@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, Settings, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut, BookOpen, HelpCircle, TrendingUp, Rocket } from "lucide-react";
+import { BarChart3, Settings, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut, BookOpen, HelpCircle, TrendingUp, Rocket, CreditCard } from "lucide-react";
 import { SegmentProvider, useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
@@ -36,8 +36,9 @@ function PlanBadge() {
 
   if (!info) return null;
 
+  const isFree   = !info.plan || info.plan === "free";
+  const isTrial  = info.status === "trial";
   const isActive = info.status === "active";
-  const isFree = !info.plan || info.plan === "free";
   const planLabel = info.plan
     ? info.plan.charAt(0).toUpperCase() + info.plan.slice(1)
     : "Free";
@@ -55,17 +56,33 @@ function PlanBadge() {
     );
   }
 
-  if (isActive) {
+  if (isTrial) {
     return (
       <div className="px-3 pt-2">
-        <div className="px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
-          <span className="text-[10px] font-semibold text-green-400">{planLabel} plan</span>
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
+          <span className="text-[10px] font-semibold text-violet-400">Trial active</span>
+          <Link href="/dashboard/billing" className="text-[10px] text-violet-400 hover:text-violet-200 underline underline-offset-2 transition-colors">
+            View
+          </Link>
         </div>
       </div>
     );
   }
 
-  // pending/created/authenticated — show plan name with pending indicator
+  if (isActive) {
+    return (
+      <div className="px-3 pt-2">
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
+          <span className="text-[10px] font-semibold text-green-400">{planLabel} plan</span>
+          <Link href="/dashboard/billing" className="text-[10px] text-green-400 hover:text-green-200 underline underline-offset-2 transition-colors">
+            Usage
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // pending/created/authenticated
   return (
     <div className="px-3 pt-2">
       <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
@@ -94,6 +111,7 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
     { href: "/dashboard/history",    label: "History",     icon: <Clock className="w-4 h-4" /> },
     { href: "/dashboard/analytics", label: "Analytics",  icon: <TrendingUp className="w-4 h-4" /> },
     { href: "/dashboard/memory",   label: "Memory",      icon: <Brain className="w-4 h-4" /> },
+    { href: "/dashboard/billing",  label: "Billing",     icon: <CreditCard className="w-4 h-4" /> },
     { href: "/dashboard/settings", label: "Profile",    icon: <Settings className="w-4 h-4" /> },
     { href: "/dashboard/guide",    label: "Guide",       icon: <HelpCircle className="w-4 h-4" /> },
   ];
