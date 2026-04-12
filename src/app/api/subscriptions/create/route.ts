@@ -19,8 +19,9 @@ export async function POST(req: NextRequest) {
       process.env.RAZORPAY_PLAN_PRO,
       process.env.RAZORPAY_PLAN_BUSINESS,
     ].filter(Boolean);
+    console.log("[subscriptions/create] planId received:", planId, "| length:", planId?.length, "| valid:", VALID_PLAN_IDS);
     if (!planId || !VALID_PLAN_IDS.includes(planId)) {
-      return NextResponse.json({ error: `Invalid plan ID: "${planId}". Valid: ${VALID_PLAN_IDS.join(", ")}` }, { status: 400 });
+      return NextResponse.json({ error: `Invalid plan ID: "${planId}" (length: ${planId?.length ?? 0}). Valid: ${VALID_PLAN_IDS.join(", ")}` }, { status: 400 });
     }
 
     const planName = PLAN_IDS[planId];
