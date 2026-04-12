@@ -151,7 +151,7 @@ export default function BillingPage() {
         <p className="text-sm text-slate-500 mt-1">Manage your plan, track usage, and activate promo codes.</p>
       </div>
 
-      {loading ? (
+      {(loading || planLoading) ? (
         <div className="flex justify-center py-16">
           <div className="w-7 h-7 border-2 border-[#0A66C2] border-t-transparent rounded-full animate-spin" />
         </div>
