@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { checkAndIncrementUsage } from "@/lib/usageTracking";
+import { getUserPlan } from "@/lib/checkSubscription";
 
 const STYLE_PROMPTS: Record<string, string> = {
   professional: "professional LinkedIn headshot, modern office background, natural window light, clean corporate setting, confident pose",
@@ -23,6 +25,36 @@ export async function POST(req: NextRequest) {
       uid = decoded.uid;
     } catch {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    // Gate: free plan cannot use Use My Face
+    const plan = await getUserPlan(uid);
+    if (plan === "free") {
+      return NextResponse.json(
+        {
+          error: "Use My Face is not available on the Free plan. Upgrade to Starter or above.",
+          code: "PLAN_GATE",
+          plan: "free",
+          upgradeUrl: "/#pricing",
+        },
+        { status: 403 }
+      );
+    }
+
+    // Check and increment face image quota
+    const usageCheck = await checkAndIncrementUsage(uid, "faceImage");
+    if (!usageCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "Monthly face image limit reached. Upgrade your plan to continue.",
+          code: "LIMIT_EXCEEDED",
+          limit: usageCheck.limit,
+          used: usageCheck.used,
+          plan: usageCheck.plan,
+          upgradeUrl: "/#pricing",
+        },
+        { status: 429 }
+      );
     }
 
     const { backgroundStyle = "professional", postTopic = "" } = await req.json();

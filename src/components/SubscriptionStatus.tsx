@@ -7,7 +7,6 @@ interface SubStatus {
   plan: string;
   status: string;
   subscriptionId?: string;
-  trialEndsAt?: string;
   currentPeriodEnd?: string;
 }
 
@@ -60,9 +59,13 @@ export default function SubscriptionStatus() {
   }
 
   const planLabel = sub.plan.charAt(0).toUpperCase() + sub.plan.slice(1);
-  const trialEnd = sub.trialEndsAt ? new Date(sub.trialEndsAt) : null;
   const periodEnd = sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd) : null;
-  const trialDaysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : 0;
+
+  const statusLabel =
+    sub.status === "active" ? "Active" :
+    sub.status === "pending" || sub.status === "created" || sub.status === "authenticated" ? "Pending" :
+    sub.status === "cancelled" ? "Cancelled" :
+    sub.status;
 
   return (
     <div className="rounded-xl border border-gray-200 p-6 space-y-4">
@@ -71,20 +74,15 @@ export default function SubscriptionStatus() {
           <p className="font-semibold text-gray-900 text-lg">{planLabel} Plan</p>
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
             sub.status === "active" ? "bg-green-100 text-green-700" :
-            sub.status === "trialing" || sub.status === "authenticated" || sub.status === "created" ? "bg-blue-100 text-blue-700" :
+            sub.status === "pending" || sub.status === "created" || sub.status === "authenticated" ? "bg-blue-100 text-blue-700" :
             sub.status === "cancelled" ? "bg-red-100 text-red-700" :
             "bg-gray-100 text-gray-600"
           }`}>
-            {sub.status === "trialing" || sub.status === "created" || sub.status === "authenticated" ? "Trial" : sub.status}
+            {statusLabel}
           </span>
         </div>
       </div>
 
-      {trialEnd && trialDaysLeft > 0 && (
-        <p className="text-sm text-blue-600">
-          Trial ends in <strong>{trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""}</strong> · {trialEnd.toLocaleDateString()}
-        </p>
-      )}
       {periodEnd && sub.status === "active" && (
         <p className="text-sm text-gray-500">Next billing: {periodEnd.toLocaleDateString()}</p>
       )}

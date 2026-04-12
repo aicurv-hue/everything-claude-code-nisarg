@@ -9,6 +9,17 @@ export async function POST(req: NextRequest) {
   const uid = await verifyTokenEdge(req.headers.get("authorization"));
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Check and increment image generation quota (pre-flight to Node.js route)
+  const checkRes = await fetch(new URL("/api/usage/check", req.url), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: req.headers.get("authorization") || "",
+    },
+    body: JSON.stringify({ action: "image" }),
+  });
+  if (!checkRes.ok) return checkRes;
+
   try {
     const { prompt } = await req.json();
     if (!prompt || typeof prompt !== "string") {

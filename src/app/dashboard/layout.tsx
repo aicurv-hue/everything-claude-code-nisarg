@@ -15,7 +15,6 @@ import { auth as firebaseAuth } from "@/lib/firebase";
 interface PlanBadgeInfo {
   plan: string;
   status: string;
-  trialEndsAt?: string;
 }
 
 function PlanBadge() {
@@ -36,14 +35,8 @@ function PlanBadge() {
 
   if (!info) return null;
 
-  const isTrial = info.status === "trialing" || info.status === "created" || info.status === "authenticated";
   const isActive = info.status === "active";
   const isFree = !info.plan || info.plan === "free";
-
-  const trialDaysLeft = info.trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(info.trialEndsAt).getTime() - Date.now()) / 86400000))
-    : 0;
-
   const planLabel = info.plan
     ? info.plan.charAt(0).toUpperCase() + info.plan.slice(1)
     : "Free";
@@ -61,21 +54,6 @@ function PlanBadge() {
     );
   }
 
-  if (isTrial) {
-    return (
-      <div className="px-3 pt-2">
-        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-          <span className="text-[10px] font-semibold text-blue-400">
-            Trial{trialDaysLeft > 0 ? ` — ${trialDaysLeft}d left` : ""}
-          </span>
-          <a href="/#pricing" className="text-[10px] text-blue-400 hover:text-blue-200 underline underline-offset-2 transition-colors">
-            Upgrade
-          </a>
-        </div>
-      </div>
-    );
-  }
-
   if (isActive) {
     return (
       <div className="px-3 pt-2">
@@ -86,21 +64,19 @@ function PlanBadge() {
     );
   }
 
-  return null;
-}
-
-function BetaSignOutButton() {
-  const { logOut } = useAuth();
-  const router = useRouter();
+  // pending/created/authenticated — show plan name with pending indicator
   return (
-    <button
-      onClick={async () => { await logOut(); router.replace("/login"); }}
-      className="text-slate-500 hover:text-white text-sm transition-colors"
-    >
-      Sign out
-    </button>
+    <div className="px-3 pt-2">
+      <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+        <span className="text-[10px] font-semibold text-blue-400">{planLabel} — pending</span>
+        <a href="/#pricing" className="text-[10px] text-blue-400 hover:text-blue-200 underline underline-offset-2 transition-colors">
+          Manage
+        </a>
+      </div>
+    </div>
   );
 }
+
 
 function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failedCount: number }) {
   const { setSegment, isIndividual, isCorporate } = useSegment();
@@ -249,9 +225,6 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [betaChecking, setBetaChecking] = React.useState(false);
-  const [betaApproved, setBetaApproved] = React.useState<boolean | null>(null);
-  const [betaError, setBetaError] = React.useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -259,17 +232,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, router]);
 
-  useEffect(() => {
-    if (!user) return;
-    setBetaChecking(true);
-    fetch(`/api/beta/check?email=${encodeURIComponent(user.email || "")}`)
-      .then(r => r.json())
-      .then(data => setBetaApproved(data.approved === true))
-      .catch(() => setBetaError(true))
-      .finally(() => setBetaChecking(false));
-  }, [user]);
-
-  if (loading || betaChecking) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-[#0A66C2] border-t-transparent rounded-full animate-spin" />
@@ -278,51 +241,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return null;
-
-  if (betaError) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-slate-900 border border-white/[0.07] rounded-2xl p-8 text-center">
-          <p className="text-slate-400 text-sm mb-4">Could not verify access. Check your connection and try again.</p>
-          <button
-            onClick={() => {
-              setBetaError(false);
-              setBetaChecking(true);
-              setBetaApproved(null);
-              fetch(`/api/beta/check?email=${encodeURIComponent(user!.email || "")}`)
-                .then(r => r.json())
-                .then(d => setBetaApproved(d.approved === true))
-                .catch(() => setBetaError(true))
-                .finally(() => setBetaChecking(false));
-            }}
-            className="px-4 py-2 bg-[#0A66C2] text-white text-sm rounded-lg hover:bg-[#0854a0]"
-          >Retry</button>
-        </div>
-      </div>
-    );
-  }
-
-  if (betaApproved === false) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-slate-900 border border-white/[0.07] rounded-2xl p-8 text-center">
-          <div className="w-14 h-14 rounded-full bg-[#0A66C2]/10 flex items-center justify-center mx-auto mb-5">
-            <svg className="w-7 h-7 text-[#0A66C2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h1 className="text-white text-xl font-bold mb-2">Beta Access Required</h1>
-          <p className="text-slate-400 text-sm leading-relaxed mb-6">
-            Cridl is currently in closed beta. Your account (<span className="text-slate-300">{user.email}</span>) is not yet on the approved list.
-          </p>
-          <p className="text-slate-500 text-sm mb-6">
-            Contact <span className="text-[#0A66C2]">nisarg2526@gmail.com</span> to request access.
-          </p>
-          <BetaSignOutButton />
-        </div>
-      </div>
-    );
-  }
 
   return <>{children}</>;
 }

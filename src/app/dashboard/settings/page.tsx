@@ -74,6 +74,9 @@ export default function SettingsPage() {
   const [liDisconnecting, setLiDisconnecting] = useState(false);
   const [liJustDisconnected, setLiJustDisconnected] = useState(false);
 
+  // Plan state (for feature gating)
+  const [userPlan, setUserPlan] = useState<string>("free");
+
   // Profile photo state (Individual only)
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -192,6 +195,11 @@ export default function SettingsPage() {
             setPhotoHasFace(cloudProfile.profilePhotoHasFace ?? true);
           }
         }
+        // Fetch plan for feature gating
+        fetch("/api/subscriptions/status", { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json())
+          .then(d => setUserPlan(d.plan || "free"))
+          .catch(() => {});
       } catch (err) {
         console.error("Failed to load settings:", err);
       }
@@ -526,12 +534,22 @@ export default function SettingsPage() {
               {profileType === "corporate" && (
                 <div className="col-span-2">
                   <label className={labelClass}>LinkedIn Organization ID</label>
-                  <input
-                    value={currentProfile.linkedinOrganizationId || ""}
-                    onChange={e => handleFieldChange("linkedinOrganizationId", e.target.value)}
-                    placeholder="e.g. 109408305"
-                    className={inputClass}
-                  />
+                  {userPlan === "free" || userPlan === "starter" ? (
+                    <div className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-400 flex items-center gap-2">
+                      <span>🔒</span>
+                      <span>
+                        Pro plan required to connect a company page.{" "}
+                        <a href="/#pricing" className="text-[#0A66C2] hover:underline font-medium">Upgrade</a>
+                      </span>
+                    </div>
+                  ) : (
+                    <input
+                      value={currentProfile.linkedinOrganizationId || ""}
+                      onChange={e => handleFieldChange("linkedinOrganizationId", e.target.value)}
+                      placeholder="e.g. 109408305"
+                      className={inputClass}
+                    />
+                  )}
                   <FieldHint>Found in your LinkedIn Company Page URL: linkedin.com/company/<strong>109408305</strong>/admin. Required for scheduled publishing to your company page.</FieldHint>
                 </div>
               )}

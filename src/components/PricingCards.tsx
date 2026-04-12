@@ -4,19 +4,27 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 
-const PLANS = [
+const FREE_PLAN = {
+  name: "Free",
+  price: "₹0",
+  features: ["5 posts/month", "2 AI images", "1 LinkedIn profile", "Basic AI research", "Manual publishing"],
+  popular: false,
+  planId: null,
+};
+
+const PAID_PLANS = [
   {
     name: "Starter",
     price: "₹499",
     planId: process.env.NEXT_PUBLIC_RAZORPAY_PLAN_STARTER || "",
-    features: ["30 posts/month", "10 AI images", "1 LinkedIn profile", "AI research pipeline", "Post scheduling"],
+    features: ["30 posts/month", "10 AI images", "5 face images/month", "1 LinkedIn profile", "AI research pipeline", "Post scheduling"],
     popular: false,
   },
   {
     name: "Pro",
     price: "₹999",
     planId: process.env.NEXT_PUBLIC_RAZORPAY_PLAN_PRO || "",
-    features: ["100 posts/month", "50 AI images", "1 profile + 1 company page", "Use My Face images", "Campaigns"],
+    features: ["100 posts/month", "50 AI images", "20 face images/month", "1 profile + 1 company page", "Use My Face images", "Campaigns"],
     popular: true,
   },
   {
@@ -42,7 +50,7 @@ function PricingCardsInner() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleStartTrial(plan: (typeof PLANS)[0]) {
+  async function handleCheckout(plan: (typeof PAID_PLANS)[0]) {
     const user = auth.currentUser;
     if (!user) {
       const redirect = encodeURIComponent(`/?plan=${plan.name.toLowerCase()}#pricing`);
@@ -67,7 +75,7 @@ function PricingCardsInner() {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         subscription_id: data.subscriptionId,
         name: "Cridl",
-        description: `${plan.name} Plan — 14-day free trial`,
+        description: `${plan.name} Plan`,
         handler: function () {
           router.push(`/dashboard?welcome=true&plan=${plan.name.toLowerCase()}`);
         },
@@ -96,29 +104,53 @@ function PricingCardsInner() {
   // Auto-trigger checkout if ?plan= param is in URL (user came back after login)
   useEffect(() => {
     const autoPlan = searchParams.get("plan");
-    if (!autoPlan) return;
-    const match = PLANS.find(p => p.name.toLowerCase() === autoPlan.toLowerCase());
+    if (!autoPlan || autoPlan === "free") return;
+    const match = PAID_PLANS.find(p => p.name.toLowerCase() === autoPlan.toLowerCase());
     if (!match) return;
-    // Wait for Firebase auth to resolve
-    const timer = setTimeout(() => handleStartTrial(match), 600);
+    const timer = setTimeout(() => handleCheckout(match), 600);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <section className="py-20 bg-white">
-      <div className="max-w-5xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">Simple, transparent pricing</h2>
-          <p className="text-gray-500">14-day free trial on all plans. No credit card required upfront.</p>
+          <p className="text-gray-500">Start free. Upgrade when you&apos;re ready.</p>
         </div>
         {error && (
           <div className="mb-6 text-center text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg py-3 px-4">
             {error}
           </div>
         )}
-        <div className="grid md:grid-cols-3 gap-6">
-          {PLANS.map((plan) => (
+        <div className="grid md:grid-cols-4 gap-6">
+          {/* Free plan card */}
+          <div className="relative rounded-2xl border border-gray-200 p-6 flex flex-col">
+            <div className="mb-4">
+              <p className="font-semibold text-gray-900 text-lg">{FREE_PLAN.name}</p>
+              <p className="mt-1">
+                <span className="text-3xl font-bold text-gray-900">{FREE_PLAN.price}</span>
+                <span className="text-gray-400 text-sm">/month</span>
+              </p>
+            </div>
+            <ul className="space-y-2 mb-6 flex-1">
+              {FREE_PLAN.features.map((f) => (
+                <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
+                  <span className="text-gray-400">✓</span> {f}
+                </li>
+              ))}
+            </ul>
+            <a
+              href="/signup"
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-center border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Sign Up Free
+            </a>
+          </div>
+
+          {/* Paid plan cards */}
+          {PAID_PLANS.map((plan) => (
             <div
               key={plan.name}
               className={`relative rounded-2xl border p-6 flex flex-col ${
@@ -147,7 +179,7 @@ function PricingCardsInner() {
                 ))}
               </ul>
               <button
-                onClick={() => handleStartTrial(plan)}
+                onClick={() => handleCheckout(plan)}
                 disabled={loading === plan.name}
                 className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors ${
                   plan.popular
@@ -155,7 +187,7 @@ function PricingCardsInner() {
                     : "border border-[#0A66C2] text-[#0A66C2] hover:bg-[#0A66C2]/5"
                 } disabled:opacity-50`}
               >
-                {loading === plan.name ? "Opening..." : "Start 14-day free trial"}
+                {loading === plan.name ? "Opening..." : plan.popular ? "Buy Now" : "Get Started"}
               </button>
             </div>
           ))}

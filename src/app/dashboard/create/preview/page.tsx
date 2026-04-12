@@ -47,6 +47,10 @@ export default function PostPreviewPage() {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [profileName, setProfileName]       = useState<string | null>(null);
 
+  // Plan + usage state (for feature gating)
+  const [userPlan, setUserPlan] = useState<string>("free");
+  const [monthlyUsage, setMonthlyUsage] = useState<{ faceImagesGenerated?: number; limits?: { faceImagesPerMonth?: number } } | null>(null);
+
   // "Use My Face" state
   const [profilePhotoUrl, setProfilePhotoUrl]       = useState<string | null>(null);
   const [profilePhotoHasFace, setProfilePhotoHasFace] = useState(false);
@@ -134,6 +138,15 @@ export default function PostPreviewPage() {
             setProfilePhotoUrl(p.profilePhotoUrl);
             setProfilePhotoHasFace(p.profilePhotoHasFace ?? true);
           }
+        })
+        .catch(() => {});
+
+      // Load plan + usage for feature gating
+      fetch("/api/usage/me", { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(d => {
+          setUserPlan(d.plan || "free");
+          setMonthlyUsage({ faceImagesGenerated: d.faceImagesGenerated, limits: d.limits });
         })
         .catch(() => {});
     });
@@ -953,38 +966,58 @@ export default function PostPreviewPage() {
 
                 {/* Use My Face — Individual only */}
                 {postData?.metadata?.segment !== "corporate" && (
-                  <button
-                    onClick={() => profilePhotoHasFace && profilePhotoUrl && handleModeChange("face")}
-                    disabled={!profilePhotoHasFace || !profilePhotoUrl}
-                    title={
-                      !profilePhotoUrl
-                        ? "Upload a profile photo in Settings → Identity first"
-                        : !profilePhotoHasFace
-                        ? "No face detected in your profile photo. Update it in Settings → Identity"
-                        : undefined
-                    }
-                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center disabled:opacity-40 disabled:cursor-not-allowed ${
-                      imageMode === "face"
-                        ? "border-purple-500 bg-purple-50"
-                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-                    }`}
-                  >
-                    {profilePhotoUrl ? (
-                      <div className="w-9 h-9 rounded-xl overflow-hidden border border-slate-200 shrink-0">
-                        <img src={profilePhotoUrl} alt="Your face" className="w-full h-full object-cover" />
-                      </div>
-                    ) : (
+                  userPlan === "free" ? (
+                    <a
+                      href="/#pricing"
+                      title="Upgrade to Starter or above to use this feature"
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-center opacity-70 hover:opacity-90 transition-opacity"
+                    >
                       <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100">
-                        <User className="w-4 h-4 text-slate-400" />
+                        <User className="w-4 h-4 text-slate-300" />
                       </div>
-                    )}
-                    <div>
-                      <p className={`text-xs font-semibold ${imageMode === "face" ? "text-purple-700" : "text-slate-700"}`}>Use My Face</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">
-                        {profilePhotoUrl ? "AI places you in a scene" : "Upload photo in Settings"}
-                      </p>
-                    </div>
-                  </button>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-400">Use My Face</p>
+                        <p className="text-[10px] text-amber-500 mt-0.5 leading-tight">Starter plan required</p>
+                      </div>
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => profilePhotoHasFace && profilePhotoUrl && handleModeChange("face")}
+                      disabled={!profilePhotoHasFace || !profilePhotoUrl}
+                      title={
+                        !profilePhotoUrl
+                          ? "Upload a profile photo in Settings → Identity first"
+                          : !profilePhotoHasFace
+                          ? "No face detected in your profile photo. Update it in Settings → Identity"
+                          : undefined
+                      }
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center disabled:opacity-40 disabled:cursor-not-allowed ${
+                        imageMode === "face"
+                          ? "border-purple-500 bg-purple-50"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      {profilePhotoUrl ? (
+                        <div className="w-9 h-9 rounded-xl overflow-hidden border border-slate-200 shrink-0">
+                          <img src={profilePhotoUrl} alt="Your face" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100">
+                          <User className="w-4 h-4 text-slate-400" />
+                        </div>
+                      )}
+                      <div>
+                        <p className={`text-xs font-semibold ${imageMode === "face" ? "text-purple-700" : "text-slate-700"}`}>Use My Face</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                          {profilePhotoUrl
+                            ? monthlyUsage?.limits?.faceImagesPerMonth && monthlyUsage.limits.faceImagesPerMonth < 999999
+                              ? `${monthlyUsage.faceImagesGenerated ?? 0}/${monthlyUsage.limits.faceImagesPerMonth} used`
+                              : "AI places you in a scene"
+                            : "Upload photo in Settings"}
+                        </p>
+                      </div>
+                    </button>
+                  )
                 )}
               </div>
 

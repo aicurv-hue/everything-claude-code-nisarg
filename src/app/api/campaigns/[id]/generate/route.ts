@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import { checkAndIncrementBulk } from "@/lib/usageTracking";
 
 async function getUid(req: NextRequest): Promise<string | null> {
   const auth = req.headers.get("authorization") || "";
@@ -35,6 +36,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   const campaign = campaignSnap.data()!;
+  const postCount = (campaign.post_count as number) || 1;
+
+  // Check and reserve post generation quota for all campaign posts upfront
+  const usageCheck = await checkAndIncrementBulk(uid, "post", postCount);
+  if (!usageCheck.allowed) {
+    const remaining = usageCheck.limit - usageCheck.used;
+    return NextResponse.json(
+      {
+        error: `Generating this campaign requires ${postCount} post slots, but you only have ${remaining} remaining this month.`,
+        code: "LIMIT_EXCEEDED",
+        limit: usageCheck.limit,
+        used: usageCheck.used,
+        plan: usageCheck.plan,
+        upgradeUrl: "/#pricing",
+      },
+      { status: 429 }
+    );
+  }
+
   const model = "google/gemini-2.0-flash-001";
 
   // Fetch user profile for brand context

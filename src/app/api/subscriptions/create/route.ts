@@ -23,13 +23,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Invalid plan ID: "${planId}". Valid: ${VALID_PLAN_IDS.join(", ")}` }, { status: 400 });
     }
 
-    const trialEndsAt = Math.floor(Date.now() / 1000) + 14 * 24 * 60 * 60;
     const planName = PLAN_IDS[planId];
 
     const subscription = await getRazorpay().subscriptions.create({
       plan_id: planId,
       total_count: 120,
-      start_at: trialEndsAt,
       quantity: 1,
       notes: { userId },
     });
@@ -43,7 +41,6 @@ export async function POST(req: NextRequest) {
       planId,
       planName,
       status: "created",
-      trialEndsAt: new Date(trialEndsAt * 1000),
       currentPeriodStart: null,
       currentPeriodEnd: null,
       createdAt: now,
@@ -53,7 +50,7 @@ export async function POST(req: NextRequest) {
     const userEmail = decoded.email || "";
 
     await adminDb.collection("users").doc(userId).set(
-      { plan: planName, planStatus: "trialing", subscriptionId: subId, betaApproved: true },
+      { plan: planName, planStatus: "pending", subscriptionId: subId, betaApproved: true },
       { merge: true }
     );
 

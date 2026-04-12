@@ -48,10 +48,7 @@ function SignupForm() {
         router.replace(redirectTo);
         return;
       }
-      // Check beta access before sending to dashboard
-      const res = await fetch(`/api/beta/check?email=${encodeURIComponent(email.toLowerCase().trim())}`);
-      const { approved } = await res.json();
-      router.replace(approved ? "/dashboard" : "/waitlist");
+      router.replace("/dashboard");
     } catch (err: any) {
       setError(friendlyError(err.code));
     } finally {
@@ -70,7 +67,7 @@ function SignupForm() {
 
       {planHint && (
         <div className="mb-5 text-center text-xs text-[#0A66C2] bg-[#0A66C2]/10 border border-[#0A66C2]/20 rounded-lg py-2 px-3">
-          Create your account to start your <span className="font-semibold capitalize">{planHint}</span> plan free trial
+          Create your account to get started with the <span className="font-semibold capitalize">{planHint}</span> plan
         </div>
       )}
 
