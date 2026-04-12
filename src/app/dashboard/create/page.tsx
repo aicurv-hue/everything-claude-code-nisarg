@@ -193,6 +193,7 @@ export default function CreatePostPage() {
       });
       if (!researchRes.ok) throw new Error(`Research failed: ${await researchRes.text()}`);
       const research = await researchRes.json();
+      const intentType: "personal" | "professional" = research.intentType ?? "professional";
 
       // ── Stage 2: Load auto-saved memory via API route ────────────────────────
       setGeneratingStep("memory");
@@ -217,6 +218,7 @@ export default function CreatePostPage() {
         headers: authHeaders,
         body: JSON.stringify({
           topic, tone, audience, length, segment, research,
+          intentType,
           model: selectedModel,
           systemPrompt: activeProfile?.systemPrompt || undefined,
           clientProfile: activeProfile,
@@ -233,6 +235,7 @@ export default function CreatePostPage() {
       localStorage.setItem("latest_post", JSON.stringify({
         content, imagePrompt, research,
         referenceImagePreview: sourceImage?.preview || null,
+        intentType,
         metadata: { topic, tone, audience, length, segment, customInstructions: customInstructions.trim() || null, memoryUsed: memoryContext.length, model: selectedModel },
         clientProfile: activeProfile || null,
         systemPrompt: activeProfile?.systemPrompt || null,

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { savePostMemory } from "@/lib/ai/save-memory";
 
@@ -274,17 +274,23 @@ export async function POST(request: NextRequest) {
   const postId = res.headers.get("x-restli-id") || res.headers.get("location") || "unknown";
   console.log(`[linkedin/publish] ✅ Success — postId: ${postId} | account: ${segment} | image: ${!!imageUrn}`);
 
-  // Save memory — fire and forget, never blocks the response
+  // Save memory after response is sent — after() keeps the function alive until this completes
   if (firebaseUid) {
-    savePostMemory({
-      content,
-      topic:    topic    || "",
-      audience: audience || "",
-      tone:     tone     || "professional",
-      segment:  segment as "individual" | "corporate",
-      userId:   firebaseUid,
-      postId:   postDbId || undefined,
-    }).catch((err) => console.error('[Memory] savePostMemory failed:', err));
+    after(async () => {
+      try {
+        await savePostMemory({
+          content,
+          topic:    topic    || "",
+          audience: audience || "",
+          tone:     tone     || "professional",
+          segment:  segment as "individual" | "corporate",
+          userId:   firebaseUid!,
+          postId:   postDbId || undefined,
+        });
+      } catch (err) {
+        console.error('[Memory] savePostMemory failed:', err);
+      }
+    });
   }
 
   return NextResponse.json({

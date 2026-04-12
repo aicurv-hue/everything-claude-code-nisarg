@@ -11,11 +11,14 @@ export interface ResearchInsight {
   source?: string;
 }
 
+export type IntentType = "personal" | "professional";
+
 export interface ResearchResult {
   topic: string;
   insights: ResearchInsight[];
   summary: string;
   references: string[];
+  intentType: IntentType;
 }
 
 export interface ResearchOptions {
@@ -25,6 +28,23 @@ export interface ResearchOptions {
   audience?: string;
   length?: string;
   clientProfile?: ProfileSegment;
+}
+
+// ── Intent detection — keyword-based, zero latency, zero API cost ────────────
+
+const PERSONAL_SIGNALS = [
+  /\bwatched\b/, /\bsaw\b/, /\bfilm\b/, /\bmovie\b/, /\bbook\b/,
+  /\bpodcast\b/, /\blistened\b/, /\bread\b/,
+  /\bsharing my thoughts?\b/, /\bjust (thinking|reflecting)\b/,
+  /\bmy (opinion|view|take)\b/, /\bi (realized|noticed|felt)\b/,
+  /\bpersonal(ly)?\b/, /\blife lesson\b/, /\bunpopular opinion\b/,
+  /\brecently i\b/,
+];
+
+function detectIntent(topic: string): IntentType {
+  const lower = topic.toLowerCase();
+  const hits = PERSONAL_SIGNALS.filter((re) => re.test(lower)).length;
+  return hits >= 1 ? "personal" : "professional";
 }
 
 /**
@@ -70,18 +90,32 @@ export async function performResearch(
 
   console.log(`[research] topic="${topic}" segment=${segment} tone=${tone} audience=${audience} length=${length} model=${model}`);
 
-  // Only include profile fields that are actually filled in — empty fields add noise
+  const intentType = detectIntent(topic);
+  console.log(`[research] intentType=${intentType}`);
+
+  // Only include profile fields that are actually filled in — empty fields add noise.
+  // For personal topics: strip brand/product fields so research doesn't inject industry content.
   const profileLines = clientProfile ? [
-    clientProfile.icp            && `- ICP / Target Audience: ${clientProfile.icp}`,
-    (clientProfile.niche || clientProfile.roleOrIndustry) && `- Niche / Industry: ${clientProfile.niche || clientProfile.roleOrIndustry}`,
-    clientProfile.bioOrOffering  && `- Offering / Bio: ${clientProfile.bioOrOffering}`,
-    clientProfile.jtbd           && `- Jobs-to-be-Done: ${clientProfile.jtbd}`,
-    clientProfile.customerPains  && `- Customer Pains: ${clientProfile.customerPains}`,
+    intentType === "professional" && clientProfile.icp            && `- ICP / Target Audience: ${clientProfile.icp}`,
+    intentType === "professional" && (clientProfile.niche || clientProfile.roleOrIndustry) && `- Niche / Industry: ${clientProfile.niche || clientProfile.roleOrIndustry}`,
+    intentType === "professional" && clientProfile.bioOrOffering  && `- Offering / Bio: ${clientProfile.bioOrOffering}`,
+    intentType === "professional" && clientProfile.jtbd           && `- Jobs-to-be-Done: ${clientProfile.jtbd}`,
+    intentType === "professional" && clientProfile.customerPains  && `- Customer Pains: ${clientProfile.customerPains}`,
   ].filter(Boolean) : [];
 
   const clientContext = profileLines.length > 0
     ? `Client context:\n${profileLines.join("\n")}`
     : "";
+
+  const researchInstruction = intentType === "personal"
+    ? `Rules:
+- This is a personal story or reflection post. Research the TOPIC ITSELF — factual context, cultural/historical background, relevant human truths, expert perspectives on the subject matter.
+- Do NOT inject business metrics, automation statistics, or industry data unless the topic explicitly mentions them.
+- Every insight must deepen or contextualize the topic as a human experience.`
+    : `Rules:
+- Surface specific, data-backed insights (numbers, named companies, named trends) — no generic claims.
+- Prefer 2024–2026 data.
+- Every insight must be immediately useful for writing a LinkedIn post for ${audience}.`;
 
   // ── Single combined research call — merges sub-questions + synthesis into 1 ─
   // Two sequential AI calls exceeded Vercel's 60s limit; one call fixes it.
@@ -95,10 +129,7 @@ Produce a research report to power a single LinkedIn post with these parameters:
 - Segment: ${segment === "individual" ? "personal brand, first-person" : "corporate brand, company voice"}
 ${clientContext}
 
-Rules:
-- Surface specific, data-backed insights (numbers, named companies, named trends) — no generic claims.
-- Prefer 2024–2026 data.
-- Every insight must be immediately useful for writing a LinkedIn post for ${audience}.
+${researchInstruction}
 
 Return ONLY valid JSON (no markdown fences, no extra text):
 {
@@ -138,6 +169,7 @@ Return ONLY valid JSON (no markdown fences, no extra text):
     summary: synthesis.summary,
     insights: synthesis.insights,
     references: synthesis.references ?? [],
+    intentType,
   };
 
   // Persist research to Firestore (skip in mock mode)

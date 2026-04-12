@@ -73,8 +73,10 @@ export default function UpgradePlans() {
       const RazorpayClass = (window as any).Razorpay;
       if (!RazorpayClass) throw new Error("Payment SDK not loaded. Please refresh the page.");
       const rzp = new RazorpayClass(options);
-      rzp.on("payment.failed", function (response: { error?: { description?: string } }) {
-        setError(response.error?.description || "Payment failed");
+      rzp.on("payment.failed", function (response: { error?: { code?: string; description?: string; reason?: string } }) {
+        console.error("[Razorpay] payment.failed", JSON.stringify(response));
+        const msg = response.error?.description || response.error?.reason || response.error?.code || "Payment failed";
+        setError(`Payment failed: ${msg}`);
       });
       rzp.open();
     } catch (err: unknown) {

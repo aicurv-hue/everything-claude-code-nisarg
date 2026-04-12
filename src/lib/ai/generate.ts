@@ -25,6 +25,7 @@ export interface PostRequest {
   imageStyle?: string;            // Layer 1: art style key (photo|illustration|abstract|3d|lineart|bw_photo)
   sourceContext?: string;         // Extracted text from user-provided URL + image description
   previousPost?: string;          // Current post content when regenerating — Neel iterates on this, not a blank slate
+  intentType?: "personal" | "professional"; // Detected from topic — controls brand context application
 }
 
 // ─── Image style prefix map (Layer 1 — Brand Consistency) ─────────────────────
@@ -221,27 +222,36 @@ function sanitizePost(raw: string): string {
  *   - marketing-skills-all: social-content (LinkedIn-specific structure, CTA, tone mapping)
  */
 export async function generatePost(request: PostRequest): Promise<GenerateResult> {
-  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, writingSamples, imageStyle, sourceContext, previousPost } = request;
+  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, writingSamples, imageStyle, sourceContext, previousPost, intentType } = request;
 
   const lengthSpec = LENGTH_SPEC[length] || LENGTH_SPEC.medium;
+  const isProfessional = (intentType ?? "professional") === "professional";
 
   // ── Brand context block ────────────────────────────────────────────────────
+  // For personal topics: only pass voice/style fields (name, role, personality, word rules).
+  // Brand/product fields (niche, ICP, pillars, offering, pains) are stripped so Neel
+  // doesn't inject the user's service into a post about a movie or personal reflection.
   const clientBranding = clientProfile
     ? [
-        "BRAND CONTEXT — treat every item below as a non-negotiable constraint:",
+        isProfessional
+          ? "BRAND CONTEXT — treat every item below as a non-negotiable constraint:"
+          : "VOICE & STYLE REFERENCE — use these to match the author's writing voice and style. Do NOT override the topic's personal nature with brand messaging or product promotion:",
         clientProfile.name           ? `- Author: ${clientProfile.name}` : null,
         clientProfile.roleOrIndustry ? `- Industry / Role: ${clientProfile.roleOrIndustry}` : null,
-        clientProfile.companyStage   ? `- Company Stage: ${clientProfile.companyStage}` : null,
-        clientProfile.niche          ? `- Niche & Authority angle: ${clientProfile.niche}` : null,
-        clientProfile.icp            ? `- Ideal Customer Profile (ICP): ${clientProfile.icp}` : null,
-        clientProfile.jtbd           ? `- Jobs-to-be-Done for customer: ${clientProfile.jtbd}` : null,
-        clientProfile.pillars        ? `- Content Pillars: ${clientProfile.pillars}` : null,
+        isProfessional && clientProfile.companyStage   ? `- Company Stage: ${clientProfile.companyStage}` : null,
+        isProfessional && clientProfile.niche          ? `- Niche & Authority angle: ${clientProfile.niche}` : null,
+        isProfessional && clientProfile.icp            ? `- Ideal Customer Profile (ICP): ${clientProfile.icp}` : null,
+        isProfessional && clientProfile.jtbd           ? `- Jobs-to-be-Done for customer: ${clientProfile.jtbd}` : null,
+        isProfessional && clientProfile.pillars        ? `- Content Pillars: ${clientProfile.pillars}` : null,
         clientProfile.personality    ? `- Brand Personality: ${clientProfile.personality}` : null,
-        clientProfile.usp            ? `- Unique Selling Point: ${clientProfile.usp}` : null,
-        clientProfile.bioOrOffering  ? `- Bio / Offering: ${clientProfile.bioOrOffering}` : null,
-        clientProfile.customerPains  ? `- Customer Pains to address: ${clientProfile.customerPains}` : null,
+        isProfessional && clientProfile.usp            ? `- Unique Selling Point: ${clientProfile.usp}` : null,
+        isProfessional && clientProfile.bioOrOffering  ? `- Bio / Offering: ${clientProfile.bioOrOffering}` : null,
+        isProfessional && clientProfile.customerPains  ? `- Customer Pains to address: ${clientProfile.customerPains}` : null,
         clientProfile.verbatimLanguage ? `- Native phrases to weave in naturally: ${clientProfile.verbatimLanguage}` : null,
         clientProfile.wordsToAvoid   ? `- Words / phrases to NEVER use: ${clientProfile.wordsToAvoid}` : null,
+        !isProfessional
+          ? `\n⛔ INTENT OVERRIDE: This topic is a personal story or reflection. Write about the topic directly and authentically. Do NOT inject the author's product, service, or business niche. Do NOT add automation, AI, or industry statistics unless the topic explicitly mentions them. The post should stand alone as a human story — not a promotional piece.`
+          : null,
       ].filter(Boolean).join("\n")
     : "No brand profile — write in a clear, credible professional voice.";
 
@@ -251,6 +261,8 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
 
   const systemInstructions = [
     section("IDENTITY"),
+    "",
+    section("INTENT_DETECTION"),
     "",
     section("OUTPUT_RULES"),
     "",

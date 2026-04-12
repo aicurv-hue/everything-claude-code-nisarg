@@ -178,6 +178,7 @@ export default function PostPreviewPage() {
           length:             postData.metadata.length,
           segment:            postData.metadata.segment,
           research:           postData.research,
+          intentType:         postData.intentType       ?? "professional",
           customInstructions: effectiveInstructions,
           imageStyle:         imageStyleRegen,
           // Full context — same as initial generation
@@ -196,7 +197,7 @@ export default function PostPreviewPage() {
 
       setEditedContent(data.post);
       setImagePrompt(data.imagePrompt);
-      setImageUrl(null); // clear old generated image — prompt changed
+      // Do NOT clear imageUrl — image is independent of post text
       setShowRegenHint(false);
       setRegenHint("");
 

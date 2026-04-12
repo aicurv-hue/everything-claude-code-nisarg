@@ -45,6 +45,92 @@ User fills Create form
 
 ---
 
+## Layer 0 — Intent Detection (v1.5+)
+
+Intent detection runs at two levels — code (research stage) and prompt (generation stage). It prevents the AI from injecting brand/product content into posts where the user's topic is personal or unrelated to their business.
+
+### Code-Level Detection (research.ts)
+
+`detectIntent(topic)` runs zero-cost regex matching on the raw topic string before the research call:
+
+```
+PERSONAL_SIGNALS = [
+  /\bwatched\b/, /\bsaw\b/, /\bfilm\b/, /\bmovie\b/, /\bbook\b/,
+  /\bpodcast\b/, /\blistened\b/, /\bread\b/,
+  /\bsharing my thoughts?\b/, /\bjust (thinking|reflecting)\b/,
+  /\bmy (opinion|view|take)\b/, /\bi (realized|noticed|felt)\b/,
+  /\bpersonal(ly)?\b/, /\blife lesson\b/, /\bunpopular opinion\b/,
+  /\brecently i\b/,
+]
+```
+
+If ≥1 signal matches → `intentType = "personal"`. Otherwise → `"professional"`.
+
+### What Changes Based on intentType
+
+| Layer | professional | personal |
+|-------|-------------|---------|
+| **Research prompt** | Full brand context: ICP, niche, offering, JTBD, pains | Brand fields stripped. Research the topic itself — cultural/historical/human context only. |
+| **Research instruction** | "Find data-backed insights for [audience]" | "Research this topic's factual context. NO industry stats unless topic explicitly mentions them." |
+| **Generate brand label** | `"BRAND CONTEXT — treat every item below as a non-negotiable constraint:"` | `"VOICE & STYLE REFERENCE — use these to match writing voice and style. Do NOT override the topic's personal nature."` |
+| **Generate brand fields** | All fields included (ICP, niche, pillars, USP, offering, pains) | Only name, roleOrIndustry, personality, verbatimLanguage, wordsToAvoid |
+| **Generate override instruction** | None | `⛔ INTENT OVERRIDE: This topic is a personal story. Write about it directly. Do NOT inject product, service, or business niche. Do NOT add automation/AI/industry statistics.` |
+| **Neel's system prompt** | Standard | INTENT_DETECTION section (injected) classifies to Type B, blocks business framing |
+
+### Four Topic Types (Prompt-Level)
+
+| Type | Signal | Neel's approach |
+|------|--------|----------------|
+| **A — Service/Product Promo** | Topic is about the user's business, tool, or expertise | Full brand context, audience focus, conversion-driven |
+| **B — Personal Story** | Movie, trip, life event, observation unrelated to work | Write the story authentically — voice/style from profile apply but brand subject matter does NOT override the human story |
+| **C — Industry Insight** | Market data, trends, frameworks, professional observations | Research-driven, authority-building, brand voice |
+| **D — Creative/Contrarian** | Bold opinion, counterintuitive take | Conviction-first; brand voice applies, no forced promotion |
+
+**Core rule:** The brand profile provides VOICE and STYLE, not subject matter. A movie post should be about the movie — not "what the movie taught me about SaaS."
+
+### Pipeline Flow for intentType
+
+```
+User submits topic
+       │
+       ▼
+detectIntent(topic)         ← code-level, zero latency, zero cost
+       │
+   "personal"               "professional"
+       │                          │
+       ▼                          ▼
+Research: topic-only context   Research: full brand context
+       │                          │
+       ▼                          ▼
+ResearchResult.intentType ────────┤
+                                  │
+                            Passed via: create/page.tsx → generate fetch body
+                                  │
+                                  ▼
+                        generatePost(intentType)
+                          │                  │
+                      personal            professional
+                          │                  │
+                   Voice/style only    Full brand constraints
+                   ⛔ OVERRIDE added  Standard behavior
+                          │
+                          ▼
+                  preview/page.tsx reads intentType from localStorage
+                  → regeneration preserves intent classification
+```
+
+### Files Involved
+
+| File | Role |
+|------|------|
+| `src/lib/ai/research.ts` | `detectIntent()` + conditional brand stripping + `intentType` in `ResearchResult` |
+| `src/lib/ai/generate.ts` | `intentType` in `PostRequest`, conditional brand context assembly, `⛔ INTENT OVERRIDE` |
+| `src/lib/ai/neel-prompt-sections.ts` | `INTENT_DETECTION` section injected into Neel's system prompt |
+| `src/app/dashboard/create/page.tsx` | Extracts `intentType` from research, passes to generate, stores in localStorage |
+| `src/app/dashboard/create/preview/page.tsx` | Reads `intentType` from localStorage for regeneration |
+
+---
+
 ## Layer A — Post Parameters
 
 **Where set:** Create Post page (`/dashboard/create`)
@@ -266,26 +352,95 @@ This is Neel's persistent persona layer for this segment. The default contains t
 
 ---
 
-## Layer G — Image Style Prefix *(new in v1.2)*
+## Layer G — Image Generation System *(v1.5 — full rewrite)*
 
-**Where set:** Settings → Image Style tab
-**Where applied:** `src/lib/ai/generate.ts` — `generatePost()` and `generateImagePrompt()`
-**Route:** `/api/ai/image-prompt` also accepts and forwards `imageStyle`
+### How Image Prompts Are Built
 
-**Flow:**
-1. User selects a style in Settings → Image Style → Save
-2. Style is stored in `ProfileSegment.imageStyle` in Firestore
-3. On Create page load, `activeProfile.imageStyle` is read from the fetched profile
-4. When generating, `imageStyle` is sent in the request body to `/api/ai/generate`
-5. `generatePost()` reads `IMAGE_STYLE_PREFIXES[imageStyle]` and prepends it to the Neel-generated image prompt before returning
-6. Same prefix logic applies on standalone image-prompt regeneration (`handleRegenerateImagePrompt` on preview page reads `imageStyle` from `localStorage.client_profile`)
+The image is NOT a literal illustration of the topic. It is a **cinematic translation of the emotional core of the post.**
 
-**Key file:** `src/lib/ai/generate.ts` — `IMAGE_STYLE_PREFIXES` constant map
+**Three-step decode (runs silently inside the AI):**
+1. **Hero archetype** — who is the reader identifying with? (Founder / Operator / Builder / Executive…)
+2. **Core emotion** — what feeling does the post create? (Pride of mastery / Relief after struggle / Quiet confidence / Weight of responsibility…)
+3. **Narrative tension** — what is the before/after? (Chaos → control / Invisible work → visible result / Doubt → conviction)
 
-**Fixed frame rules applied regardless of style:**
-- No full faces (partial/profile/chest-down only)
-- Always **square 1:1** (`square_hd` 1024×1024) — fills full width on mobile LinkedIn feed *(updated v1.3)*
-- TEXT ZONE RULE: top-left quadrant (top 45%, left 50%) must be dark/clean negative space — reserved for hook text overlay. Subject always in center-right or lower-right.
+**The image prompt structure:**
+```
+[SCENE OR HERO]   — person by posture/energy OR physical object that carries the emotion
+[ENVIRONMENT]     — exact setting with 2–3 tactile details (not "industrial setting" — "factory floor with rusted iron pillars and fluorescent strips")
+[MOMENT]          — decisive action, texture, stillness, or contrast
+[LIGHTING]        — one specific source + quality (golden-hour raking / pre-dawn blue hour / single overhead pendant)
+[PALETTE]         — 2 dominant colors + 1 accent
+[LENS/FRAME]      — square 1:1 format. Subject center-right or lower-right. Top-left clean/dark for text overlay.
+[QUALITY TAG]     — ultra-detailed, cinematic photography, 4K, LinkedIn editorial style
+```
+
+### Visual Diversity by Post Type
+
+The AI chooses the visual approach based on the post type — NOT a generic default:
+
+| Post Type | Visual Approach |
+|-----------|----------------|
+| **Personal story** | Scene without people (cinema seat, book spine, train window) OR two-person candid caught from the side |
+| **Business/insight** | Environmental scale (factory floor, warehouse, trading floor) — human in context, not isolated |
+| **Contrarian/opinion** | Unexpected angle (shot from below, wide shot with person tiny against architecture, tension before decision) |
+| **All types** | Real textures (worn leather, raw concrete, steam, rain) / Spatial drama / Muted palette with one accent |
+
+### Art Style Layer (Image Style Prefix)
+
+**Where set:** Settings → Image Style tab  
+**Where applied:** `src/lib/ai/generate.ts` — `IMAGE_STYLE_PREFIXES` prepended to every image prompt
+
+| Style | Prefix effect |
+|-------|--------------|
+| 📷 Photo | Cinematic editorial photography, ultra-realistic, natural lighting, shallow DOF |
+| 🎨 Illustration | Soft editorial illustration, warm linework, hand-crafted texture, muted ink palette |
+| 🔷 Abstract | Abstract conceptual art, geometric shapes, emotion-driven composition, premium editorial |
+| 🧊 3D Render | Photorealistic 3D render, volumetric lighting, depth, cinematic quality |
+| ✏️ Line Art | Minimal black ink line art on white, clean strokes, no fill, sketch style |
+| ⬛ B&W Photo | Cinematic black and white photography, high contrast, film grain, editorial style |
+
+The style prefix is the **highest-priority visual directive** — it defines the rendering medium. Neel's emotional/compositional prompt defines WHAT is shown. Both combine at generation time.
+
+### Fixed Frame Rules (Always Applied)
+
+- No full faces — partial/profile/chest-down/from behind only (prevents LinkedIn uncanny valley)
+- Always **square 1:1** (`square_hd` 1024×1024) — fills full width on mobile LinkedIn feed
+- **TEXT ZONE RULE:** Top-left quadrant (top 45%, left 50%) must be dark/clean — reserved for hook text overlay. Subject always in center-right or lower-right.
+
+### What Is Banned
+
+**Instant rejection (AI-bot aesthetics):**
+- Gears, circuit boards, holograms, robot hands, orbs, ascending arrows, handshakes, floating icons
+
+**Overused defaults (must be actively avoided):**
+- Person sitting at desk staring at monitors
+- Person alone in dark office with glowing screens  
+- Laptop + coffee on a white desk
+- Overhead desk flatlay with notebook and phone
+
+### Image Generation Flow
+
+```
+generatePost() completes
+        │
+        ▼
+IMAGE_PROMPT_SYSTEM (from neel-prompt-sections.ts)
++ IMAGE_PROMPT_USER template (topic, segment, full post)
+        │
+        ▼
+OpenRouter call (Gemini 2.0 Flash, temp 0.9)
+        │
+        ▼
+Raw image prompt
+        │
+        ▼
+IMAGE_STYLE_PREFIXES[imageStyle] prepended
+        │
+        ▼
+Final image prompt stored in post + sent to fal.ai on preview page
+```
+
+**Standalone regeneration:** Preview page → "Regenerate Image" button → `POST /api/ai/image-prompt` → same system, reads `imageStyle` from `localStorage.client_profile`
 
 ---
 
@@ -617,6 +772,19 @@ Go to **Settings → Image Style tab**:
 - Layer H: Image Hook Text overlay (on-demand Gemini call, 7-word max)
 - Fixed Frame Rules added to image prompt system
 - Tab 6 (Image Style) added to Settings page
+
+### v4.4 — 2026-04-13 (Intent Detection + Image Diversity)
+- **Layer 0 (Intent Detection):** `detectIntent()` in `research.ts` — keyword regex, zero latency, zero cost
+- Brand fields stripped from research prompt for personal topics (ICP, niche, offering, JTBD, pains)
+- Brand context label changed in generate for personal topics: "VOICE & STYLE REFERENCE" instead of "non-negotiable constraint"
+- `⛔ INTENT OVERRIDE` injected for personal topics — blocks brand/product content from personal story posts
+- `INTENT_DETECTION` section added to `neel-prompt-sections.ts` — injected as Step 0 in Neel's system prompt
+- `intentType` flows through: `research.ts` → `ResearchResult` → `create/page.tsx` → generate API → `preview/page.tsx` regeneration
+- **Image Diversity:** `neel-prompt-sections.ts` IMAGE_PROMPT_SYSTEM synced from `Master_Neel_Prompt.md`
+- Old reference prompts ("woman at monitors", "man with wall of glowing screens") replaced with 4 diverse examples
+- Added "OVERUSED DEFAULTS" ban to BANNED IMAGERY section
+- Added VISUAL DIVERSITY section: 3 visual approaches mapped to personal/business/contrarian post types
+- PROMPT ARCHITECTURE updated: [SCENE OR HERO] replaces [HERO] — allows no-person compositions for personal posts
 
 ### v4.3.1 — 2026-03-28 (Mobile-First Image Format)
 - **Image format** changed from `landscape_4_3` → `square_hd` (1024×1024) — fills full width on mobile LinkedIn feed
