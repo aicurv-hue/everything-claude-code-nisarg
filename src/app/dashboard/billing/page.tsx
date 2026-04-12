@@ -271,18 +271,16 @@ export default function BillingPage() {
             </div>
           )}
 
-          {/* ── Upgrade Plans ── */}
-          {(isFree || isTrial) && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-                <p className="text-sm font-semibold text-slate-700">
-                  {isTrial ? "Upgrade before your trial ends" : "Upgrade your plan"}
-                </p>
-              </div>
-              <UpgradePlans />
+          {/* ── Upgrade Plans — always visible ── */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+              <p className="text-sm font-semibold text-slate-700">
+                {isTrial ? "Upgrade before your trial ends" : isPaid ? "Change your plan" : "Upgrade your plan"}
+              </p>
             </div>
-          )}
+            <UpgradePlans />
+          </div>
         </>
       )}
     </div>
