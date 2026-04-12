@@ -24,7 +24,6 @@ import { UserProfile, ProfileSegment, ImageStyle } from "@/lib/db/profiles";
 import { useAuth } from "@/lib/context/auth";
 import { HelpTooltip, FieldHint } from "@/components/ui/HelpTooltip";
 import { ProfileAIAssist } from "@/components/ui/ProfileAIAssist";
-import SubscriptionStatus from "@/components/SubscriptionStatus";
 
 const DEFAULT_SYSTEM_PROMPT = `You are a world-class marketing copywriter and content strategist.
 Your goal is to generate high-performing LinkedIn content that drives engagement and authority.
@@ -299,7 +298,6 @@ export default function SettingsPage() {
     { id: "voice",    label: "Customer Voice", icon: MessageSquare },
     { id: "ai",       label: "AI Config",      icon: ShieldCheck },
     { id: "image",    label: "Image Style",    icon: ImageIcon },
-    { id: "billing",  label: "Billing",        icon: ShieldCheck },
   ];
 
   const IMAGE_STYLES: Array<{ id: ImageStyle; label: string; description: string; emoji: string }> = [
@@ -834,15 +832,6 @@ export default function SettingsPage() {
                 </p>
               </div>
             )}
-          </div>
-        )}
-
-        {activeTab === "billing" && (
-          <div className="space-y-5">
-            <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700 leading-relaxed">
-              <strong>Billing</strong> — manage your subscription, trial status, and plan.
-            </div>
-            <SubscriptionStatus />
           </div>
         )}
 

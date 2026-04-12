@@ -83,31 +83,35 @@ export default function BillingPage() {
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const tok = await getAuthToken();
-      if (!tok) { setLoading(false); return; }
+      try {
+        const tok = await getAuthToken();
+        if (!tok) return;
 
-      const [usageRes, subRes] = await Promise.all([
-        fetch("/api/usage/me",              { headers: { Authorization: `Bearer ${tok}` } }),
-        fetch("/api/subscriptions/status",  { headers: { Authorization: `Bearer ${tok}` } }),
-      ]);
+        const [usageRes, subRes] = await Promise.all([
+          fetch("/api/usage/me",              { headers: { Authorization: `Bearer ${tok}` } }),
+          fetch("/api/subscriptions/status",  { headers: { Authorization: `Bearer ${tok}` } }),
+        ]);
 
-      if (usageRes.ok)  setUsage(await usageRes.json());
-      if (subRes.ok)    setSub(await subRes.json());
+        if (usageRes.ok)  setUsage(await usageRes.json());
+        if (subRes.ok)    setSub(await subRes.json());
 
-      // Firestore direct read for trial days
-      const user = firebaseAuth.currentUser;
-      if (user && firebaseDb) {
-        const snap = await getDoc(doc(firebaseDb, "users", user.uid));
-        if (snap.exists()) {
-          const d = snap.data();
-          if (d.trialActive === true) {
-            const exp = d.trialExpiresAt?.toMillis ? d.trialExpiresAt.toMillis() : 0;
-            if (exp > Date.now()) setTrialDaysLeft(Math.ceil((exp - Date.now()) / 86400000));
+        // Firestore direct read for trial days
+        const user = firebaseAuth.currentUser;
+        if (user && firebaseDb) {
+          const snap = await getDoc(doc(firebaseDb, "users", user.uid));
+          if (snap.exists()) {
+            const d = snap.data();
+            if (d.trialActive === true) {
+              const exp = d.trialExpiresAt?.toMillis ? d.trialExpiresAt.toMillis() : 0;
+              if (exp > Date.now()) setTrialDaysLeft(Math.ceil((exp - Date.now()) / 86400000));
+            }
           }
         }
+      } catch (err) {
+        console.error("[BillingPage] load error", err);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     }
     load();
   }, []);
