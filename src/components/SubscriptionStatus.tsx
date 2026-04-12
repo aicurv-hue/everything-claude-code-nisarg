@@ -36,12 +36,17 @@ export default function SubscriptionStatus() {
     const user = auth.currentUser;
     if (!user) return;
     const token = await user.getIdToken();
-    await fetch("/api/subscriptions/cancel", {
+    const res = await fetch("/api/subscriptions/cancel", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ subscriptionId: sub.subscriptionId }),
     });
-    setSub(prev => prev ? { ...prev, status: "cancelled" } : prev);
+    if (res.ok) {
+      setSub(prev => prev ? { ...prev, status: "cancelled", plan: "free" } : prev);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "Failed to cancel. Please contact support@cridl.com");
+    }
     setCancelling(false);
   }
 
@@ -51,7 +56,7 @@ export default function SubscriptionStatus() {
       <div className="rounded-xl border border-gray-200 p-6">
         <p className="font-semibold text-gray-900 mb-1">Free plan</p>
         <p className="text-sm text-gray-500 mb-4">5 posts/month · 2 AI images · 1 profile</p>
-        <a href="/#pricing" className="inline-block bg-[#0A66C2] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#0A66C2]/90">
+        <a href="#upgrade" className="inline-block bg-[#0A66C2] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#0A66C2]/90">
           Upgrade
         </a>
       </div>

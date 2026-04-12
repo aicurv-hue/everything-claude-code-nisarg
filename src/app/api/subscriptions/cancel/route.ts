@@ -23,17 +23,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    await getRazorpay().subscriptions.cancel(subscriptionId, { cancel_at_cycle_end: true } as never);
-
     const now = FieldValue.serverTimestamp();
-    await adminDb.collection("subscriptions").doc(subscriptionId).update({
-      status: "cancelled",
-      updatedAt: now,
-    });
-    await adminDb.collection("users").doc(userId).set(
-      { planStatus: "cancelled" },
-      { merge: true }
-    );
+    const currentStatus = subDoc.data()?.status || "";
+
+    // For pending/created subscriptions (no payment made), just reset to free in Firestore
+    // Razorpay API rejects cancel on non-activated subscriptions
+    if (currentStatus === "pending" || currentStatus === "created" || currentStatus === "authenticated") {
+      await adminDb.collection("subscriptions").doc(subscriptionId).update({
+        status: "cancelled",
+        updatedAt: now,
+      });
+      await adminDb.collection("users").doc(userId).set(
+        { plan: "free", planStatus: "free", subscriptionId: null },
+        { merge: true }
+      );
+    } else {
+      await getRazorpay().subscriptions.cancel(subscriptionId, { cancel_at_cycle_end: true } as never);
+      await adminDb.collection("subscriptions").doc(subscriptionId).update({
+        status: "cancelled",
+        updatedAt: now,
+      });
+      await adminDb.collection("users").doc(userId).set(
+        { planStatus: "cancelled" },
+        { merge: true }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {

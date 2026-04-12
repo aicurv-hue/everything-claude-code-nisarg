@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
       if (eventType === "subscription.authenticated") {
         await subRef.update({ status: "authenticated", updatedAt: now });
       } else if (eventType === "subscription.activated") {
+        const planName = subDoc.data()?.planName || null;
         await subRef.update({
           status: "active",
           currentPeriodStart: sub.current_start ? new Date(sub.current_start * 1000) : null,
@@ -40,11 +41,12 @@ export async function POST(req: NextRequest) {
         });
         if (userId) {
           await adminDb.collection("users").doc(userId).set(
-            { planStatus: "active" },
+            { plan: planName, planStatus: "active" },
             { merge: true }
           );
         }
       } else if (eventType === "subscription.charged") {
+        const planName = subDoc.data()?.planName || null;
         const payment = event.payload?.payment?.entity;
         await subRef.update({
           status: "active",
@@ -63,7 +65,7 @@ export async function POST(req: NextRequest) {
             createdAt: now,
           });
           await adminDb.collection("users").doc(userId).set(
-            { planStatus: "active" },
+            { plan: planName, planStatus: "active" },
             { merge: true }
           );
         }

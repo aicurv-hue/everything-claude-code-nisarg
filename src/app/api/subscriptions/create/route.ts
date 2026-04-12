@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     const userEmail = decoded.email || "";
 
     await adminDb.collection("users").doc(userId).set(
-      { plan: planName, planStatus: "pending", subscriptionId: subId, betaApproved: true },
+      { planStatus: "pending", subscriptionId: subId, betaApproved: true },
       { merge: true }
     );
 
