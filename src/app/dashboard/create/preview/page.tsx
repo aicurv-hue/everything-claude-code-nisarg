@@ -378,6 +378,78 @@ export default function PostPreviewPage() {
     a.click();
   };
 
+  /**
+   * Composites hook text onto the image using Canvas.
+   * Returns a data: URL with the text baked in, or the original URL if compositing fails.
+   * This ensures what you see in the preview is exactly what gets posted to LinkedIn.
+   */
+  const compositeImageWithHook = async (imgSrc: string, hookText: string): Promise<string> => {
+    return new Promise((resolve) => {
+      try {
+        const canvas = document.createElement("canvas");
+        const SIZE = 1024;
+        canvas.width = SIZE;
+        canvas.height = SIZE;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(imgSrc); return; }
+
+        const img = new window.Image();
+        img.crossOrigin = "anonymous";
+
+        img.onload = () => {
+          // Draw base image scaled to square
+          ctx.drawImage(img, 0, 0, SIZE, SIZE);
+
+          // Gradient overlay matching CSS: linear-gradient(105deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.38) 38%, transparent 58%)
+          const grad = ctx.createLinearGradient(0, 0, SIZE * 0.75, SIZE * 0.55);
+          grad.addColorStop(0,    "rgba(0,0,0,0.62)");
+          grad.addColorStop(0.38, "rgba(0,0,0,0.38)");
+          grad.addColorStop(0.58, "rgba(0,0,0,0)");
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, SIZE, SIZE);
+
+          // Text settings — matches CSS: weight 800, left 44%, top-left
+          const MAX_TEXT_WIDTH = SIZE * 0.42;
+          const FONT_SIZE = 58;
+          const LINE_HEIGHT = FONT_SIZE * 1.18;
+          const PAD_X = SIZE * 0.05;
+          const PAD_Y = SIZE * 0.055;
+
+          ctx.font = `800 ${FONT_SIZE}px 'Plus Jakarta Sans', Inter, Arial, sans-serif`;
+          ctx.fillStyle = "white";
+          ctx.shadowColor = "rgba(0,0,0,0.9)";
+          ctx.shadowBlur = 18;
+
+          // Word-wrap
+          const words = hookText.split(" ");
+          const lines: string[] = [];
+          let current = "";
+          for (const word of words) {
+            const test = current ? `${current} ${word}` : word;
+            if (ctx.measureText(test).width > MAX_TEXT_WIDTH && current) {
+              lines.push(current);
+              current = word;
+            } else {
+              current = test;
+            }
+          }
+          if (current) lines.push(current);
+
+          lines.forEach((line, i) => {
+            ctx.fillText(line, PAD_X, PAD_Y + FONT_SIZE + i * LINE_HEIGHT);
+          });
+
+          resolve(canvas.toDataURL("image/jpeg", 0.93));
+        };
+
+        img.onerror = () => resolve(imgSrc); // fallback: send raw image
+        img.src = imgSrc;
+      } catch {
+        resolve(imgSrc); // fallback on any error
+      }
+    });
+  };
+
   /* Resolve final image URL for publishing */
   const finalImageUrl =
     imageMode === "ai"        ? imageUrl :
@@ -422,6 +494,12 @@ export default function PostPreviewPage() {
     try {
       const authToken = await getAuthToken();
 
+      // Bake hook text into image before publishing — what you see is what gets posted
+      let publishImageUrl = finalImageUrl;
+      if (finalImageUrl && imageHook) {
+        publishImageUrl = await compositeImageWithHook(finalImageUrl, imageHook);
+      }
+
       const res = await fetch("/api/linkedin/publish", {
         method: "POST",
         headers: {
@@ -430,7 +508,7 @@ export default function PostPreviewPage() {
         },
         body: JSON.stringify({
           content: editedContent,
-          imageUrl: finalImageUrl || null,
+          imageUrl: publishImageUrl || null,
           segment: postData.metadata.segment || "individual",
           organizationId: organizationId || undefined,
           topic:    postData.metadata.topic    || "",
@@ -481,11 +559,17 @@ export default function PostPreviewPage() {
     setIsScheduling(true);
     setScheduleStatus("idle");
     try {
+      // Bake hook text into image before scheduling — cron worker publishes the stored URL as-is
+      let scheduleImageSrc = finalImageUrl;
+      if (finalImageUrl && imageHook) {
+        scheduleImageSrc = await compositeImageWithHook(finalImageUrl, imageHook);
+      }
+
       let immediateImageUrl: string | undefined = undefined;
-      if (finalImageUrl) {
-        if (finalImageUrl.startsWith("data:")) {
+      if (scheduleImageSrc) {
+        if (scheduleImageSrc.startsWith("data:")) {
           try {
-            const uploadPromise = uploadDataUrlToStorage(finalImageUrl, `post-images/${Date.now()}.jpg`);
+            const uploadPromise = uploadDataUrlToStorage(scheduleImageSrc, `post-images/${Date.now()}.jpg`);
             const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000));
             const uploaded = await Promise.race([uploadPromise, timeoutPromise]);
             immediateImageUrl = uploaded || undefined;
@@ -493,7 +577,7 @@ export default function PostPreviewPage() {
             console.warn("[Schedule] Image upload error — scheduling without image:", uploadErr);
           }
         } else {
-          immediateImageUrl = finalImageUrl;
+          immediateImageUrl = scheduleImageSrc;
         }
       }
 
