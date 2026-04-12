@@ -13,15 +13,15 @@ export async function POST(req: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(token);
     const userId = decoded.uid;
 
-    const { planId } = await req.json();
+    const { planId: rawPlanId } = await req.json();
+    const planId = (rawPlanId || "").trim();
     const VALID_PLAN_IDS = [
       process.env.RAZORPAY_PLAN_STARTER,
       process.env.RAZORPAY_PLAN_PRO,
       process.env.RAZORPAY_PLAN_BUSINESS,
-    ].filter(Boolean);
-    console.log("[subscriptions/create] planId received:", planId, "| length:", planId?.length, "| valid:", VALID_PLAN_IDS);
+    ].filter(Boolean).map(id => id!.trim());
     if (!planId || !VALID_PLAN_IDS.includes(planId)) {
-      return NextResponse.json({ error: `Invalid plan ID: "${planId}" (length: ${planId?.length ?? 0}). Valid: ${VALID_PLAN_IDS.join(", ")}` }, { status: 400 });
+      return NextResponse.json({ error: `Invalid plan ID: "${planId}" (length: ${planId.length}). Valid: ${VALID_PLAN_IDS.join(", ")}` }, { status: 400 });
     }
 
     const planName = PLAN_IDS[planId];
