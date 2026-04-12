@@ -7,6 +7,7 @@ interface LinkedInPostCardProps {
   avatarUrl: string;
   content: string;
   imageUrl?: string;
+  imageHook?: string;
 }
 
 export default function LinkedInPostCard({
@@ -14,6 +15,7 @@ export default function LinkedInPostCard({
   avatarUrl,
   content,
   imageUrl,
+  imageHook,
 }: LinkedInPostCardProps) {
   const initials = name
     ? name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
@@ -53,11 +55,33 @@ export default function LinkedInPostCard({
         </div>
 
         {imageUrl && (
-          <img
-            src={imageUrl}
-            alt="Post image"
-            className="w-full aspect-[4/3] object-cover"
-          />
+          <div className="w-full relative aspect-square">
+            <img
+              src={imageUrl}
+              alt="Post image"
+              className="w-full h-full object-cover"
+            />
+            {imageHook && (
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{ background: "linear-gradient(105deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.38) 38%, transparent 58%)" }}
+              >
+                <p
+                  className="absolute top-4 left-4 text-white leading-[1.12]"
+                  style={{
+                    width: "44%",
+                    fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                    fontWeight: 800,
+                    fontSize: "clamp(0.85rem, 2.8vw, 1.4rem)",
+                    letterSpacing: "-0.02em",
+                    textShadow: "0 2px 16px rgba(0,0,0,0.8), 0 1px 4px rgba(0,0,0,0.95)",
+                  }}
+                >
+                  {imageHook}
+                </p>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Footer */}

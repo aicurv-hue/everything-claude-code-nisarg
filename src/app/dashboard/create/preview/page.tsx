@@ -816,6 +816,7 @@ export default function PostPreviewPage() {
               avatarUrl={linkedInUser?.picture ?? profilePhotoUrl ?? ''}
               content={editedContent}
               imageUrl={finalImageUrl ?? undefined}
+              imageHook={imageHook || undefined}
             />
           </div>
 
