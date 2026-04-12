@@ -20,12 +20,17 @@ export async function getUserPlan(userId: string): Promise<PlanName> {
   if (!doc.exists) return "free";
   const data = doc.data() || {};
 
-  // Active trial overrides whatever plan is stored
+  // Active trial overrides planStatus (trial is a separate grant)
   if (data.trialActive === true) {
     const trialExpiry = data.trialExpiresAt?.toMillis ? data.trialExpiresAt.toMillis() : (data.trialExpiresAt || 0);
     if (trialExpiry > Date.now()) {
       return "starter";
     }
+  }
+
+  // Cancelled or paused subscriptions lose paid quota immediately
+  if (data.planStatus === "cancelled" || data.planStatus === "paused") {
+    return "free";
   }
 
   return (data.plan as PlanName) || "free";

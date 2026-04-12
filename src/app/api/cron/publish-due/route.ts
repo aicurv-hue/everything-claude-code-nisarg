@@ -26,6 +26,24 @@ const LI_VERSION  = "202504";
 const TIMEOUT_MS  = 20_000;
 const CRON_SECRET = process.env.CRON_SECRET; // required — set this in Vercel env vars
 
+const ALLOWED_IMAGE_HOSTS = new Set([
+  "storage.googleapis.com",
+  "firebasestorage.googleapis.com",
+  "fal.run",
+  "storage.fal.run",
+  "v2.fal.media",
+  "cdn.fal.ai",
+]);
+
+function isAllowedImageUrl(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return ALLOWED_IMAGE_HOSTS.has(hostname);
+  } catch {
+    return false;
+  }
+}
+
 // In-memory lock — prevents duplicate publishes when two cron calls overlap
 // (works in local dev where there is one server process)
 const publishingIds = new Set<string>();
@@ -121,9 +139,13 @@ async function postToLinkedIn(
 ): Promise<string> {
   let imageUrn: string | null = null;
   if (imageUrl && !imageUrl.startsWith("data:")) {
-    imageUrn = await uploadImage(accessToken, authorUrn, imageUrl);
-    if (!imageUrn) {
-      throw new Error("Image upload to LinkedIn failed. Post held — fix the image URL or remove it, then reschedule.");
+    if (!isAllowedImageUrl(imageUrl)) {
+      console.warn("[cron/image] Blocked SSRF attempt — imageUrl hostname not in allowlist:", imageUrl);
+    } else {
+      imageUrn = await uploadImage(accessToken, authorUrn, imageUrl);
+      if (!imageUrn) {
+        throw new Error("Image upload to LinkedIn failed. Post held — fix the image URL or remove it, then reschedule.");
+      }
     }
   }
 
@@ -159,14 +181,15 @@ async function postToLinkedIn(
 }
 
 export async function POST(req: NextRequest) {
-  // Auth: only accept CRON_SECRET (from cron-job.org) or Vercel cron header.
-  // Firebase user tokens are NOT accepted — this route runs across all users' posts
-  // and must never be triggerable by an individual logged-in user.
+  // Auth: CRON_SECRET is mandatory. If not configured, fail hard.
+  // x-vercel-cron bypass removed — any client can set that header.
+  if (!CRON_SECRET) {
+    console.error("[cron] CRON_SECRET is not configured");
+    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
+  }
   {
     const authHeader = req.headers.get("authorization") || "";
-    const isVercelCron = req.headers.get("x-vercel-cron") === "1";
-    const isCronSecret = !!CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`;
-    if (!isVercelCron && !isCronSecret) {
+    if (authHeader !== `Bearer ${CRON_SECRET}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }

@@ -51,10 +51,14 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;
     }
 
-    // ── Admins collection — managed manually via Firebase Console ────────────
+    // ── Users collection — billing page reads own doc ─────────────────────────
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ── Admins collection — Admin SDK only, never client-readable ─────────────
     match /admins/{userId} {
-      allow read: if isSignedIn();
-      allow write: if false; // Only writable from Firebase Console or Admin SDK
+      allow read, write: if false; // Admin SDK bypasses; client must never know who is admin
     }
 
     // ── Feedback ──────────────────────────────────────────────────────────────

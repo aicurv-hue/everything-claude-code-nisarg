@@ -5,6 +5,24 @@ import { savePostMemory } from "@/lib/ai/save-memory";
 const LI_VERSION = "202505"; // LinkedIn API version header (YYYYMM)
 const TIMEOUT_MS  = 15_000;
 
+const ALLOWED_IMAGE_HOSTS = new Set([
+  "storage.googleapis.com",
+  "firebasestorage.googleapis.com",
+  "fal.run",
+  "storage.fal.run",
+  "v2.fal.media",
+  "cdn.fal.ai",
+]);
+
+function isAllowedImageUrl(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return ALLOWED_IMAGE_HOSTS.has(hostname);
+  } catch {
+    return false;
+  }
+}
+
 function resolveAuthorUrn(segment: string, userSub: string, organizationId?: string): string {
   if (segment === "corporate") {
     // MUST come from the user's own profile — never fall back to global env var
@@ -168,12 +186,16 @@ export async function POST(request: NextRequest) {
   // Upload image if provided
   let imageUrn: string | null = null;
   if (imageUrl) {
-    console.log("[linkedin/publish] Uploading image via new Images API...");
-    imageUrn = await uploadImage(accessToken, authorUrn, imageUrl);
-    if (!imageUrn) {
-      console.warn("[linkedin/publish] Image upload failed — posting text only.");
+    if (!isAllowedImageUrl(imageUrl)) {
+      console.warn("[linkedin/publish] Blocked SSRF attempt — imageUrl hostname not in allowlist:", imageUrl);
     } else {
-      console.log(`[linkedin/publish] Image ready: ${imageUrn}`);
+      console.log("[linkedin/publish] Uploading image via new Images API...");
+      imageUrn = await uploadImage(accessToken, authorUrn, imageUrl);
+      if (!imageUrn) {
+        console.warn("[linkedin/publish] Image upload failed — posting text only.");
+      } else {
+        console.log(`[linkedin/publish] Image ready: ${imageUrn}`);
+      }
     }
   }
 

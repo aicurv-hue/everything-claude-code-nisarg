@@ -1,17 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import { FieldValue } from "firebase-admin/firestore";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!secret) {
+    console.error("[webhook/razorpay] RAZORPAY_WEBHOOK_SECRET is not configured");
+    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+  }
+
   const body = await req.text();
   const signature = req.headers.get("x-razorpay-signature") || "";
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET || "";
 
   const expected = createHmac("sha256", secret).update(body).digest("hex");
-  if (expected !== signature) {
+  let signatureValid = false;
+  try {
+    signatureValid = timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(signature, "hex"));
+  } catch {
+    signatureValid = false;
+  }
+  if (!signatureValid) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -73,7 +84,7 @@ export async function POST(req: NextRequest) {
         await subRef.update({ status: "cancelled", updatedAt: now });
         if (userId) {
           await adminDb.collection("users").doc(userId).set(
-            { planStatus: "cancelled" },
+            { planStatus: "cancelled", plan: "free" },
             { merge: true }
           );
         }
@@ -81,7 +92,7 @@ export async function POST(req: NextRequest) {
         await subRef.update({ status: "paused", updatedAt: now });
         if (userId) {
           await adminDb.collection("users").doc(userId).set(
-            { planStatus: "paused" },
+            { planStatus: "paused", plan: "free" },
             { merge: true }
           );
         }
