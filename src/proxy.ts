@@ -26,7 +26,7 @@ const BODY_LIMITS: Array<{ pattern: RegExp; limit: number }> = [
   { pattern: /^\/api\//, limit: 512 * 1024 },                   // All other API: 512 KB
 ];
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Only apply to API routes
