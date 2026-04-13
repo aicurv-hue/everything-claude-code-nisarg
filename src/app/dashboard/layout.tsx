@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, Settings, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut, BookOpen, HelpCircle, TrendingUp, Rocket, CreditCard } from "lucide-react";
+import { LayoutDashboard, UserCircle2, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut, BookOpen, HelpCircle, TrendingUp, Rocket, CreditCard } from "lucide-react";
 import { SegmentProvider, useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
@@ -68,18 +68,33 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
   const pathname = usePathname();
   const router = useRouter();
 
-  const navItems = [
-    { href: "/dashboard",          label: "Dashboard",   icon: <BarChart3 className="w-4 h-4" /> },
-    { href: "/dashboard/create",   label: "Create Post", icon: <PenSquare className="w-4 h-4" /> },
-    { href: "/dashboard/drafts",    label: "Drafts",      icon: <FileText className="w-4 h-4" /> },
-    { href: "/dashboard/schedule",   label: "Schedule",    icon: <CalendarDays className="w-4 h-4" /> },
-    { href: "/dashboard/campaigns",  label: "Campaigns",   icon: <Rocket className="w-4 h-4" /> },
-    { href: "/dashboard/history",    label: "History",     icon: <Clock className="w-4 h-4" /> },
-    { href: "/dashboard/analytics", label: "Analytics",  icon: <TrendingUp className="w-4 h-4" /> },
-    { href: "/dashboard/memory",   label: "Memory",      icon: <Brain className="w-4 h-4" /> },
-    { href: "/dashboard/billing",  label: "Billing",     icon: <CreditCard className="w-4 h-4" /> },
-    { href: "/dashboard/settings", label: "Profile",    icon: <Settings className="w-4 h-4" /> },
-    { href: "/dashboard/guide",    label: "Guide",       icon: <HelpCircle className="w-4 h-4" /> },
+  const navGroups = [
+    {
+      label: null,
+      items: [
+        { href: "/dashboard",           label: "Home",        icon: <LayoutDashboard className="w-4 h-4" /> },
+        { href: "/dashboard/create",    label: "Create Post", icon: <PenSquare className="w-4 h-4" /> },
+        { href: "/dashboard/drafts",    label: "Drafts",      icon: <FileText className="w-4 h-4" /> },
+        { href: "/dashboard/schedule",  label: "Schedule",    icon: <CalendarDays className="w-4 h-4" /> },
+        { href: "/dashboard/campaigns", label: "Campaigns",   icon: <Rocket className="w-4 h-4" /> },
+        { href: "/dashboard/history",   label: "History",     icon: <Clock className="w-4 h-4" /> },
+      ],
+    },
+    {
+      label: "Insights",
+      items: [
+        { href: "/dashboard/analytics", label: "Analytics",  icon: <TrendingUp className="w-4 h-4" /> },
+        { href: "/dashboard/memory",    label: "AI Memory",  icon: <Brain className="w-4 h-4" /> },
+      ],
+    },
+    {
+      label: "Account",
+      items: [
+        { href: "/dashboard/settings", label: "Profile",  icon: <UserCircle2 className="w-4 h-4" /> },
+        { href: "/dashboard/billing",  label: "Billing",  icon: <CreditCard className="w-4 h-4" /> },
+        { href: "/dashboard/guide",    label: "Guide",    icon: <HelpCircle className="w-4 h-4" /> },
+      ],
+    },
   ];
 
   const accentClass = isCorporate ? "bg-violet-600" : "bg-[#0A66C2]";
@@ -125,38 +140,49 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
       </div>
 
       {/* Navigation */}
-      <nav className="px-2 pt-2 flex-1 space-y-0.5">
-        {navItems.map(({ href, label, icon }) => {
-          const isActive = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
-          const showBadge = href === "/dashboard/history" && failedCount > 0;
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all ${
-                isActive
-                  ? "bg-white/10 text-white font-medium"
-                  : "text-slate-400 hover:text-white hover:bg-white/[0.06]"
-              }`}
-            >
-              <span className={`relative ${isActive ? "text-white" : "text-slate-500"}`}>
-                {icon}
-                {showBadge && (
-                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
-                )}
-              </span>
-              {label}
-              {showBadge && (
-                <span className="ml-auto text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">
-                  {failedCount}
-                </span>
-              )}
-              {!showBadge && isActive && (
-                <div className={`ml-auto w-1 h-4 rounded-full ${accentClass}`} />
-              )}
-            </Link>
-          );
-        })}
+      <nav className="px-2 pt-2 flex-1 overflow-y-auto">
+        {navGroups.map((group) => (
+          <div key={group.label ?? "main"} className="mb-1">
+            {group.label && (
+              <p className="px-3 pt-3 pb-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                {group.label}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map(({ href, label, icon }) => {
+                const isActive = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+                const showBadge = href === "/dashboard/history" && failedCount > 0;
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                      isActive
+                        ? "bg-white/10 text-white font-medium"
+                        : "text-slate-400 hover:text-white hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    <span className={`relative ${isActive ? "text-white" : "text-slate-500"}`}>
+                      {icon}
+                      {showBadge && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
+                      )}
+                    </span>
+                    {label}
+                    {showBadge && (
+                      <span className="ml-auto text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">
+                        {failedCount}
+                      </span>
+                    )}
+                    {!showBadge && isActive && (
+                      <div className={`ml-auto w-1 h-4 rounded-full ${accentClass}`} />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Plan badge */}
