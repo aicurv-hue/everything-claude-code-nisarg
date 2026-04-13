@@ -17,12 +17,16 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { trialDays, maxUses, expiresAt, label } = body;
+    const { trialDays, maxUses, expiresAt, label, plan } = body;
+
+    const validPlans = ["starter", "pro", "business"];
+    const resolvedPlan = validPlans.includes(plan) ? plan : "starter";
 
     const code = `CRIDL-${randomCode(8)}`;
 
     const docData = {
       code,
+      plan: resolvedPlan,
       trialDays: Number(trialDays) || 15,
       maxUses: maxUses !== undefined && maxUses !== null && maxUses !== "" ? Number(maxUses) : null,
       expiresAt: expiresAt ? Timestamp.fromDate(new Date(expiresAt)) : null,
@@ -36,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     await adminDb.collection("promoCodes").doc(code).set(docData);
 
-    return NextResponse.json({ code, trialDays: docData.trialDays, maxUses: docData.maxUses, label: docData.label });
+    return NextResponse.json({ code, plan: resolvedPlan, trialDays: docData.trialDays, maxUses: docData.maxUses, label: docData.label });
   } catch (err: unknown) {
     const e = err as Error;
     return NextResponse.json({ error: e.message || "Unexpected error." }, { status: 500 });
@@ -98,6 +102,7 @@ export async function GET(req: NextRequest) {
       return {
         code: d.code,
         label: d.label || "",
+        plan: d.plan || "starter",
         trialDays: d.trialDays,
         maxUses: d.maxUses,
         usesCount: d.usesCount || 0,

@@ -7,6 +7,7 @@ import { auth } from "@/lib/firebase";
 interface PromoCode {
   code: string;
   label: string;
+  plan: string;
   trialDays: number;
   maxUses: number | null;
   usesCount: number;
@@ -14,6 +15,12 @@ interface PromoCode {
   isActive: boolean;
   createdAt: string | null;
 }
+
+const PLAN_COLORS: Record<string, string> = {
+  starter:  "bg-blue-500/15 text-blue-400",
+  pro:      "bg-violet-500/15 text-violet-400",
+  business: "bg-amber-500/15 text-amber-400",
+};
 
 async function getToken(): Promise<string | null> {
   const user = auth?.currentUser;
@@ -28,6 +35,7 @@ export default function PromoCodesPage() {
 
   // Form state
   const [formLabel, setFormLabel] = useState("");
+  const [formPlan, setFormPlan] = useState("starter");
   const [formTrialDays, setFormTrialDays] = useState("15");
   const [formMaxUses, setFormMaxUses] = useState("");
   const [formExpiresAt, setFormExpiresAt] = useState("");
@@ -71,6 +79,7 @@ export default function PromoCodesPage() {
         },
         body: JSON.stringify({
           label: formLabel,
+          plan: formPlan,
           trialDays: parseInt(formTrialDays) || 15,
           maxUses: formMaxUses ? parseInt(formMaxUses) : null,
           expiresAt: formExpiresAt || null,
@@ -80,6 +89,7 @@ export default function PromoCodesPage() {
       if (!res.ok) { setFormError(data.error || "Failed to generate code."); return; }
       setFormResult(data.code);
       setFormLabel("");
+      setFormPlan("starter");
       setFormTrialDays("15");
       setFormMaxUses("");
       setFormExpiresAt("");
@@ -123,6 +133,14 @@ export default function PromoCodesPage() {
           <div>
             <label className={labelClass}>Label</label>
             <input type="text" value={formLabel} onChange={e => setFormLabel(e.target.value)} placeholder="e.g. ProductHunt Launch" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Plan</label>
+            <select value={formPlan} onChange={e => setFormPlan(e.target.value)} className={inputClass}>
+              <option value="starter">Starter</option>
+              <option value="pro">Pro</option>
+              <option value="business">Business</option>
+            </select>
           </div>
           <div>
             <label className={labelClass}>Trial Days</label>
@@ -175,6 +193,7 @@ export default function PromoCodesPage() {
                 <tr className="text-[11px] font-medium text-slate-500 uppercase tracking-wide border-b border-white/[0.07]">
                   <th className="px-6 py-3 text-left">Code</th>
                   <th className="px-4 py-3 text-left">Label</th>
+                  <th className="px-4 py-3 text-left">Plan</th>
                   <th className="px-4 py-3 text-left">Trial</th>
                   <th className="px-4 py-3 text-left">Uses</th>
                   <th className="px-4 py-3 text-left">Expiry</th>
@@ -193,6 +212,11 @@ export default function PromoCodesPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-slate-400">{c.label || "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${PLAN_COLORS[c.plan] || "bg-slate-700 text-slate-400"}`}>
+                        {c.plan || "starter"}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-slate-300">{c.trialDays}d</td>
                     <td className="px-4 py-3 text-slate-300">
                       {c.usesCount} / {c.maxUses === null ? "∞" : c.maxUses}

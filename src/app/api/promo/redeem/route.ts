@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
       }
 
       const trialDays: number = promo.trialDays || 15;
+      const promoPlan: string = ["starter", "pro", "business"].includes(promo.plan) ? promo.plan : "starter";
       trialExpiresAtMs = Date.now() + trialDays * 86400000;
       const trialExpiresAtTs = Timestamp.fromMillis(trialExpiresAtMs);
 
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
         trialActive: true,
         trialExpiresAt: trialExpiresAtTs,
         promoCodeUsed: code,
-        plan: "starter",
+        plan: promoPlan,
         planStatus: "trial",
       }, { merge: true });
     });
