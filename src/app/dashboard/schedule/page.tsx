@@ -69,6 +69,20 @@ export default function SchedulePage() {
     load(true);
   };
 
+  const handlePostNow = async (postId: string) => {
+    const token = await getAuthToken();
+    if (!token) throw new Error("Not authenticated");
+    const res = await fetch("/api/posts/publish-now", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ postId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data as any).error || "Publish failed");
+    // Refresh list after a short delay to allow Firestore to update
+    setTimeout(() => load(true), 1500);
+  };
+
   // Scheduled: soonest first | Published: latest first | Failed: newest first
   const scheduled  = posts.filter((p) => p.status === "scheduled")
     .sort((a, b) => (a.scheduled_at?.seconds ?? 0) - (b.scheduled_at?.seconds ?? 0));
@@ -218,6 +232,7 @@ export default function SchedulePage() {
         onClose={() => setSelected(null)}
         onReschedule={handleReschedule}
         onDelete={handleDelete}
+        onPostNow={handlePostNow}
         segment={segment as "individual" | "corporate"}
       />
     </div>

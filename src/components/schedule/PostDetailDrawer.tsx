@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import {
   X, CalendarDays, Clock, Linkedin, AlertCircle, CheckCircle,
   Trash2, RotateCcw, Pencil, Save, Image as ImageIcon, XCircle,
-  ExternalLink, Check,
+  ExternalLink, Check, Send,
 } from "lucide-react";
 import { Post } from "@/lib/db/posts";
 import SchedulePicker from "./SchedulePicker";
@@ -15,6 +15,7 @@ interface Props {
   onClose: () => void;
   onReschedule: (postId: string, newDate: Date, tz: string) => void;
   onDelete: (postId: string) => void;
+  onPostNow?: (postId: string) => Promise<void>;
   segment: "individual" | "corporate";
 }
 
@@ -40,9 +41,12 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
   draft:     <Clock className="w-3.5 h-3.5" />,
 };
 
-export default function PostDetailDrawer({ post, onClose, onReschedule, onDelete, segment }: Props) {
+export default function PostDetailDrawer({ post, onClose, onReschedule, onDelete, onPostNow, segment }: Props) {
   const [showPicker, setShowPicker] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isPostingNow, setIsPostingNow] = useState(false);
+  const [postNowError, setPostNowError] = useState<string | null>(null);
+  const [postNowSuccess, setPostNowSuccess] = useState(false);
 
   // Edit state
   const [editing, setEditing]         = useState(false);
@@ -57,6 +61,8 @@ export default function PostDetailDrawer({ post, onClose, onReschedule, onDelete
     setEditing(false);
     setSaveError(null);
     setSaved(false);
+    setPostNowError(null);
+    setPostNowSuccess(false);
     if (post) {
       setEditContent(post.content);
       setEditImageUrl(post.image_url || "");
@@ -124,6 +130,21 @@ export default function PostDetailDrawer({ post, onClose, onReschedule, onDelete
     if (!confirm("Delete this post?")) return;
     setIsDeleting(true);
     onDelete(post.id);
+  };
+
+  const handlePostNow = async () => {
+    if (!post.id || isPostingNow || !onPostNow) return;
+    if (!confirm("Post this to LinkedIn right now?")) return;
+    setIsPostingNow(true);
+    setPostNowError(null);
+    try {
+      await onPostNow(post.id);
+      setPostNowSuccess(true);
+    } catch (err: any) {
+      setPostNowError(err?.message || "Failed to publish. Please try again.");
+    } finally {
+      setIsPostingNow(false);
+    }
   };
 
   const imageToShow = editing ? editImageUrl : (post.image_url || "");
@@ -349,15 +370,42 @@ export default function PostDetailDrawer({ post, onClose, onReschedule, onDelete
           ) : (
             <>
               {(post.status === "scheduled" || post.status === "failed") && (
-                <button
-                  onClick={() => setShowPicker(true)}
-                  className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white transition-all ${
-                    isCorp ? "bg-violet-600 hover:bg-violet-700" : "bg-[#0A66C2] hover:bg-[#0854a0]"
-                  }`}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Reschedule
-                </button>
+                <>
+                  {/* Post Now */}
+                  {onPostNow && !postNowSuccess && (
+                    <button
+                      onClick={handlePostNow}
+                      disabled={isPostingNow}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-all disabled:opacity-50"
+                    >
+                      {isPostingNow ? (
+                        <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" /> Publishing…</>
+                      ) : (
+                        <><Send className="w-4 h-4" /> Post Now</>
+                      )}
+                    </button>
+                  )}
+                  {postNowSuccess && (
+                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-green-50 border border-green-200">
+                      <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                      <p className="text-xs font-medium text-green-700">Published to LinkedIn successfully!</p>
+                    </div>
+                  )}
+                  {postNowError && (
+                    <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-red-50 border border-red-200">
+                      <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                      <p className="text-xs text-red-600">{postNowError}</p>
+                    </div>
+                  )}
+                  {/* Reschedule */}
+                  <button
+                    onClick={() => setShowPicker(true)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all border border-slate-200 text-slate-700 hover:bg-slate-50"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Reschedule
+                  </button>
+                </>
               )}
               <button
                 onClick={handleDelete}

@@ -495,9 +495,18 @@ export default function PostPreviewPage() {
       const authToken = await getAuthToken();
 
       // Bake hook text into image before publishing — what you see is what gets posted
-      let publishImageUrl = finalImageUrl;
+      let publishImageUrl: string | null = finalImageUrl;
       if (finalImageUrl && imageHook) {
-        publishImageUrl = await compositeImageWithHook(finalImageUrl, imageHook);
+        const composited = await compositeImageWithHook(finalImageUrl, imageHook);
+        // If compositing produced a data: URL, upload it to Firebase Storage so the
+        // server receives a real HTTPS URL (data: URLs are blocked by SSRF guard and
+        // sending multi-MB base64 in the request body can corrupt content parsing).
+        if (composited.startsWith("data:")) {
+          const stored = await uploadDataUrlToStorage(composited);
+          publishImageUrl = stored || finalImageUrl; // fall back to original if upload fails
+        } else {
+          publishImageUrl = composited;
+        }
       }
 
       const res = await fetch("/api/linkedin/publish", {
