@@ -401,10 +401,11 @@ export default function AdminPage() {
     if (firebaseAuth?.currentUser) {
       token = await firebaseAuth.currentUser.getIdToken();
     } else {
-      // Wait up to 4s for auth to initialize before giving up
+      // Wait up to 4s for Firebase auth to initialize
       token = await new Promise<string | undefined>((resolve) => {
+        let unsub: (() => void) | undefined;
         const timer = setTimeout(() => { unsub?.(); resolve(undefined); }, 4000);
-        const unsub = firebaseAuth?.onAuthStateChanged(async (user) => {
+        unsub = firebaseAuth?.onAuthStateChanged(async (user) => {
           clearTimeout(timer);
           unsub?.();
           resolve(user ? await user.getIdToken() : undefined);
