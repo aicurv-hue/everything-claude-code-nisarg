@@ -447,12 +447,22 @@ export default function AdminPage() {
   // ── Promo code helpers ──
   const loadPromos = useCallback(async () => {
     setPromosLoading(true);
+    setPromoMsg(null);
     try {
+      // Ensure auth token is ready before fetching
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      if (!firebaseAuth?.currentUser) {
+        await new Promise<void>(resolve => {
+          const unsub = firebaseAuth?.onAuthStateChanged(u => { unsub?.(); resolve(); });
+        });
+      }
       const res = await adminFetch("/api/admin/promo-codes");
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load codes.");
       setPromos(data.codes || []);
-    } catch { setPromoMsg({ type: "err", text: "Failed to load promo codes." }); }
-    finally { setPromosLoading(false); }
+    } catch (e: any) {
+      setPromoMsg({ type: "err", text: e.message || "Failed to load promo codes." });
+    } finally { setPromosLoading(false); }
   }, [adminFetch]);
 
   useEffect(() => { if (tab === "promos") loadPromos(); }, [tab, loadPromos]);
