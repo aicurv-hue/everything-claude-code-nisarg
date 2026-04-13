@@ -407,29 +407,25 @@ Start directly with the hook line. Output nothing else.`;
     const raw = completion.choices[0].message.content || "";
     const post = sanitizePost(raw) || raw.trim();
 
-    // Stage 2: Generate image prompt — only when an image style is actually requested.
-    // Skip this expensive AI call when no image is needed (saves ~2300 tokens per request).
-    let imagePrompt = "";
-    if (imageStyle) {
-      const imageSystemPrompt = section("IMAGE_PROMPT_SYSTEM");
-      const imageUserPrompt = section("IMAGE_PROMPT_USER", {
-        TOPIC:   topic,
-        SEGMENT: segment,
-        POST:    post,
-      });
+    // Stage 2: Always generate image prompt — used by the preview page image picker.
+    const imageSystemPrompt = section("IMAGE_PROMPT_SYSTEM");
+    const imageUserPrompt = section("IMAGE_PROMPT_USER", {
+      TOPIC:   topic,
+      SEGMENT: segment,
+      POST:    post,
+    });
 
-      const imagePromptCompletion = await chatWithFallback(
-        [
-          { role: "system", content: imageSystemPrompt },
-          { role: "user",   content: imageUserPrompt },
-        ],
-        0.7
-      );
+    const imagePromptCompletion = await chatWithFallback(
+      [
+        { role: "system", content: imageSystemPrompt },
+        { role: "user",   content: imageUserPrompt },
+      ],
+      0.7
+    );
 
-      const rawImagePrompt = (imagePromptCompletion.choices[0].message.content || "").trim();
-      const stylePrefix = IMAGE_STYLE_PREFIXES[imageStyle] ?? "";
-      imagePrompt = stylePrefix ? `${stylePrefix} ${rawImagePrompt}` : rawImagePrompt;
-    }
+    const rawImagePrompt = (imagePromptCompletion.choices[0].message.content || "").trim();
+    const stylePrefix = imageStyle ? (IMAGE_STYLE_PREFIXES[imageStyle] ?? "") : "";
+    const imagePrompt = stylePrefix ? `${stylePrefix} ${rawImagePrompt}` : rawImagePrompt;
 
     return { post, imagePrompt };
   } catch (error: any) {
