@@ -9,6 +9,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   serverTimestamp,
 } from "firebase/firestore";
 
@@ -206,17 +207,19 @@ export const postService = {
     return all.filter((p) => p.status === "published");
   },
 
-  async getAll(userId: string): Promise<Post[]> {
+  async getAll(userId: string, limitCount = 200): Promise<Post[]> {
     if (isMock || !db) {
       return getMockPosts()
         .filter((p) => p.user_id === userId)
-        .sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
+        .sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0))
+        .slice(0, limitCount);
     }
-    // Always filter at the DB level — never fetch all documents and filter client-side
+    // Always filter at the DB level — cap reads to prevent unbounded Firestore scans
     const q = query(
       collection(db, COLLECTION),
       where("user_id", "==", userId),
-      orderBy("created_at", "desc")
+      orderBy("created_at", "desc"),
+      limit(limitCount)
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Post));

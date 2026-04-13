@@ -236,6 +236,9 @@ export async function POST(req: NextRequest) {
 
   // ── Process each due post (each may belong to a different user) ────────────
   const results: Array<{ id: string; status: "published" | "failed"; reason?: string }> = [];
+  // Per-run token cache: refresh each user's token at most once per cron invocation.
+  // Without this, 100 posts from the same user would call LinkedIn's token endpoint 100 times.
+  const tokenCache = new Map<string, string>(); // userId → valid access_token
 
   for (const post of due) {
     if (!post.id) continue;
@@ -264,31 +267,45 @@ export async function POST(req: NextRequest) {
 
       // ── Get LinkedIn token for this post's owner ──────────────────────────
       const userId = post.user_id;
-      const tokenSnap = await adminDb!.collection("tokens").doc(userId).get();
-      const tokenRecord = tokenSnap.exists ? tokenSnap.data() : null;
 
-      if (!tokenRecord) {
-        throw new Error(`No LinkedIn token for user ${userId}. User must reconnect LinkedIn in Settings.`);
-      }
+      // Check per-run cache first — avoids refreshing the same user's token multiple times
+      let accessToken = tokenCache.get(userId);
+      let userSub: string | undefined;
+      if (!accessToken) {
+        const tokenSnap = await adminDb!.collection("tokens").doc(userId).get();
+        const tokenRecord = tokenSnap.exists ? tokenSnap.data() : null;
 
-      // Refresh token if expired or within 5 minutes of expiry
-      let accessToken = tokenRecord.access_token;
-      const fiveMin = 5 * 60 * 1000;
-      if (!tokenRecord.expires_at || tokenRecord.expires_at < Date.now() + fiveMin) {
-        if (tokenRecord.refresh_token) {
-          const refreshed = await refreshAccessToken(userId, tokenRecord.refresh_token);
-          if (refreshed) {
-            accessToken = refreshed;
+        if (!tokenRecord) {
+          throw new Error(`No LinkedIn token for user ${userId}. User must reconnect LinkedIn in Settings.`);
+        }
+        userSub = tokenRecord.user_sub;
+
+        // Refresh token if expired or within 5 minutes of expiry
+        const fiveMin = 5 * 60 * 1000;
+        if (!tokenRecord.expires_at || tokenRecord.expires_at < Date.now() + fiveMin) {
+          if (tokenRecord.refresh_token) {
+            const refreshed = await refreshAccessToken(userId, tokenRecord.refresh_token);
+            if (refreshed) {
+              accessToken = refreshed;
+            } else {
+              throw new Error("Access token expired and refresh failed. User must reconnect LinkedIn.");
+            }
           } else {
-            throw new Error("Access token expired and refresh failed. User must reconnect LinkedIn.");
+            throw new Error("Access token expired. No refresh token. User must reconnect LinkedIn.");
           }
         } else {
-          throw new Error("Access token expired. No refresh token. User must reconnect LinkedIn.");
+          accessToken = tokenRecord.access_token as string;
         }
+        tokenCache.set(userId, accessToken);
       }
 
       // Resolve author URN — org ID: post record first, then user profile, then env fallback
-      let authorUrn = `urn:li:person:${tokenRecord.user_sub}`;
+      // userSub may be cached from a prior iteration — fetch from token doc if needed
+      if (!userSub) {
+        const tokenSnap = await adminDb!.collection("tokens").doc(userId).get();
+        userSub = tokenSnap.data()?.user_sub || "";
+      }
+      let authorUrn = `urn:li:person:${userSub}`;
       if (post.segment === "corporate") {
         let orgId = (post as any).organization_id;
         if (!orgId) {
@@ -306,7 +323,7 @@ export async function POST(req: NextRequest) {
       }
       if (!content.trim()) throw new Error("Post content is empty.");
 
-      const postId = await postToLinkedIn(accessToken, authorUrn, content, post.image_url || undefined);
+      const postId = await postToLinkedIn(accessToken!, authorUrn, content, post.image_url || undefined);
       await postRef.update({
         status: "published",
         linkedin_post_id: postId,

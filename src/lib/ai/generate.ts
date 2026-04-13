@@ -3,6 +3,7 @@ import type { ProfileSegment } from "../db/profiles";
 import type { PostMemory } from "../db/memory";
 import { openRouter, DEFAULT_MODEL, FALLBACK_MODEL } from "./openrouter";
 import { NEEL_SECTIONS } from "./neel-prompt-sections";
+import { sanitizePromptInput } from "./sanitize";
 
 export interface GenerateResult {
   post: string;
@@ -332,19 +333,15 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
     customInstructions
       ? [
           "",
-          `══════════════════════════════════════════`,
           `CUSTOM INSTRUCTIONS — highest priority, overrides everything above`,
-          `══════════════════════════════════════════`,
-          customInstructions,
+          sanitizePromptInput(customInstructions, 500),
         ].join("\n")
       : "",
     previousPost
       ? [
           "",
-          `══════════════════════════════════════════`,
           `CURRENT POST — user is iterating on this. Refine it per the direction above. Do NOT restart from scratch.`,
-          `══════════════════════════════════════════`,
-          previousPost,
+          sanitizePromptInput(previousPost, 3000),
         ].join("\n")
       : "",
   ].join("\n").trim();
@@ -355,7 +352,7 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
     .join("\n");
 
   const sourceBlock = sourceContext
-    ? `\nSource material (URL / image provided by user — use this as the primary factual foundation):\n"""\n${sourceContext.slice(0, 2000)}\n"""\n`
+    ? `\nSource material (URL / image provided by user — use this as the primary factual foundation):\n"""\n${sanitizePromptInput(sourceContext, 2000)}\n"""\n`
     : "";
 
   const userPrompt = `Generate the LinkedIn post now.
@@ -385,13 +382,13 @@ Start directly with the hook line. Output nothing else.`;
     };
     const primary = MODEL_ALIASES[raw] ?? raw;
     try {
-      const res = await openRouter.chat.completions.create({ model: primary, messages, temperature });
+      const res = await openRouter.chat.completions.create({ model: primary, messages, temperature, max_tokens: 1200 });
       return res;
     } catch (err: any) {
       const status = err?.status || err?.code;
       if (status === 500 || status === 502 || status === 503 || status === 429) {
         console.warn(`[Neel] ${primary} returned ${status} — retrying with ${FALLBACK_MODEL}`);
-        return await openRouter.chat.completions.create({ model: FALLBACK_MODEL, messages, temperature });
+        return await openRouter.chat.completions.create({ model: FALLBACK_MODEL, messages, temperature, max_tokens: 1200 });
       }
       throw err;
     }
@@ -410,25 +407,29 @@ Start directly with the hook line. Output nothing else.`;
     const raw = completion.choices[0].message.content || "";
     const post = sanitizePost(raw) || raw.trim();
 
-    // Stage 2: Neel generates the image prompt for fal.ai
-    const imageSystemPrompt = section("IMAGE_PROMPT_SYSTEM");
-    const imageUserPrompt = section("IMAGE_PROMPT_USER", {
-      TOPIC:   topic,
-      SEGMENT: segment,
-      POST:    post,
-    });
+    // Stage 2: Generate image prompt — only when an image style is actually requested.
+    // Skip this expensive AI call when no image is needed (saves ~2300 tokens per request).
+    let imagePrompt = "";
+    if (imageStyle) {
+      const imageSystemPrompt = section("IMAGE_PROMPT_SYSTEM");
+      const imageUserPrompt = section("IMAGE_PROMPT_USER", {
+        TOPIC:   topic,
+        SEGMENT: segment,
+        POST:    post,
+      });
 
-    const imagePromptCompletion = await chatWithFallback(
-      [
-        { role: "system", content: imageSystemPrompt },
-        { role: "user",   content: imageUserPrompt },
-      ],
-      0.7
-    );
+      const imagePromptCompletion = await chatWithFallback(
+        [
+          { role: "system", content: imageSystemPrompt },
+          { role: "user",   content: imageUserPrompt },
+        ],
+        0.7
+      );
 
-    const rawImagePrompt = (imagePromptCompletion.choices[0].message.content || "").trim();
-    const stylePrefix = imageStyle ? (IMAGE_STYLE_PREFIXES[imageStyle] ?? "") : "";
-    const imagePrompt = stylePrefix ? `${stylePrefix} ${rawImagePrompt}` : rawImagePrompt;
+      const rawImagePrompt = (imagePromptCompletion.choices[0].message.content || "").trim();
+      const stylePrefix = IMAGE_STYLE_PREFIXES[imageStyle] ?? "";
+      imagePrompt = stylePrefix ? `${stylePrefix} ${rawImagePrompt}` : rawImagePrompt;
+    }
 
     return { post, imagePrompt };
   } catch (error: any) {

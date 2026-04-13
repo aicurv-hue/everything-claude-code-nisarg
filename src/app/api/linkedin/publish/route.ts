@@ -250,22 +250,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "Company page posting requires LinkedIn Partner approval for the w_organization_social scope. Please use Schedule instead — scheduled posts will publish automatically once approved.",
-          details: errText,
           code: "PARTNER_APPROVAL_REQUIRED",
         },
         { status: 422 }
       );
     }
 
-    // Parse LinkedIn error for a readable message
-    let liError = errText;
+    // Parse LinkedIn error for a readable message (details logged server-side only — never sent to client)
+    let liError = "Publishing failed. Please try again.";
     try {
       const parsed = JSON.parse(errText);
-      liError = parsed.message || parsed.error_description || parsed.error || errText;
+      const msg = parsed.message || parsed.error_description || parsed.error || "";
+      // Surface only safe, non-sensitive parts of LinkedIn errors
+      if (msg && msg.length < 200) liError = msg;
     } catch {}
 
     return NextResponse.json(
-      { error: `LinkedIn API error: ${res.status} — ${liError}`, details: errText },
+      { error: liError },
       { status: res.status }
     );
   }

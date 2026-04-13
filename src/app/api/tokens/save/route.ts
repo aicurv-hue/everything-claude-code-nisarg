@@ -12,9 +12,13 @@ import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: NextRequest) {
-  // Internal-only endpoint — verify shared secret only if configured
+  // Internal-only endpoint — INTERNAL_API_SECRET is mandatory
   const internalSecret = process.env.INTERNAL_API_SECRET;
-  if (internalSecret && req.headers.get("x-internal-secret") !== internalSecret) {
+  if (!internalSecret) {
+    console.error("[tokens/save] INTERNAL_API_SECRET is not configured — rejecting request");
+    return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+  }
+  if (req.headers.get("x-internal-secret") !== internalSecret) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

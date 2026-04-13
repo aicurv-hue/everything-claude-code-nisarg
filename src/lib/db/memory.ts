@@ -18,6 +18,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   serverTimestamp,
 } from "firebase/firestore";
 
@@ -170,17 +171,17 @@ export const memoryService = {
         .slice(0, 100);
     }
     try {
-      // Filter at DB level — never fetch all memories and filter client-side
+      // Fetch recent 20 entries at DB level — enough for relevance scoring without over-reading
       const q = query(
         collection(db, "post_memories"),
         where("user_id", "==", userId),
         where("segment", "==", segment),
-        orderBy("created_at", "desc")
+        orderBy("created_at", "desc"),
+        limit(20)
       );
       const snapshot = await getDocs(q);
       return snapshot.docs
-        .map((d) => ({ id: d.id, ...d.data() } as PostMemory))
-        .slice(0, 100);
+        .map((d) => ({ id: d.id, ...d.data() } as PostMemory));
     } catch (err) {
       console.warn("[Memory] Failed to load memories:", err);
       return [];

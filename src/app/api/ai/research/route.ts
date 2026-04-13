@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyTokenEdge } from "@/lib/utils/verifyTokenEdge";
+import { sanitizePromptInput } from "@/lib/ai/sanitize";
 
 // Edge Runtime — no timeout on Vercel Hobby plan (unlike serverless 10s limit)
 export const runtime = "edge";
@@ -19,10 +20,14 @@ export async function POST(req: NextRequest) {
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { topic, options = {}, sourceContext } = await req.json();
-    if (!topic) return NextResponse.json({ error: "topic required" }, { status: 400 });
+    const { topic: rawTopic, options = {}, sourceContext: rawSourceContext } = await req.json();
+    if (!rawTopic) return NextResponse.json({ error: "topic required" }, { status: 400 });
 
-    const { segment = "individual", tone = "professional", audience = "general", length = "medium", clientProfile } = options;
+    const topic = sanitizePromptInput(rawTopic, 200);
+    const sourceContext = sanitizePromptInput(rawSourceContext, 3000);
+
+    const { segment = "individual", tone = "professional", audience: rawAudience = "general", length = "medium", clientProfile } = options;
+    const audience = sanitizePromptInput(rawAudience, 150);
 
     const profileLines = clientProfile ? [
       clientProfile.niche         && `- Niche: ${clientProfile.niche}`,
@@ -60,29 +65,50 @@ Return ONLY valid JSON:
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) return NextResponse.json({ error: "OpenRouter API key not configured" }, { status: 500 });
 
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
-        "X-Title": "Cridl",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.0-flash-001",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.3,
-        max_tokens: 1200,
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("[research] OpenRouter error:", err);
-      throw new Error(`OpenRouter ${res.status}: ${err}`);
+    // Retry up to 2 times on transient errors (5xx, network failures)
+    let data: any = null;
+    let lastErr = "";
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 1000 * attempt));
+      try {
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
+            "X-Title": "Cridl",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.0-flash-001",
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.3,
+            max_tokens: 1200,
+          }),
+        });
+        if (!res.ok) {
+          lastErr = `OpenRouter ${res.status}: ${await res.text()}`;
+          if (res.status < 500) break; // don't retry 4xx
+          continue;
+        }
+        data = await res.json();
+        break;
+      } catch (fetchErr: any) {
+        lastErr = fetchErr?.message || "network error";
+      }
     }
 
-    const data = await res.json();
+    if (!data) {
+      console.error("[research] All attempts failed:", lastErr);
+      // Return a structured fallback so downstream generation still works
+      return NextResponse.json({
+        topic,
+        summary: `Research on "${topic}" is currently unavailable. The post will be generated from your existing brand context and the topic description.`,
+        insights: [{ title: topic, content: `Explore the key dimensions of ${topic} relevant to ${audience}.`, source: "Fallback" }],
+        references: [],
+      });
+    }
+
     const text = data.choices?.[0]?.message?.content || "";
     const synthesis = extractJSON(text);
 
