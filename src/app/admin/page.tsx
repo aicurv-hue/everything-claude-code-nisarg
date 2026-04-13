@@ -397,10 +397,27 @@ export default function AdminPage() {
 
   const adminFetch = useCallback(async (url: string, options: RequestInit = {}) => {
     const { auth: firebaseAuth } = await import("@/lib/firebase");
-    const token = await firebaseAuth?.currentUser?.getIdToken();
+    let token: string | undefined;
+    if (firebaseAuth?.currentUser) {
+      token = await firebaseAuth.currentUser.getIdToken();
+    } else {
+      // Wait up to 4s for auth to initialize before giving up
+      token = await new Promise<string | undefined>((resolve) => {
+        const timer = setTimeout(() => { unsub?.(); resolve(undefined); }, 4000);
+        const unsub = firebaseAuth?.onAuthStateChanged(async (user) => {
+          clearTimeout(timer);
+          unsub?.();
+          resolve(user ? await user.getIdToken() : undefined);
+        });
+      });
+    }
     return fetch(url, {
       ...options,
-      headers: { ...(options.headers || {}), Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      headers: {
+        ...(options.headers || {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        "Content-Type": "application/json",
+      },
     });
   }, []);
 
@@ -449,13 +466,6 @@ export default function AdminPage() {
     setPromosLoading(true);
     setPromoMsg(null);
     try {
-      // Ensure auth token is ready before fetching
-      const { auth: firebaseAuth } = await import("@/lib/firebase");
-      if (!firebaseAuth?.currentUser) {
-        await new Promise<void>(resolve => {
-          const unsub = firebaseAuth?.onAuthStateChanged(u => { unsub?.(); resolve(); });
-        });
-      }
       const res = await adminFetch("/api/admin/promo-codes");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load codes.");
