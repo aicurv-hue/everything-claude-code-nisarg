@@ -1,18 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
-
-async function verifyAdmin(req: NextRequest): Promise<string | null> {
-  try {
-    const authHeader = req.headers.get("authorization") || "";
-    const idToken = authHeader.replace("Bearer ", "");
-    if (!idToken || !adminAuth) return null;
-    const decoded = await adminAuth.verifyIdToken(idToken);
-    if (!ADMIN_EMAILS.includes(decoded.email?.toLowerCase() || "")) return null;
-    return decoded.uid;
-  } catch { return null; }
-}
+import { requireAdmin } from "@/lib/utils/requireAdmin";
 
 /**
  * POST /api/admin/migrate
@@ -24,9 +12,8 @@ export async function POST(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.get("authorization") || "";
   const isCronAuth = cronSecret && authHeader === `Bearer ${cronSecret}`;
-  if (!isCronAuth) {
-    const adminUid = await verifyAdmin(req);
-    if (!adminUid) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!isCronAuth && !(await requireAdmin(req))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   if (!adminDb || !adminAuth) return NextResponse.json({ error: "Admin SDK not configured" }, { status: 503 });
 

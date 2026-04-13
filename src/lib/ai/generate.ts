@@ -452,31 +452,18 @@ export async function generateImagePrompt(topic: string, segment: string, post: 
     POST:    post,
   });
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY not set");
-
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
-      "X-Title": "Cridl",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.0-flash-001",
-      messages: [
-        { role: "system", content: imageSystemPrompt },
-        { role: "user",   content: imageUserPrompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 200,
-    }),
+  // Use the centralized OpenRouter client — consistent auth, error handling, and future logging
+  const completion = await openRouter.chat.completions.create({
+    model: "google/gemini-2.0-flash-001",
+    messages: [
+      { role: "system", content: imageSystemPrompt },
+      { role: "user",   content: imageUserPrompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 200,
   });
 
-  if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
-  const data = await res.json();
-  const rawPrompt = (data.choices?.[0]?.message?.content || "").trim();
+  const rawPrompt = (completion.choices[0]?.message?.content || "").trim();
   const stylePrefix = imageStyle ? (IMAGE_STYLE_PREFIXES[imageStyle] ?? "") : "";
   return stylePrefix ? `${stylePrefix} ${rawPrompt}` : rawPrompt;
 }
@@ -486,37 +473,24 @@ export async function generateImagePrompt(topic: string, segment: string, post: 
  * On-demand — called when user clicks "Generate Hook" on the preview page.
  */
 export async function generateImageHook(post: string, topic: string): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY not set");
-
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
-      "X-Title": "Cridl",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.0-flash-001",
-      messages: [
-        {
-          role: "system",
-          content: "You write short, punchy image overlay hooks for LinkedIn posts. Output ONLY the hook text — 7 words maximum, no punctuation at the end, no quotes. Make it a bold question or provocative statement that makes the viewer stop and read the post. Do not explain. Do not use hashtags.",
-        },
-        {
-          role: "user",
-          content: `Topic: "${topic}"\n\nPost:\n${post.slice(0, 600)}\n\nWrite a 7-word-max hook for the image overlay.`,
-        },
-      ],
-      temperature: 0.85,
-      max_tokens: 30,
-    }),
+  // Use the centralized OpenRouter client — consistent auth, error handling, and future logging
+  const completion = await openRouter.chat.completions.create({
+    model: "google/gemini-2.0-flash-001",
+    messages: [
+      {
+        role: "system",
+        content: "You write short, punchy image overlay hooks for LinkedIn posts. Output ONLY the hook text — 7 words maximum, no punctuation at the end, no quotes. Make it a bold question or provocative statement that makes the viewer stop and read the post. Do not explain. Do not use hashtags.",
+      },
+      {
+        role: "user",
+        content: `Topic: "${topic}"\n\nPost:\n${post.slice(0, 600)}\n\nWrite a 7-word-max hook for the image overlay.`,
+      },
+    ],
+    temperature: 0.85,
+    max_tokens: 30,
   });
 
-  if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
-  const data = await res.json();
-  return (data.choices?.[0]?.message?.content || "")
+  return (completion.choices[0]?.message?.content || "")
     .trim()
     .replace(/\*\*/g, "")        // strip markdown bold
     .replace(/\*/g, "")          // strip markdown italic

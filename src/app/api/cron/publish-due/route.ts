@@ -234,24 +234,30 @@ export async function POST(req: NextRequest) {
     console.log("[cron] No posts due — proceeding to engagement sync.");
   }
 
-  // ── Process each due post (each may belong to a different user) ────────────
+  // ── Process due posts in parallel batches of 5 ───────────────────────────
+  // Sequential publishing (1 post at a time) was O(n × 3s) — 100 posts = ~5 min.
+  // Batching reduces that to O(n/5 × 3s) — 100 posts = ~1 min.
+  // Same-user posts are not grouped into the same batch to avoid LinkedIn rate limits.
   const results: Array<{ id: string; status: "published" | "failed"; reason?: string }> = [];
   // Per-run token cache: refresh each user's token at most once per cron invocation.
   // Without this, 100 posts from the same user would call LinkedIn's token endpoint 100 times.
   const tokenCache = new Map<string, string>(); // userId → valid access_token
+  // Mutex map: prevents two concurrent publishes for the same user hitting LinkedIn simultaneously
+  const userInFlight = new Set<string>();
 
-  for (const post of due) {
-    if (!post.id) continue;
-
-    // In-memory lock — prevents duplicate publish within same invocation
-    if (publishingIds.has(post.id)) {
-      console.log(`[cron] Post ${post.id} already in-flight — skipping.`);
-      continue;
-    }
+  async function publishOne(post: Post): Promise<{ id: string; status: "published" | "failed"; reason?: string }> {
+    if (!post.id) return { id: post.id!, status: "failed" as const, reason: "no id" };
+    if (publishingIds.has(post.id)) return { id: post.id, status: "failed" as const, reason: "in-flight" };
     publishingIds.add(post.id);
 
+    // Wait if this user already has a post being published in the current batch
+    // (prevents hitting LinkedIn per-user rate limits within a single batch)
+    while (userInFlight.has(post.user_id)) {
+      await new Promise(r => setTimeout(r, 200));
+    }
+    userInFlight.add(post.user_id);
+
     try {
-      // Atomically claim the post: only proceed if it's still "scheduled"
       const postRef = adminDb!.collection("posts").doc(post.id);
       const claimed = await adminDb!.runTransaction(async (tx) => {
         const snap = await tx.get(postRef);
@@ -261,35 +267,23 @@ export async function POST(req: NextRequest) {
       });
       if (!claimed) {
         console.log(`[cron] Post ${post.id} already claimed — skipping.`);
-        publishingIds.delete(post.id);
-        continue;
+        return { id: post.id, status: "failed" as const, reason: "already claimed" };
       }
 
-      // ── Get LinkedIn token for this post's owner ──────────────────────────
       const userId = post.user_id;
-
-      // Check per-run cache first — avoids refreshing the same user's token multiple times
       let accessToken = tokenCache.get(userId);
       let userSub: string | undefined;
       if (!accessToken) {
         const tokenSnap = await adminDb!.collection("tokens").doc(userId).get();
         const tokenRecord = tokenSnap.exists ? tokenSnap.data() : null;
-
-        if (!tokenRecord) {
-          throw new Error(`No LinkedIn token for user ${userId}. User must reconnect LinkedIn in Settings.`);
-        }
+        if (!tokenRecord) throw new Error(`No LinkedIn token for user ${userId}. User must reconnect LinkedIn in Settings.`);
         userSub = tokenRecord.user_sub;
-
-        // Refresh token if expired or within 5 minutes of expiry
         const fiveMin = 5 * 60 * 1000;
         if (!tokenRecord.expires_at || tokenRecord.expires_at < Date.now() + fiveMin) {
           if (tokenRecord.refresh_token) {
             const refreshed = await refreshAccessToken(userId, tokenRecord.refresh_token);
-            if (refreshed) {
-              accessToken = refreshed;
-            } else {
-              throw new Error("Access token expired and refresh failed. User must reconnect LinkedIn.");
-            }
+            if (refreshed) { accessToken = refreshed; }
+            else throw new Error("Access token expired and refresh failed. User must reconnect LinkedIn.");
           } else {
             throw new Error("Access token expired. No refresh token. User must reconnect LinkedIn.");
           }
@@ -299,8 +293,6 @@ export async function POST(req: NextRequest) {
         tokenCache.set(userId, accessToken);
       }
 
-      // Resolve author URN — org ID: post record first, then user profile, then env fallback
-      // userSub may be cached from a prior iteration — fetch from token doc if needed
       if (!userSub) {
         const tokenSnap = await adminDb!.collection("tokens").doc(userId).get();
         userSub = tokenSnap.data()?.user_sub || "";
@@ -316,11 +308,8 @@ export async function POST(req: NextRequest) {
         authorUrn = `urn:li:organization:${orgId}`;
       }
 
-      // Use post content
       let content = post.content || "";
-      if (content.startsWith("[Pending generation]")) {
-        content = post.topic || content;
-      }
+      if (content.startsWith("[Pending generation]")) content = post.topic || content;
       if (!content.trim()) throw new Error("Post content is empty.");
 
       const postId = await postToLinkedIn(accessToken!, authorUrn, content, post.image_url || undefined);
@@ -331,18 +320,13 @@ export async function POST(req: NextRequest) {
         updated_at: FieldValue.serverTimestamp(),
       });
       console.log(`[cron] ✅ Published post ${post.id} (user: ${userId}) → LinkedIn ${postId}`);
-
       savePostMemory({
-        content,
-        topic:    post.topic    || "",
-        audience: post.audience || "",
-        tone:     post.tone     || "professional",
-        segment:  (post.segment as "individual" | "corporate") || "individual",
-        userId,
-        postId:   post.id,
+        content, topic: post.topic || "", audience: post.audience || "",
+        tone: post.tone || "professional",
+        segment: (post.segment as "individual" | "corporate") || "individual",
+        userId, postId: post.id,
       }).catch((err) => console.error('[Memory] savePostMemory failed:', err));
-
-      results.push({ id: post.id, status: "published" });
+      return { id: post.id, status: "published" as const };
 
     } catch (err: any) {
       console.error(`[cron] ❌ Failed to publish post ${post.id}:`, err?.message || err);
@@ -351,14 +335,27 @@ export async function POST(req: NextRequest) {
         failed_reason: err?.message || "Unknown error",
         updated_at: FieldValue.serverTimestamp(),
       }).catch(() => {});
-      results.push({ id: post.id, status: "failed", reason: err?.message });
+      return { id: post.id, status: "failed" as const, reason: err?.message };
     } finally {
       publishingIds.delete(post.id);
+      userInFlight.delete(post.user_id);
+    }
+  }
+
+  // Process in batches of 5 — each batch runs in parallel, batches run sequentially
+  const BATCH_SIZE = 5;
+  const validPosts = due.filter(p => p.id);
+  for (let i = 0; i < validPosts.length; i += BATCH_SIZE) {
+    const batch = validPosts.slice(i, i + BATCH_SIZE);
+    const batchResults = await Promise.allSettled(batch.map(post => publishOne(post)));
+    for (const r of batchResults) {
+      if (r.status === "fulfilled") results.push(r.value);
+      // rejected = unexpected throw — already handled inside publishOne, so this shouldn't happen
     }
   }
 
   const published = results.filter(r => r.status === "published").length;
-  const failed    = results.filter(r => r.status === "failed").length;
+  const failed    = results.filter(r => r.status === "failed" && r.reason !== "in-flight" && r.reason !== "already claimed").length;
 
   // ── Engagement sync disabled ──────────────────────────────────────────────
   // LinkedIn moved all social engagement endpoints (reactions, comments, socialActions)

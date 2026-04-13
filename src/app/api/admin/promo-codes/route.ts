@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
-  .split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
-
-async function verifyAdmin(req: NextRequest): Promise<{ ok: boolean; uid?: string }> {
-  try {
-    const idToken = req.headers.get("authorization")?.replace("Bearer ", "");
-    if (!idToken || !adminAuth) return { ok: false };
-    const decoded = await adminAuth.verifyIdToken(idToken);
-    const isAdmin = ADMIN_EMAILS.includes(decoded.email?.toLowerCase() || "");
-    return { ok: isAdmin, uid: decoded.uid };
-  } catch { return { ok: false }; }
-}
+import { requireAdmin } from "@/lib/utils/requireAdmin";
 
 function randomCode(length: number): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -23,7 +11,7 @@ function randomCode(length: number): string {
 }
 
 export async function POST(req: NextRequest) {
-  const { ok, uid } = await verifyAdmin(req);
+  const adminEmail = await requireAdmin(req); const ok = !!adminEmail; const uid = undefined;
   if (!ok) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (!adminDb) return NextResponse.json({ error: "Server not configured." }, { status: 503 });
 
@@ -57,7 +45,7 @@ export async function POST(req: NextRequest) {
 
 /** PATCH /api/admin/promo-codes — edit a code (trialDays, expiresAt, isActive, label) */
 export async function PATCH(req: NextRequest) {
-  const { ok } = await verifyAdmin(req);
+  const ok = !!(await requireAdmin(req));
   if (!ok) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (!adminDb) return NextResponse.json({ error: "Server not configured." }, { status: 503 });
 
@@ -83,7 +71,7 @@ export async function PATCH(req: NextRequest) {
 
 /** DELETE /api/admin/promo-codes — delete a code */
 export async function DELETE(req: NextRequest) {
-  const { ok } = await verifyAdmin(req);
+  const ok = !!(await requireAdmin(req));
   if (!ok) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (!adminDb) return NextResponse.json({ error: "Server not configured." }, { status: 503 });
 
@@ -99,7 +87,7 @@ export async function DELETE(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const { ok } = await verifyAdmin(req);
+  const ok = !!(await requireAdmin(req));
   if (!ok) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (!adminDb) return NextResponse.json({ error: "Server not configured." }, { status: 503 });
 

@@ -6,23 +6,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
-  .split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
-
-async function verifyAdmin(req: NextRequest): Promise<boolean> {
-  try {
-    const authHeader = req.headers.get("authorization") || "";
-    const idToken = authHeader.replace("Bearer ", "");
-    if (!idToken || !adminAuth) return false;
-    const decoded = await adminAuth.verifyIdToken(idToken);
-    return ADMIN_EMAILS.includes(decoded.email?.toLowerCase() || "");
-  } catch { return false; }
-}
+import { requireAdmin } from "@/lib/utils/requireAdmin";
+import { logAdminAction } from "@/lib/logging/audit";
 
 /** GET /api/admin/users — list all users with aggregated stats (2 Firestore reads, not N) */
 export async function GET(req: NextRequest) {
-  if (!await verifyAdmin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const adminEmail = await requireAdmin(req);
+  if (!adminEmail) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  logAdminAction("admin.users.list", adminEmail);
   if (!adminAuth || !adminDb) return NextResponse.json({ error: "Admin SDK not configured." }, { status: 503 });
 
   try {
@@ -123,7 +114,7 @@ export async function GET(req: NextRequest) {
 
 /** PATCH /api/admin/users — enable/disable a user */
 export async function PATCH(req: NextRequest) {
-  if (!await verifyAdmin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!await requireAdmin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (!adminAuth) return NextResponse.json({ error: "Admin SDK not configured." }, { status: 503 });
 
   const { uid, disabled } = await req.json();
@@ -135,7 +126,7 @@ export async function PATCH(req: NextRequest) {
 
 /** DELETE /api/admin/users — permanently delete a user and all their Firestore data */
 export async function DELETE(req: NextRequest) {
-  if (!await verifyAdmin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!await requireAdmin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (!adminAuth || !adminDb) return NextResponse.json({ error: "Admin SDK not configured." }, { status: 503 });
 
   const { uid } = await req.json();

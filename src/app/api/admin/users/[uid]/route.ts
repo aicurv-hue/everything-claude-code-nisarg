@@ -8,19 +8,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
-  .split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
-
-async function verifyAdmin(req: NextRequest): Promise<boolean> {
-  try {
-    const authHeader = req.headers.get("authorization") || "";
-    const idToken = authHeader.replace("Bearer ", "");
-    if (!idToken || !adminAuth) return false;
-    const decoded = await adminAuth.verifyIdToken(idToken);
-    return ADMIN_EMAILS.includes(decoded.email?.toLowerCase() || "");
-  } catch { return false; }
-}
+import { requireAdmin } from "@/lib/utils/requireAdmin";
+import { logAdminAction } from "@/lib/logging/audit";
 
 function toIso(ts: any): string | null {
   if (!ts) return null;
@@ -33,10 +22,12 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ uid: string }> }
 ) {
-  if (!await verifyAdmin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const adminEmail = await requireAdmin(req);
+  if (!adminEmail) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (!adminDb) return NextResponse.json({ error: "Admin SDK not configured." }, { status: 503 });
 
   const { uid } = await params;
+  logAdminAction("admin.users.view", adminEmail, uid);
 
   const [postsSnap, memoriesSnap, tokenDoc, profileDoc] = await Promise.all([
     adminDb.collection("posts")

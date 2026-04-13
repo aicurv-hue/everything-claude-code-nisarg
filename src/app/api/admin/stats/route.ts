@@ -1,22 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
-
-// Use server-only env var — never NEXT_PUBLIC (that leaks to the browser bundle)
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
-  .split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
-
-async function verifyAdmin(req: NextRequest): Promise<boolean> {
-  try {
-    const authHeader = req.headers.get("authorization") || "";
-    const idToken = authHeader.replace("Bearer ", "");
-    if (!idToken || !adminAuth) return false;
-    const decoded = await adminAuth.verifyIdToken(idToken);
-    return ADMIN_EMAILS.includes(decoded.email?.toLowerCase() || "");
-  } catch { return false; }
-}
+import { requireAdmin } from "@/lib/utils/requireAdmin";
 
 export async function GET(req: NextRequest) {
-  if (!await verifyAdmin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!await requireAdmin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (!adminAuth || !adminDb) return NextResponse.json({ error: "Admin SDK not configured." }, { status: 503 });
 
   try {

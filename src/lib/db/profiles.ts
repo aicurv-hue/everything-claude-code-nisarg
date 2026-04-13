@@ -54,7 +54,9 @@ const COLLECTION_NAME = "profiles";
 export const profileService = {
   async saveProfile(userId: string, profile: UserProfile) {
     if (isMock || !db) {
-      localStorage.setItem("user_profiles", JSON.stringify(profile));
+      // In mock mode: use sessionStorage only (cleared on tab close, not persisted cross-session)
+      // Never use localStorage — brand strategy data must not persist to XSS payloads across sessions
+      try { sessionStorage.setItem("user_profiles_session", JSON.stringify(profile)); } catch {}
       return;
     }
     const profileRef = doc(db, COLLECTION_NAME, userId);
@@ -66,18 +68,10 @@ export const profileService = {
 
   async getProfile(userId: string): Promise<UserProfile | null> {
     if (isMock || !db) {
-      const saved = localStorage.getItem("user_profiles");
-      if (saved) return JSON.parse(saved);
-      
-      // Migration from old single profile
-      const old = localStorage.getItem("client_profile");
-      if (old) {
-        const parsed = JSON.parse(old);
-        return {
-          lastActiveSegment: parsed.profileType || "individual",
-          individual: parsed.profileType === "individual" ? parsed : {},
-          corporate: parsed.profileType === "corporate" ? parsed : {}
-        } as UserProfile;
+      // Session-scoped fallback only — no localStorage read (security: brand data must not be XSS-accessible)
+      const saved = sessionStorage.getItem("user_profiles_session");
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
       }
       return null;
     }

@@ -1,40 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import { requireAdmin } from "@/lib/utils/requireAdmin";
 
 /**
  * POST /api/admin/beta-access
  * Add or remove an email from the beta allowlist.
  *
- * Auth: Bearer <Firebase ID token> (must be in ADMIN_EMAILS)
- *    OR Bearer <CRON_SECRET>  (legacy, kept for scripts)
+ * Auth: Bearer <Firebase ID token> (must be in ADMIN_EMAILS) + optional X-Admin-Token
+ *    OR Bearer <CRON_SECRET>  (legacy, kept for CLI scripts)
  *
  * Body: { email: string, action: "add" | "remove" }
  *
  * GET /api/admin/beta-access
- * List all approved emails + pending (signed-up but not yet approved) users.
+ * List all approved emails.
  */
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
-  .split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
-
 async function isAuthorized(req: NextRequest): Promise<boolean> {
+  // Legacy: CRON_SECRET for CLI scripts (no browser UI)
   const authHeader = req.headers.get("authorization") || "";
   const token = authHeader.replace("Bearer ", "").trim();
-  if (!token) return false;
-
-  // Option 1: CRON_SECRET (legacy scripts)
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret && token === cronSecret) return true;
-
-  // Option 2: Firebase ID token with admin email check
-  try {
-    if (!adminAuth) return false;
-    const decoded = await adminAuth.verifyIdToken(token);
-    return ADMIN_EMAILS.includes(decoded.email?.toLowerCase() || "");
-  } catch {
-    return false;
-  }
+  // Standard admin check
+  return !!(await requireAdmin(req));
 }
 
 export async function POST(req: NextRequest) {

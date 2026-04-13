@@ -5,6 +5,11 @@ import { sanitizePromptInput } from "@/lib/ai/sanitize";
 // Edge Runtime — no timeout on Vercel Hobby plan (unlike serverless 10s limit)
 export const runtime = "edge";
 
+// In-process research cache — works within warm Edge instances (survives for the instance lifetime)
+// Key: "uid|topic|audience", Value: { result, cachedAt }
+const researchCache = new Map<string, { result: any; cachedAt: number }>();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes within a warm instance
+
 function extractJSON(text: string): any {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const cleaned = fenced ? fenced[1] : text;
@@ -28,6 +33,16 @@ export async function POST(req: NextRequest) {
 
     const { segment = "individual", tone = "professional", audience: rawAudience = "general", length = "medium", clientProfile } = options;
     const audience = sanitizePromptInput(rawAudience, 150);
+
+    // Check in-process cache — skip AI call if same user+topic+audience was researched recently
+    // (Only cache when there's no custom sourceContext — cached results won't reflect new source material)
+    const cacheKey = `${uid}|${topic}|${audience}`;
+    if (!sourceContext) {
+      const cached = researchCache.get(cacheKey);
+      if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
+        return NextResponse.json(cached.result);
+      }
+    }
 
     const profileLines = clientProfile ? [
       clientProfile.niche         && `- Niche: ${clientProfile.niche}`,
@@ -120,7 +135,17 @@ Return ONLY valid JSON:
       });
     }
 
-    return NextResponse.json({ topic, ...synthesis });
+    const result = { topic, ...synthesis };
+    // Store in cache (only when no sourceContext was used — cached results are topic-generic)
+    if (!sourceContext) {
+      researchCache.set(cacheKey, { result, cachedAt: Date.now() });
+      // Evict old entries if cache grows large
+      if (researchCache.size > 200) {
+        const oldest = [...researchCache.entries()].sort((a, b) => a[1].cachedAt - b[1].cachedAt)[0];
+        if (oldest) researchCache.delete(oldest[0]);
+      }
+    }
+    return NextResponse.json(result);
   } catch (err: any) {
     console.error("[api/ai/research] Error:", err?.message || err);
     return NextResponse.json({ error: err?.message || "Research failed" }, { status: 500 });

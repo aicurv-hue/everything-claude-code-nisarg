@@ -3,7 +3,11 @@ import OpenAI from "openai";
 const apiKey = process.env.OPENROUTER_API_KEY;
 
 if (!apiKey) {
-  console.warn("OPENROUTER_API_KEY is not set. AI features will fail.");
+  // Throw at module load so misconfigured deployments fail immediately with a clear message
+  // rather than producing a cryptic error on the first AI call.
+  throw new Error(
+    "[openrouter] OPENROUTER_API_KEY is not set. Set this environment variable in Vercel or .env.local before deploying."
+  );
 }
 
 export const openRouter = new OpenAI({
