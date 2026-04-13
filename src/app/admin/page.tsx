@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Users, FileText, Calendar, Linkedin, Trash2, Ban, CheckCircle,
   RefreshCw, AlertTriangle, TrendingUp, Activity, X, ChevronRight,
@@ -390,23 +390,46 @@ export default function AdminPage() {
   const [betaActionId,  setBetaActionId]  = useState<string | null>(null);
   const [betaMsg,       setBetaMsg]       = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
+  // Auth token stored in a ref — resolved once at mount, refreshed on demand
+  const tokenRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    let unsub: (() => void) | undefined;
+    import("@/lib/firebase").then(({ auth: firebaseAuth }) => {
+      if (!firebaseAuth) return;
+      unsub = firebaseAuth.onAuthStateChanged(async (user) => {
+        tokenRef.current = user ? await user.getIdToken() : null;
+      });
+    });
+    return () => unsub?.();
+  }, []);
+
   const adminFetch = useCallback(async (url: string, options: RequestInit = {}) => {
     const { auth: firebaseAuth } = await import("@/lib/firebase");
-    let token: string | undefined;
+
+    let token: string | null = null;
+
     if (firebaseAuth?.currentUser) {
+      // User is already signed in — get a fresh token (auto-refreshes if expired)
       token = await firebaseAuth.currentUser.getIdToken();
+    } else if (tokenRef.current) {
+      // Use cached token from auth listener
+      token = tokenRef.current;
     } else {
-      // Wait up to 4s for Firebase auth to initialize
-      token = await new Promise<string | undefined>((resolve) => {
-        let unsub: (() => void) | undefined;
-        const timer = setTimeout(() => { unsub?.(); resolve(undefined); }, 4000);
-        unsub = firebaseAuth?.onAuthStateChanged(async (user) => {
+      // Firebase auth hasn't resolved yet — wait up to 5s
+      token = await new Promise<string | null>((resolve) => {
+        if (!firebaseAuth) { resolve(null); return; }
+        const timer = setTimeout(() => { unsub(); resolve(null); }, 5000);
+        const unsub = firebaseAuth.onAuthStateChanged(async (user) => {
           clearTimeout(timer);
-          unsub?.();
-          resolve(user ? await user.getIdToken() : undefined);
+          unsub();
+          const t = user ? await user.getIdToken() : null;
+          tokenRef.current = t;
+          resolve(t);
         });
       });
     }
+
     return fetch(url, {
       ...options,
       headers: {
