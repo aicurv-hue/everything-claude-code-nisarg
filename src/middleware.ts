@@ -9,14 +9,19 @@ import { NextRequest, NextResponse } from "next/server";
  */
 
 // Origins allowed to call our API routes.
-// Set CORS_ALLOWED_ORIGINS in Vercel env vars as comma-separated URLs.
-// Falls back to allowing the production domain.
-const ALLOWED_ORIGINS = new Set(
-  (process.env.CORS_ALLOWED_ORIGINS || "https://linkedin-automation-chi.vercel.app")
+// Includes all known production/preview domains. Set CORS_ALLOWED_ORIGINS in Vercel
+// env vars as comma-separated URLs to extend without a code change.
+const HARDCODED_ORIGINS = [
+  "https://app.cridl.com",
+  "https://linkedin-automation-chi.vercel.app",
+];
+const ALLOWED_ORIGINS = new Set([
+  ...HARDCODED_ORIGINS,
+  ...(process.env.CORS_ALLOWED_ORIGINS || "")
     .split(",")
     .map((o) => o.trim())
-    .filter(Boolean)
-);
+    .filter(Boolean),
+]);
 
 // Body size limits per route pattern (in bytes)
 const BODY_LIMITS: Array<{ pattern: RegExp; limit: number }> = [
@@ -26,7 +31,7 @@ const BODY_LIMITS: Array<{ pattern: RegExp; limit: number }> = [
   { pattern: /^\/api\//, limit: 512 * 1024 },                   // All other API: 512 KB
 ];
 
-export function proxy(req: NextRequest) {
+export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Only apply to API routes
