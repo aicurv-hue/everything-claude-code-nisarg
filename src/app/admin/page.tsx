@@ -360,11 +360,6 @@ interface PromoCode {
   expiresAt: string | null; isActive: boolean; createdAt: string | null;
 }
 
-const PLAN_BADGE: Record<string, string> = {
-  starter:  "bg-blue-500/15 text-blue-400 border-blue-500/30",
-  pro:      "bg-violet-500/15 text-violet-400 border-violet-500/30",
-  business: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-};
 
 export default function AdminPage() {
   const [tab,        setTab]        = useState<Tab>("overview");
@@ -382,7 +377,7 @@ export default function AdminPage() {
   const [promos,        setPromos]        = useState<PromoCode[]>([]);
   const [promosLoading, setPromosLoading] = useState(false);
   const [promoMsg,      setPromoMsg]      = useState<{ type: "ok" | "err"; text: string } | null>(null);
-  const [promoForm,     setPromoForm]     = useState({ plan: "starter", trialDays: 15, maxUses: "", expiresAt: "", label: "" });
+  const [promoForm,     setPromoForm]     = useState({ trialDays: 15, maxUses: "", expiresAt: "", label: "" });
   const [promoGenerating, setPromoGenerating] = useState(false);
   const [editingPromo,  setEditingPromo]  = useState<string | null>(null);
   const [editForm,      setEditForm]      = useState<{ trialDays: number; expiresAt: string; label: string }>({ trialDays: 15, expiresAt: "", label: "" });
@@ -483,7 +478,7 @@ export default function AdminPage() {
     setPromoMsg(null);
     try {
       const body = {
-        plan: promoForm.plan,
+        plan: "business",
         trialDays: Number(promoForm.trialDays) || 15,
         maxUses: promoForm.maxUses !== "" ? Number(promoForm.maxUses) : null,
         expiresAt: promoForm.expiresAt || null,
@@ -493,7 +488,7 @@ export default function AdminPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setPromoMsg({ type: "ok", text: `Generated: ${data.code}` });
-      setPromoForm({ plan: "starter", trialDays: 15, maxUses: "", expiresAt: "", label: "" });
+      setPromoForm({ trialDays: 15, maxUses: "", expiresAt: "", label: "" });
       await loadPromos();
     } catch (e: any) {
       setPromoMsg({ type: "err", text: e.message || "Failed" });
@@ -1130,18 +1125,6 @@ export default function AdminPage() {
             <p className="text-xs text-slate-500 uppercase tracking-wider mb-4">Generate New Code</p>
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Plan</label>
-                <select
-                  value={promoForm.plan}
-                  onChange={e => setPromoForm(f => ({ ...f, plan: e.target.value }))}
-                  className="w-full bg-slate-800 border border-white/[0.07] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0A66C2]/60"
-                >
-                  <option value="starter">Starter</option>
-                  <option value="pro">Pro</option>
-                  <option value="business">Business</option>
-                </select>
-              </div>
-              <div>
                 <label className="block text-xs text-slate-400 mb-1">Trial Days</label>
                 <input
                   type="number" min={1} max={365}
@@ -1278,10 +1261,6 @@ export default function AdminPage() {
                               : <Copy className="w-3.5 h-3.5" />}
                           </button>
                         </div>
-
-                        <span className={`text-[10px] font-semibold capitalize px-2 py-0.5 rounded-full border ${PLAN_BADGE[p.plan] || "bg-slate-700 text-slate-400 border-slate-600"}`}>
-                          {p.plan || "starter"}
-                        </span>
 
                         <div className="flex items-center gap-1.5 text-xs">
                           <Clock className="w-3 h-3 text-slate-500" />
