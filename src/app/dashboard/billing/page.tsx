@@ -149,6 +149,16 @@ export default function BillingPage() {
   const planLabel = sub?.plan ? sub.plan.charAt(0).toUpperCase() + sub.plan.slice(1) : "Free";
   const planColor = PLAN_COLORS[isTrial ? "trial" : (sub?.plan || "free")] ?? PLAN_COLORS.free;
 
+  // Use plan from sub (authoritative) to determine limits, overriding stale usage.limits
+  const BILLING_LIMITS: Record<string, { postsPerMonth: number; imagesPerMonth: number; faceImagesPerMonth: number }> = {
+    free:     { postsPerMonth: 10,   imagesPerMonth: 5,   faceImagesPerMonth: 0  },
+    starter:  { postsPerMonth: 45,   imagesPerMonth: 20,  faceImagesPerMonth: 5  },
+    pro:      { postsPerMonth: 100,  imagesPerMonth: 50,  faceImagesPerMonth: 10 },
+    business: { postsPerMonth: 9999, imagesPerMonth: 100, faceImagesPerMonth: 20 },
+  };
+  const effectivePlan = sub?.plan || "free";
+  const displayLimits = usage ? (BILLING_LIMITS[effectivePlan] ?? usage.limits) : null;
+
   return (
     <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-8">
 
@@ -222,10 +232,10 @@ export default function BillingPage() {
                 <BarChart2 className="w-4 h-4 text-slate-400" />
                 <p className="text-sm font-semibold text-slate-700">Usage this month</p>
               </div>
-              <UsageBar label="Posts generated" used={usage.postsGenerated} limit={usage.limits.postsPerMonth} tooltip="Every time you generate or regenerate a post or image, it uses 1 from your monthly limit." displayUnlimited={sub?.plan === "business"} />
-              <UsageBar label="AI images"            used={usage.imagesGenerated}      limit={usage.limits.imagesPerMonth} />
-              {usage.limits.faceImagesPerMonth > 0 && (
-                <UsageBar label="Face images (Use My Face)" used={usage.faceImagesGenerated} limit={usage.limits.faceImagesPerMonth} />
+              <UsageBar label="Posts generated" used={usage.postsGenerated} limit={displayLimits!.postsPerMonth} tooltip="Every time you generate or regenerate a post or image, it uses 1 from your monthly limit." displayUnlimited={effectivePlan === "business"} />
+              <UsageBar label="AI images"            used={usage.imagesGenerated}      limit={displayLimits!.imagesPerMonth} />
+              {displayLimits!.faceImagesPerMonth > 0 && (
+                <UsageBar label="Face images (Use My Face)" used={usage.faceImagesGenerated} limit={displayLimits!.faceImagesPerMonth} />
               )}
               <p className="text-xs text-slate-400 pt-1">Usage resets on the 1st of each month.</p>
             </div>
