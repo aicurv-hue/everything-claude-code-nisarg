@@ -72,6 +72,7 @@ export default function SettingsPage() {
   const [liExpiry, setLiExpiry]       = useState<number | null>(null);
   const [liDisconnecting, setLiDisconnecting] = useState(false);
   const [liJustDisconnected, setLiJustDisconnected] = useState(false);
+  const [liError, setLiError] = useState<string | null>(null);
 
   // Plan state (for feature gating)
   const [userPlan, setUserPlan] = useState<string>("free");
@@ -83,7 +84,9 @@ export default function SettingsPage() {
   const [photoHasFace, setPhotoHasFace] = useState<boolean | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  // Load LinkedIn status once Firebase auth is ready
   useEffect(() => {
+    if (!user) return;
     getAuthToken().then(tok =>
       fetch("/api/linkedin/status", tok ? { headers: { Authorization: `Bearer ${tok}` } } : {})
         .then(r => r.json())
@@ -91,11 +94,11 @@ export default function SettingsPage() {
           setLiConnected(d.connected);
           setLiName(d.name || "");
           setLiEmail(d.email || "");
-          setLiExpiry(d.expiresAt || null);
+          setLiExpiry(d.tokenDaysLeft ? Date.now() + d.tokenDaysLeft * 86400000 : null);
         })
         .catch(() => {})
     );
-  }, []);
+  }, [user]);
 
   const refreshLinkedInStatus = () => {
     getAuthToken().then(tok =>
@@ -105,7 +108,7 @@ export default function SettingsPage() {
           setLiConnected(d.connected);
           setLiName(d.name || "");
           setLiEmail(d.email || "");
-          setLiExpiry(d.expiresAt || null);
+          setLiExpiry(d.tokenDaysLeft ? Date.now() + d.tokenDaysLeft * 86400000 : null);
         })
         .catch(() => {})
     );
@@ -134,19 +137,23 @@ export default function SettingsPage() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  // Also handle direct redirect (non-popup fallback): check URL param on mount
+  // Handle direct redirect (non-popup fallback): check URL param; wait for Firebase user before refreshing status
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("linkedin_connected") === "true") {
-      refreshLinkedInStatus();
-      // Clean the URL without reload
-      window.history.replaceState({}, "", window.location.pathname);
-    }
     if (params.get("linkedin_error")) {
-      console.error("[LinkedIn OAuth error]", params.get("linkedin_error"));
+      const msg = decodeURIComponent(params.get("linkedin_error")!);
+      setLiError(msg);
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, []);
+    if (params.get("linkedin_connected") === "true") {
+      window.history.replaceState({}, "", window.location.pathname);
+      if (user) {
+        refreshLinkedInStatus();
+      } else {
+        // Firebase not ready yet — status useEffect with [user] dep will fire once user loads
+      }
+    }
+  }, [user]);
 
   const handleReconnect = () => {
     if (!user?.uid) {
@@ -330,6 +337,18 @@ export default function SettingsPage() {
           {isSaved ? "✓ Saved" : <><Save className="w-4 h-4" /> Save Changes</>}
         </button>
       </div>
+
+      {/* LinkedIn OAuth error banner */}
+      {liError && (
+        <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-200">
+          <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-700">LinkedIn connection failed</p>
+            <p className="text-xs text-red-600 mt-0.5">{liError}</p>
+          </div>
+          <button onClick={() => setLiError(null)} className="text-red-400 hover:text-red-600 text-xs font-medium">Dismiss</button>
+        </div>
+      )}
 
       {/* Disconnected banner */}
       {liJustDisconnected && (
