@@ -10,26 +10,32 @@ export async function GET(req: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(token);
     const userId = decoded.uid;
 
+    const OWNER_UIDS = ["iYmoobFP0ChkrYZzDLQokuKcXcw2"];
+    if (OWNER_UIDS.includes(userId)) {
+      return NextResponse.json({ plan: "business", status: "active" }, { headers: { "Cache-Control": "no-store" } });
+    }
+
     const userDoc = await adminDb.collection("users").doc(userId).get();
     const userData = userDoc.data() || {};
     const plan = userData.plan || "free";
     const planStatus = userData.planStatus || "free";
     const subscriptionId = userData.subscriptionId || null;
 
-    // Check active promo trial before falling back to "free"
-    if (!subscriptionId) {
-      if (userData.trialActive === true) {
-        const trialExpiry = userData.trialExpiresAt?.toMillis
-          ? userData.trialExpiresAt.toMillis()
-          : (userData.trialExpiresAt || 0);
-        if (trialExpiry > Date.now()) {
-          return NextResponse.json({
-            plan: "starter",
-            status: "trial",
-            trialEndsAt: new Date(trialExpiry).toISOString(),
-          }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=30" } });
-        }
+    // Always check active promo trial first — takes priority over everything
+    if (userData.trialActive === true) {
+      const trialExpiry = userData.trialExpiresAt?.toMillis
+        ? userData.trialExpiresAt.toMillis()
+        : (userData.trialExpiresAt || 0);
+      if (trialExpiry > Date.now()) {
+        return NextResponse.json({
+          plan: "starter",
+          status: "trial",
+          trialEndsAt: new Date(trialExpiry).toISOString(),
+        }, { headers: { "Cache-Control": "no-store" } });
       }
+    }
+
+    if (!subscriptionId) {
       return NextResponse.json({ plan: "free", status: "free" }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=30" } });
     }
 

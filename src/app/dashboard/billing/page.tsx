@@ -172,7 +172,7 @@ export default function BillingPage() {
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Current Plan</p>
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${planColor.bg} ${planColor.text} ${planColor.border}`}>
-                {isTrial ? "Trial" : planLabel}
+                {isTrial ? `${planLabel} (Trial)` : planLabel}
               </span>
             </div>
 
