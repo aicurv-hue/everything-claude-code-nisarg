@@ -378,7 +378,7 @@ Start directly with the hook line. Output nothing else.`;
     const MODEL_ALIASES: Record<string, string> = {
       "google/gemini-2.0-flash": "google/gemini-2.0-flash-001",
       "google/gemini-2.5-flash": "google/gemini-2.5-flash-preview-05-20",
-      "anthropic/claude-haiku-4-5": "anthropic/claude-haiku-4-5-20251001",
+      "anthropic/claude-haiku-4-5": "anthropic/claude-haiku-4-5",
     };
     const primary = MODEL_ALIASES[raw] ?? raw;
     try {
