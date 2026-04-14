@@ -7,22 +7,28 @@ import { auth } from "@/lib/firebase";
 const PLANS = [
   {
     name: "Starter",
-    price: "₹499",
-    planId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_STARTER || "").trim(),
+    monthlyPrice: 499,
+    yearlyPrice: 4990,
+    monthlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_STARTER || "").trim(),
+    yearlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_STARTER_YEARLY || "").trim(),
     features: ["45 posts/month", "20 AI images", "5 face images/month", "Post scheduling"],
     popular: false,
   },
   {
     name: "Pro",
-    price: "₹999",
-    planId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_PRO || "").trim(),
+    monthlyPrice: 999,
+    yearlyPrice: 9990,
+    monthlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_PRO || "").trim(),
+    yearlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_PRO_YEARLY || "").trim(),
     features: ["100 posts/month", "50 AI images", "10 face images/month", "Campaigns", "Company page"],
     popular: true,
   },
   {
     name: "Business",
-    price: "₹1,999",
-    planId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_BUSINESS || "").trim(),
+    monthlyPrice: 1999,
+    yearlyPrice: 19990,
+    monthlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_BUSINESS || "").trim(),
+    yearlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_BUSINESS_YEARLY || "").trim(),
     features: ["Unlimited posts", "100 AI images", "20 face images/month", "Campaigns", "Company page"],
     popular: false,
   },
@@ -32,6 +38,7 @@ export default function UpgradePlans() {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [yearly, setYearly] = useState(false);
 
   async function handleCheckout(plan: (typeof PLANS)[0]) {
     const user = auth.currentUser;
@@ -41,6 +48,7 @@ export default function UpgradePlans() {
       return;
     }
 
+    const planId = yearly ? plan.yearlyPlanId : plan.monthlyPlanId;
     setLoading(plan.name);
     setError(null);
 
@@ -49,7 +57,7 @@ export default function UpgradePlans() {
       const res = await fetch("/api/subscriptions/create", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ planId: plan.planId }),
+        body: JSON.stringify({ planId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create subscription");
@@ -58,7 +66,7 @@ export default function UpgradePlans() {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         subscription_id: data.subscriptionId,
         name: "Cridl",
-        description: `${plan.name} Plan`,
+        description: `${plan.name} Plan (${yearly ? "Yearly" : "Monthly"})`,
         handler: function () {
           router.push(`/dashboard?welcome=true&plan=${plan.name.toLowerCase()}`);
         },
@@ -88,47 +96,73 @@ export default function UpgradePlans() {
 
   return (
     <div className="space-y-3">
+      {/* Monthly / Yearly toggle */}
+      <div className="flex items-center justify-center gap-3 py-1">
+        <span className={`text-sm font-medium ${!yearly ? "text-gray-900" : "text-gray-400"}`}>Monthly</span>
+        <button
+          onClick={() => setYearly(v => !v)}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${yearly ? "bg-[#0A66C2]" : "bg-gray-300"}`}
+          aria-label="Toggle billing period"
+        >
+          <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${yearly ? "translate-x-6" : "translate-x-1"}`} />
+        </button>
+        <span className={`text-sm font-medium ${yearly ? "text-gray-900" : "text-gray-400"}`}>
+          Yearly
+          <span className="ml-1.5 text-[10px] font-semibold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">2 months free</span>
+        </span>
+      </div>
+
       {error && (
         <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg py-2 px-3">
           {error}
         </div>
       )}
       <div className="grid grid-cols-1 gap-3">
-        {PLANS.map((plan) => (
-          <div
-            key={plan.name}
-            className={`relative rounded-xl border p-4 flex items-center justify-between gap-4 ${
-              plan.popular
-                ? "border-[#0A66C2] ring-1 ring-[#0A66C2]/20"
-                : "border-gray-200"
-            }`}
-          >
-            {plan.popular && (
-              <span className="absolute -top-2.5 left-4 bg-[#0A66C2] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                Most Popular
-              </span>
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-2">
-                <span className="font-semibold text-gray-900">{plan.name}</span>
-                <span className="text-sm font-bold text-gray-900">{plan.price}</span>
-                <span className="text-xs text-gray-400">/mo</span>
-              </div>
-              <p className="text-xs text-gray-500 mt-0.5 truncate">{plan.features.join(" · ")}</p>
-            </div>
-            <button
-              onClick={() => handleCheckout(plan)}
-              disabled={loading === plan.name}
-              className={`shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${
+        {PLANS.map((plan) => {
+          const displayPrice = yearly
+            ? `₹${(plan.yearlyPrice / 12).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`
+            : `₹${plan.monthlyPrice.toLocaleString("en-IN")}`;
+          return (
+            <div
+              key={plan.name}
+              className={`relative rounded-xl border p-4 flex items-center justify-between gap-4 ${
                 plan.popular
-                  ? "bg-[#0A66C2] text-white hover:bg-[#0854a0]"
-                  : "border border-[#0A66C2] text-[#0A66C2] hover:bg-[#0A66C2]/5"
+                  ? "border-[#0A66C2] ring-1 ring-[#0A66C2]/20"
+                  : "border-gray-200"
               }`}
             >
-              {loading === plan.name ? "Opening..." : "Upgrade"}
-            </button>
-          </div>
-        ))}
+              {plan.popular && (
+                <span className="absolute -top-2.5 left-4 bg-[#0A66C2] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                  Most Popular
+                </span>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-semibold text-gray-900">{plan.name}</span>
+                  <span className="text-sm font-bold text-gray-900">{displayPrice}</span>
+                  <span className="text-xs text-gray-400">/mo</span>
+                  {yearly && (
+                    <span className="text-xs text-gray-400">
+                      (₹{plan.yearlyPrice.toLocaleString("en-IN")}/yr)
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5 truncate">{plan.features.join(" · ")}</p>
+              </div>
+              <button
+                onClick={() => handleCheckout(plan)}
+                disabled={loading === plan.name}
+                className={`shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${
+                  plan.popular
+                    ? "bg-[#0A66C2] text-white hover:bg-[#0854a0]"
+                    : "border border-[#0A66C2] text-[#0A66C2] hover:bg-[#0A66C2]/5"
+                }`}
+              >
+                {loading === plan.name ? "Opening..." : "Upgrade"}
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

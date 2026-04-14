@@ -13,9 +13,15 @@ export const PLAN_IDS: Record<string, PlanName> = {
   [(process.env.RAZORPAY_PLAN_STARTER || "").trim()]: "starter",
   [(process.env.RAZORPAY_PLAN_PRO || "").trim()]: "pro",
   [(process.env.RAZORPAY_PLAN_BUSINESS || "").trim()]: "business",
+  [(process.env.RAZORPAY_PLAN_STARTER_YEARLY || "").trim()]: "starter",
+  [(process.env.RAZORPAY_PLAN_PRO_YEARLY || "").trim()]: "pro",
+  [(process.env.RAZORPAY_PLAN_BUSINESS_YEARLY || "").trim()]: "business",
 };
 
+const OWNER_UIDS = ["iYmoobFP0ChkrYZzDLQokuKcXcw2"];
+
 export async function getUserPlan(userId: string): Promise<PlanName> {
+  if (OWNER_UIDS.includes(userId)) return "business";
   const doc = await adminDb.collection("users").doc(userId).get();
   if (!doc.exists) return "free";
   const data = doc.data() || {};

@@ -18,22 +18,28 @@ const FREE_PLAN = {
 const PAID_PLANS = [
   {
     name: "Starter",
-    price: "₹499",
-    planId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_STARTER || "").trim(),
+    monthlyPrice: 499,
+    yearlyPrice: 4990,
+    monthlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_STARTER || "").trim(),
+    yearlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_STARTER_YEARLY || "").trim(),
     features: ["45 posts/month", "20 AI images/month", "5 Face images/month", "Scheduling", LIMIT_NOTE],
     popular: false,
   },
   {
     name: "Pro",
-    price: "₹999",
-    planId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_PRO || "").trim(),
+    monthlyPrice: 999,
+    yearlyPrice: 9990,
+    monthlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_PRO || "").trim(),
+    yearlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_PRO_YEARLY || "").trim(),
     features: ["100 posts/month", "50 AI images/month", "10 Face images/month", "Scheduling", "Campaigns", "Company page", LIMIT_NOTE],
     popular: true,
   },
   {
     name: "Business",
-    price: "₹1,999",
-    planId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_BUSINESS || "").trim(),
+    monthlyPrice: 1999,
+    yearlyPrice: 19990,
+    monthlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_BUSINESS || "").trim(),
+    yearlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_BUSINESS_YEARLY || "").trim(),
     features: ["Unlimited posts", "100 AI images/month", "20 Face images/month", "Scheduling", "Campaigns", "Company page", LIMIT_NOTE],
     popular: false,
   },
@@ -52,6 +58,7 @@ function PricingCardsInner() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [yearly, setYearly] = useState(false);
 
   async function handleCheckout(plan: (typeof PAID_PLANS)[0]) {
     const user = auth.currentUser;
@@ -61,6 +68,7 @@ function PricingCardsInner() {
       return;
     }
 
+    const planId = yearly ? plan.yearlyPlanId : plan.monthlyPlanId;
     setLoading(plan.name);
     setError(null);
 
@@ -69,7 +77,7 @@ function PricingCardsInner() {
       const res = await fetch("/api/subscriptions/create", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ planId: plan.planId }),
+        body: JSON.stringify({ planId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create subscription");
@@ -78,7 +86,7 @@ function PricingCardsInner() {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         subscription_id: data.subscriptionId,
         name: "Cridl",
-        description: `${plan.name} Plan`,
+        description: `${plan.name} Plan (${yearly ? "Yearly" : "Monthly"})`,
         handler: function () {
           router.push(`/dashboard?welcome=true&plan=${plan.name.toLowerCase()}`);
         },
@@ -127,10 +135,27 @@ function PricingCardsInner() {
   return (
     <section className="py-20 bg-white">
       <div className="max-w-6xl mx-auto px-6">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">Simple, transparent pricing</h2>
           <p className="text-gray-500">Start free. Upgrade when you&apos;re ready.</p>
         </div>
+
+        {/* Monthly / Yearly toggle */}
+        <div className="flex items-center justify-center gap-3 mb-10">
+          <span className={`text-sm font-medium ${!yearly ? "text-gray-900" : "text-gray-400"}`}>Monthly</span>
+          <button
+            onClick={() => setYearly(v => !v)}
+            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${yearly ? "bg-[#0A66C2]" : "bg-gray-300"}`}
+            aria-label="Toggle billing period"
+          >
+            <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${yearly ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
+          <span className={`text-sm font-medium ${yearly ? "text-gray-900" : "text-gray-400"}`}>
+            Yearly
+            <span className="ml-2 text-xs font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">2 months free</span>
+          </span>
+        </div>
+
         {error && (
           <div className="mb-6 text-center text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg py-3 px-4">
             {error}
@@ -142,7 +167,7 @@ function PricingCardsInner() {
             <div className="mb-4">
               <p className="font-semibold text-gray-900 text-lg">{FREE_PLAN.name}</p>
               <p className="mt-1">
-                <span className="text-3xl font-bold text-gray-900">{FREE_PLAN.price}</span>
+                <span className="text-3xl font-bold text-gray-900">₹0</span>
                 <span className="text-gray-400 text-sm">/month</span>
               </p>
             </div>
@@ -163,48 +188,60 @@ function PricingCardsInner() {
           </div>
 
           {/* Paid plan cards */}
-          {PAID_PLANS.map((plan) => (
-            <div
-              key={plan.name}
-              className={`relative rounded-2xl border p-6 flex flex-col ${
-                plan.popular
-                  ? "border-[#0A66C2] ring-2 ring-[#0A66C2]/20 shadow-lg"
-                  : "border-gray-200"
-              }`}
-            >
-              {plan.popular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0A66C2] text-white text-xs font-semibold px-3 py-1 rounded-full">
-                  Most Popular
-                </span>
-              )}
-              <div className="mb-4">
-                <p className="font-semibold text-gray-900 text-lg">{plan.name}</p>
-                <p className="mt-1">
-                  <span className="text-3xl font-bold text-gray-900">{plan.price}</span>
-                  <span className="text-gray-400 text-sm">/month</span>
-                </p>
-              </div>
-              <ul className="space-y-2 mb-6 flex-1">
-                {plan.features.slice(0, -1).map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
-                    <span className="text-[#0A66C2]">✓</span> {f}
-                  </li>
-                ))}
-                <li className="text-xs text-gray-400 italic pt-1">{plan.features[plan.features.length - 1]}</li>
-              </ul>
-              <button
-                onClick={() => handleCheckout(plan)}
-                disabled={loading === plan.name}
-                className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+          {PAID_PLANS.map((plan) => {
+            const displayMonthly = yearly
+              ? Math.round(plan.yearlyPrice / 12)
+              : plan.monthlyPrice;
+            return (
+              <div
+                key={plan.name}
+                className={`relative rounded-2xl border p-6 flex flex-col ${
                   plan.popular
-                    ? "bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90"
-                    : "border border-[#0A66C2] text-[#0A66C2] hover:bg-[#0A66C2]/5"
-                } disabled:opacity-50`}
+                    ? "border-[#0A66C2] ring-2 ring-[#0A66C2]/20 shadow-lg"
+                    : "border-gray-200"
+                }`}
               >
-                {loading === plan.name ? "Opening..." : plan.popular ? "Buy Now" : "Get Started"}
-              </button>
-            </div>
-          ))}
+                {plan.popular && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0A66C2] text-white text-xs font-semibold px-3 py-1 rounded-full">
+                    Most Popular
+                  </span>
+                )}
+                <div className="mb-4">
+                  <p className="font-semibold text-gray-900 text-lg">{plan.name}</p>
+                  <p className="mt-1">
+                    <span className="text-3xl font-bold text-gray-900">
+                      ₹{displayMonthly.toLocaleString("en-IN")}
+                    </span>
+                    <span className="text-gray-400 text-sm">/month</span>
+                  </p>
+                  {yearly && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      ₹{plan.yearlyPrice.toLocaleString("en-IN")} billed annually
+                    </p>
+                  )}
+                </div>
+                <ul className="space-y-2 mb-6 flex-1">
+                  {plan.features.slice(0, -1).map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
+                      <span className="text-[#0A66C2]">✓</span> {f}
+                    </li>
+                  ))}
+                  <li className="text-xs text-gray-400 italic pt-1">{plan.features[plan.features.length - 1]}</li>
+                </ul>
+                <button
+                  onClick={() => handleCheckout(plan)}
+                  disabled={loading === plan.name}
+                  className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                    plan.popular
+                      ? "bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90"
+                      : "border border-[#0A66C2] text-[#0A66C2] hover:bg-[#0A66C2]/5"
+                  } disabled:opacity-50`}
+                >
+                  {loading === plan.name ? "Opening..." : plan.popular ? "Buy Now" : "Get Started"}
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

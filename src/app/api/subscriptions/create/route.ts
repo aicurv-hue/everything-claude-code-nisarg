@@ -15,20 +15,27 @@ export async function POST(req: NextRequest) {
 
     const { planId: rawPlanId } = await req.json();
     const planId = (rawPlanId || "").trim();
+    const YEARLY_PLAN_IDS = [
+      process.env.RAZORPAY_PLAN_STARTER_YEARLY,
+      process.env.RAZORPAY_PLAN_PRO_YEARLY,
+      process.env.RAZORPAY_PLAN_BUSINESS_YEARLY,
+    ].filter(Boolean).map(id => id!.trim());
     const VALID_PLAN_IDS = [
       process.env.RAZORPAY_PLAN_STARTER,
       process.env.RAZORPAY_PLAN_PRO,
       process.env.RAZORPAY_PLAN_BUSINESS,
+      ...YEARLY_PLAN_IDS,
     ].filter(Boolean).map(id => id!.trim());
     if (!planId || !VALID_PLAN_IDS.includes(planId)) {
       return NextResponse.json({ error: `Invalid plan ID: "${planId}" (length: ${planId.length}). Valid: ${VALID_PLAN_IDS.join(", ")}` }, { status: 400 });
     }
 
     const planName = PLAN_IDS[planId];
+    const isYearly = YEARLY_PLAN_IDS.includes(planId);
 
     const subscription = await getRazorpay().subscriptions.create({
       plan_id: planId,
-      total_count: 120,
+      total_count: isYearly ? 10 : 120,
       quantity: 1,
       notes: { userId },
     });
