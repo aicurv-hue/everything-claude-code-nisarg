@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import { getUserPlan, canUseCampaigns } from "@/lib/checkSubscription";
 
 async function getUid(req: NextRequest): Promise<string | null> {
   const auth = req.headers.get("authorization") || "";
@@ -27,6 +28,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const uid = await getUid(req);
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const plan = await getUserPlan(uid);
+  if (!canUseCampaigns(plan)) {
+    return NextResponse.json({ error: "Campaigns require Pro or Business plan" }, { status: 403 });
+  }
+
   const body = await req.json();
   const { name, topic, audience, tone, length, post_count, frequency_days, segment, timezone, custom_instructions } = body;
   if (!name || !topic || !segment) return NextResponse.json({ error: "Missing required fields" }, { status: 400 });

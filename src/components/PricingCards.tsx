@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
+const LIMIT_NOTE = "Each generation & regeneration counts toward your monthly limit";
+
 const FREE_PLAN = {
   name: "Free",
   price: "₹0",
-  features: ["5 posts/month", "2 AI images", "1 LinkedIn profile", "Basic AI research", "Manual publishing"],
+  features: ["10 posts/month", "5 AI images/month", "Scheduling", LIMIT_NOTE],
   popular: false,
   planId: null,
 };
@@ -18,21 +20,21 @@ const PAID_PLANS = [
     name: "Starter",
     price: "₹499",
     planId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_STARTER || "").trim(),
-    features: ["30 posts/month", "10 AI images", "5 face images/month", "1 LinkedIn profile", "AI research pipeline", "Post scheduling"],
+    features: ["45 posts/month", "20 AI images/month", "5 Face images/month", "Scheduling", LIMIT_NOTE],
     popular: false,
   },
   {
     name: "Pro",
     price: "₹999",
     planId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_PRO || "").trim(),
-    features: ["100 posts/month", "50 AI images", "20 face images/month", "1 profile + 1 company page", "Use My Face images", "Campaigns"],
+    features: ["100 posts/month", "50 AI images/month", "10 Face images/month", "Scheduling", "Campaigns", "Company page", LIMIT_NOTE],
     popular: true,
   },
   {
     name: "Business",
     price: "₹1,999",
     planId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_BUSINESS || "").trim(),
-    features: ["Unlimited posts", "Unlimited images", "3 profiles + 3 company pages", "Priority support", "All features"],
+    features: ["Unlimited posts", "100 AI images/month", "20 Face images/month", "Scheduling", "Campaigns", "Company page", LIMIT_NOTE],
     popular: false,
   },
 ];
@@ -145,11 +147,12 @@ function PricingCardsInner() {
               </p>
             </div>
             <ul className="space-y-2 mb-6 flex-1">
-              {FREE_PLAN.features.map((f) => (
+              {FREE_PLAN.features.slice(0, -1).map((f) => (
                 <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
                   <span className="text-gray-400">✓</span> {f}
                 </li>
               ))}
+              <li className="text-xs text-gray-400 italic pt-1">{FREE_PLAN.features[FREE_PLAN.features.length - 1]}</li>
             </ul>
             <a
               href="/signup"
@@ -182,11 +185,12 @@ function PricingCardsInner() {
                 </p>
               </div>
               <ul className="space-y-2 mb-6 flex-1">
-                {plan.features.map((f) => (
+                {plan.features.slice(0, -1).map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
                     <span className="text-[#0A66C2]">✓</span> {f}
                   </li>
                 ))}
+                <li className="text-xs text-gray-400 italic pt-1">{plan.features[plan.features.length - 1]}</li>
               </ul>
               <button
                 onClick={() => handleCheckout(plan)}

@@ -643,6 +643,7 @@ export default function CreatePostPage() {
                 </>
               )}
             </button>
+            <p className="text-xs text-slate-400 text-center mt-2">Tip: regenerations count toward your monthly limit.</p>
           </div>
 
           {/* Sidebar: Context Panel */}

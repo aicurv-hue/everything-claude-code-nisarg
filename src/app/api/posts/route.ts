@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { getUserPlan, canUseCorporate } from "@/lib/checkSubscription";
 
 /** Convert an ISO string or existing Timestamp-like object to a Firestore Timestamp */
 function toFirestoreTimestamp(val: any): Timestamp | undefined {
@@ -90,6 +91,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const { post } = await req.json();
+
+    if (post?.segment === "corporate") {
+      const plan = await getUserPlan(uid);
+      if (!canUseCorporate(plan)) {
+        return NextResponse.json({ error: "Company page posting requires Pro or Business plan" }, { status: 403 });
+      }
+    }
+
     const postData = {
       ...post,
       user_id: uid,

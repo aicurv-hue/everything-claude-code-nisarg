@@ -21,6 +21,7 @@ import { postService, Post } from "@/lib/db/posts";
 import { savePostMemory } from "@/lib/ai/save-memory";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import { getUserPlan, canUseCorporate } from "@/lib/checkSubscription";
 
 const LI_VERSION  = "202504";
 const TIMEOUT_MS  = 20_000;
@@ -268,6 +269,20 @@ export async function POST(req: NextRequest) {
       if (!claimed) {
         console.log(`[cron] Post ${post.id} already claimed — skipping.`);
         return { id: post.id, status: "failed" as const, reason: "already claimed" };
+      }
+
+      // Plan check for corporate posts
+      if (post.segment === "corporate") {
+        const userPlan = await getUserPlan(post.user_id);
+        if (!canUseCorporate(userPlan)) {
+          console.log(`[cron] Post ${post.id} blocked — user ${post.user_id} plan (${userPlan}) does not allow corporate.`);
+          await postRef.update({
+            status: "plan_blocked",
+            failed_reason: "Company page posting requires Pro or Business plan.",
+            updated_at: FieldValue.serverTimestamp(),
+          });
+          return { id: post.id, status: "failed" as const, reason: "plan_blocked" };
+        }
       }
 
       const userId = post.user_id;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { checkAndIncrementBulk } from "@/lib/usageTracking";
+import { getUserPlan, canUseCampaigns } from "@/lib/checkSubscription";
 
 async function getUid(req: NextRequest): Promise<string | null> {
   const auth = req.headers.get("authorization") || "";
@@ -29,6 +30,11 @@ async function callOpenRouter(messages: any[], model: string): Promise<string> {
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const uid = await getUid(req);
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const plan = await getUserPlan(uid);
+  if (!canUseCampaigns(plan)) {
+    return NextResponse.json({ error: "Campaigns require Pro or Business plan" }, { status: 403 });
+  }
 
   const { id: campaignId } = await params;
   const campaignSnap = await adminDb!.collection("campaigns").doc(campaignId).get();

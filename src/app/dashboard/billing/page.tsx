@@ -31,15 +31,25 @@ interface SubStatus {
 
 // ── UsageBar ───────────────────────────────────────────────────────────────────
 
-function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
-  const isUnlimited = limit >= 999999;
+function UsageBar({ label, used, limit, tooltip, displayUnlimited }: { label: string; used: number; limit: number; tooltip?: string; displayUnlimited?: boolean }) {
+  const isUnlimited = displayUnlimited || limit >= 999999;
   const pct = isUnlimited ? 0 : Math.min(100, Math.round((used / limit) * 100));
   const color = pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-400" : "bg-[#0A66C2]";
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-slate-700 font-medium">{label}</span>
+        <span className="text-slate-700 font-medium flex items-center gap-1.5">
+          {label}
+          {tooltip && (
+            <span className="group relative inline-flex items-center">
+              <span className="w-3.5 h-3.5 rounded-full bg-slate-200 text-slate-500 text-[9px] flex items-center justify-center font-bold cursor-default select-none">i</span>
+              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-52 rounded-lg bg-slate-800 text-white text-xs px-2.5 py-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 leading-snug shadow-lg">
+                {tooltip}
+              </span>
+            </span>
+          )}
+        </span>
         <span className="text-slate-500 text-xs font-mono">
           {isUnlimited ? `${used} / ∞` : `${used} / ${limit}`}
         </span>
@@ -199,7 +209,7 @@ export default function BillingPage() {
                 <Sparkles className="w-5 h-5 text-amber-600 shrink-0" />
                 <div>
                   <p className="text-sm font-semibold text-amber-900">You&apos;re on the Free plan</p>
-                  <p className="text-xs text-amber-700 mt-0.5">5 posts/month, 2 AI images. Upgrade for more.</p>
+                  <p className="text-xs text-amber-700 mt-0.5">10 posts/month, 5 AI images. Upgrade for more.</p>
                 </div>
               </div>
             )}
@@ -212,7 +222,7 @@ export default function BillingPage() {
                 <BarChart2 className="w-4 h-4 text-slate-400" />
                 <p className="text-sm font-semibold text-slate-700">Usage this month</p>
               </div>
-              <UsageBar label="Posts generated"      used={usage.postsGenerated}      limit={usage.limits.postsPerMonth} />
+              <UsageBar label="Posts generated" used={usage.postsGenerated} limit={usage.limits.postsPerMonth} tooltip="Every time you generate or regenerate a post or image, it uses 1 from your monthly limit." displayUnlimited={sub?.plan === "business"} />
               <UsageBar label="AI images"            used={usage.imagesGenerated}      limit={usage.limits.imagesPerMonth} />
               {usage.limits.faceImagesPerMonth > 0 && (
                 <UsageBar label="Face images (Use My Face)" used={usage.faceImagesGenerated} limit={usage.limits.faceImagesPerMonth} />

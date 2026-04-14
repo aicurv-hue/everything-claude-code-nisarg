@@ -3,10 +3,10 @@ import { adminDb } from "./firebase-admin";
 export type PlanName = "free" | "starter" | "pro" | "business";
 
 export const PLAN_LIMITS = {
-  free:     { postsPerMonth: 5,      imagesPerMonth: 2,      faceImagesPerMonth: 0,      profiles: 1, companyPages: 0 },
-  starter:  { postsPerMonth: 30,     imagesPerMonth: 10,     faceImagesPerMonth: 5,      profiles: 1, companyPages: 0 },
-  pro:      { postsPerMonth: 100,    imagesPerMonth: 50,     faceImagesPerMonth: 20,     profiles: 1, companyPages: 1 },
-  business: { postsPerMonth: 999999, imagesPerMonth: 999999, faceImagesPerMonth: 999999, profiles: 3, companyPages: 3 },
+  free:     { postsPerMonth: 10,  imagesPerMonth: 5,   faceImagesPerMonth: 0,  profiles: 1, companyPages: 0, campaigns: false, corporate: false },
+  starter:  { postsPerMonth: 45,  imagesPerMonth: 20,  faceImagesPerMonth: 5,  profiles: 1, companyPages: 0, campaigns: false, corporate: false },
+  pro:      { postsPerMonth: 100, imagesPerMonth: 50,  faceImagesPerMonth: 10, profiles: 1, companyPages: 1, campaigns: true,  corporate: true  },
+  business: { postsPerMonth: 9999, imagesPerMonth: 100, faceImagesPerMonth: 20, profiles: 3, companyPages: 3, campaigns: true,  corporate: true  },
 } as const;
 
 export const PLAN_IDS: Record<string, PlanName> = {
@@ -39,6 +39,16 @@ export async function getUserPlan(userId: string): Promise<PlanName> {
 export async function getUserLimits(userId: string) {
   const plan = await getUserPlan(userId);
   return PLAN_LIMITS[plan];
+}
+
+export function canUseCampaigns(plan: string): boolean {
+  const limits = PLAN_LIMITS[plan as PlanName] ?? PLAN_LIMITS.free;
+  return limits.campaigns;
+}
+
+export function canUseCorporate(plan: string): boolean {
+  const limits = PLAN_LIMITS[plan as PlanName] ?? PLAN_LIMITS.free;
+  return limits.corporate;
 }
 
 export async function canUserPerformAction(
