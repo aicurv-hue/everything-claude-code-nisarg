@@ -400,7 +400,8 @@ export default function DashboardHomePage() {
                 <button
                   onClick={() => {
                     const url = `/api/auth/linkedin?returnTo=/dashboard/settings&uid=${encodeURIComponent(user?.uid || "")}`;
-                    window.location.href = url;
+                    const popup = window.open(url, "linkedin-oauth", "width=620,height=720,scrollbars=yes,resizable=yes");
+                    if (!popup || popup.closed || typeof popup.closed === "undefined") window.location.href = url;
                   }}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                     isCorporate

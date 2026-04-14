@@ -125,12 +125,15 @@ export default function SettingsPage() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasChanges]);
 
-  // Listen for postMessage from OAuth popup
+  // Listen for postMessage from OAuth popup (popup flow keeps main window alive — no Firebase auth loss)
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
       if (e.data?.type === "linkedin_connected") {
         refreshLinkedInStatus();
+      }
+      if (e.data?.type === "linkedin_error") {
+        setLiError(e.data.message || "LinkedIn connection failed — please try again");
       }
     };
     window.addEventListener("message", handler);
@@ -161,7 +164,13 @@ export default function SettingsPage() {
       return;
     }
     const oauthUrl = `/api/auth/linkedin?returnTo=/dashboard/settings&uid=${encodeURIComponent(user.uid)}`;
-    window.location.href = oauthUrl;
+    // Open in a popup so the main window (and Firebase auth) stays alive.
+    // If popup is blocked by the browser, fall back to a full-page redirect.
+    const popup = window.open(oauthUrl, "linkedin-oauth", "width=620,height=720,scrollbars=yes,resizable=yes");
+    if (!popup || popup.closed || typeof popup.closed === "undefined") {
+      // Popup blocked — fall back to full redirect
+      window.location.href = oauthUrl;
+    }
   };
 
   const handleDisconnect = async () => {

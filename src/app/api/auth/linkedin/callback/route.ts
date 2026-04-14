@@ -68,16 +68,12 @@ export async function GET(request: NextRequest) {
   cookieStore.delete("li_oauth_state"); // consume — one-time use
   if (!rawState || !storedState || rawState !== storedState || stateParts.length < 2 || !/^[0-9a-f]{32}$/i.test(stateParts[0])) {
     console.error("[linkedin/callback] State mismatch or invalid — possible CSRF attempt");
-    return NextResponse.redirect(
-      new URL(`/dashboard/settings?linkedin_error=${encodeURIComponent("OAuth state invalid — please try again")}`, request.url)
-    );
+    return oauthResponse(request.url, null, "OAuth state invalid — please try again");
   }
 
   if (error || !code) {
     const reason = searchParams.get("error_description") || error || "Unknown error";
-    return NextResponse.redirect(
-      new URL(`/dashboard/settings?linkedin_error=${encodeURIComponent(reason)}`, request.url)
-    );
+    return oauthResponse(request.url, null, reason);
   }
 
   // Trim env vars — strip whitespace AND literal \n that Vercel sometimes injects
@@ -102,15 +98,12 @@ export async function GET(request: NextRequest) {
   if (!tokenRes.ok) {
     const errText = await tokenRes.text();
     console.error("[linkedin/callback] Token exchange failed:", errText);
-    // Pass the actual LinkedIn error reason to the UI for easier debugging
     let reason = "token_exchange_failed";
     try {
       const errJson = JSON.parse(errText);
       reason = errJson.error_description || errJson.error || reason;
     } catch {}
-    return NextResponse.redirect(
-      new URL(`/dashboard/settings?linkedin_error=${encodeURIComponent(reason)}`, request.url)
-    );
+    return oauthResponse(request.url, null, reason);
   }
 
   const tokenData = await tokenRes.json();
@@ -179,8 +172,60 @@ export async function GET(request: NextRequest) {
     console.warn("[linkedin/callback] No Firebase UID in state — token not persisted. User must include uid= in OAuth link.");
   }
 
-  // ── Step 4: Redirect back to where they came from ─────────────────────────
+  // ── Step 4: Return to where they came from ───────────────────────────────
   const destination = returnTo.startsWith("/") ? returnTo : "/dashboard/settings";
-  const finalUrl = new URL(`${destination}?linkedin_connected=true`, request.url);
-  return NextResponse.redirect(finalUrl);
+  return oauthResponse(request.url, destination, null);
+}
+
+/**
+ * Returns an HTML response that works for both popup and full-redirect OAuth flows.
+ *
+ * Popup flow  → posts a postMessage to window.opener, then closes the popup.
+ *               The main window stays alive (Firebase auth is never lost).
+ * Full-redirect → falls back to window.location.replace (legacy behaviour,
+ *               e.g. <a href> links on other pages).
+ *
+ * Using HTML instead of NextResponse.redirect prevents Firebase auth loss on
+ * mobile / privacy browsers where a full-page cross-origin redirect can wipe
+ * IndexedDB before the app rehydrates.
+ */
+function oauthResponse(requestUrl: string, destination: string | null, errorMsg: string | null): NextResponse {
+  const base = new URL(requestUrl).origin;
+  const successPath = destination ?? "/dashboard/settings";
+  const successUrl  = `${base}${successPath}?linkedin_connected=true`;
+  const errorUrl    = `${base}/dashboard/settings?linkedin_error=${encodeURIComponent(errorMsg ?? "Unknown error")}`;
+
+  const redirectUrl = errorMsg ? errorUrl : successUrl;
+  const message     = errorMsg
+    ? JSON.stringify({ type: "linkedin_error",     message: errorMsg })
+    : JSON.stringify({ type: "linkedin_connected" });
+  const origin      = JSON.stringify(base);
+  const safeUrl     = JSON.stringify(redirectUrl);
+
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>LinkedIn OAuth</title></head>
+<body>
+<p style="font-family:sans-serif;padding:24px;color:#666">Connecting your LinkedIn account&hellip;</p>
+<script>
+(function () {
+  var msg = ${message};
+  var url = ${safeUrl};
+  var org = ${origin};
+  try {
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage(msg, org);
+      window.close();
+      return;
+    }
+  } catch (_) {}
+  window.location.replace(url);
+})();
+</script>
+</body>
+</html>`;
+
+  return new NextResponse(html, {
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
 }
