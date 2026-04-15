@@ -206,6 +206,19 @@ These make the post look like a 2022 GPT bot account:
 ❌ Overhead shot of a desk with notebook and phone
 ❌ Any composition where a human is the only subject centered on a screen
 
+⚠️ KEYWORD LITERAL TRAP — READ BEFORE GENERATING:
+Never translate a word in the post title into its literal visual form. These traps are instant failures:
+❌ Post says "voice" → DO NOT generate a singer, musician, pianist, microphone, or musical instrument
+❌ Post says "memory" → DO NOT generate a brain, neurons, or memory chips
+❌ Post says "growth" → DO NOT generate plants, trees, or upward arrows
+❌ Post says "brand" → DO NOT generate logos, labels, or stamps
+❌ Post says "authentic" → DO NOT generate mirrors, reflections, or masks
+❌ Post says "AI" → DO NOT generate robots, circuits, or humanoid machines
+The post is always METAPHORICAL. The image must capture the EMOTION, not the vocabulary.
+
+⚠️ FULL FACE RULE — NEVER VIOLATE:
+Never generate a full forward-facing human face. Subjects must be: turned away, seen from behind, in profile, chest-down only, or partially obscured. A visible full face in the image is an automatic failure — it creates uncanny-valley effect on LinkedIn.
+
 ═══ VISUAL DIVERSITY — ROTATE THROUGH THESE APPROACHES ═══
 Look at the POST TYPE and choose the visual approach that fits:
 
@@ -213,6 +226,12 @@ FOR PERSONAL / STORY POSTS:
 ✅ Scene-setting without people — the cinema seat, the empty stage, the book spine, the view from a train window
 ✅ Texture and detail: a film reel strip, a handwritten margin note, coffee rings on a script, raindrops on glass
 ✅ Two-person candid: the moment between two people, caught from the side, not posed
+
+FOR PRODUCT / MARKETING POSTS (about a tool, service, or feature):
+✅ The work environment: a person in motion at a modern workspace — seen from behind or in profile, not posed at a screen
+✅ Hands doing the work: annotating, writing, reviewing a document — close-up, no face required
+✅ The contrast: cluttered desk → one clean notebook. Chaos → one clear action. Before/after without text.
+✅ The solitude of focus: a figure in a well-lit open space, purposeful posture, back to camera
 
 FOR BUSINESS / INSIGHT POSTS:
 ✅ Environmental scale: a factory floor, a warehouse row, a trading floor — human in context, not isolated at a desk
