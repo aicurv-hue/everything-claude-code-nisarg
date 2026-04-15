@@ -8,6 +8,7 @@ interface LinkedInPostCardProps {
   content: string;
   imageUrl?: string;
   imageHook?: string;
+  isUploadedImage?: boolean;
 }
 
 export default function LinkedInPostCard({
@@ -16,6 +17,7 @@ export default function LinkedInPostCard({
   content,
   imageUrl,
   imageHook,
+  isUploadedImage = false,
 }: LinkedInPostCardProps) {
   const initials = name
     ? name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
@@ -55,11 +57,11 @@ export default function LinkedInPostCard({
         </div>
 
         {imageUrl && (
-          <div className="w-full relative aspect-square">
+          <div className={`w-full relative ${isUploadedImage ? "" : "aspect-square"}`}>
             <img
               src={imageUrl}
               alt="Post image"
-              className="w-full h-full object-cover"
+              className={`w-full ${isUploadedImage ? "object-contain max-h-[600px]" : "h-full object-cover"}`}
             />
             {imageHook && (
               <div
