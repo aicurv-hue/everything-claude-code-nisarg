@@ -195,8 +195,11 @@ STRUCTURE — FOLLOW EXACTLY
 
 HOOK (line 1):
 This is the ONLY line visible before "see more." It must earn the click.
-Apply the hook formula above. Use a SPECIFIC number, name, or fact from the research.
-One sentence. Questions are allowed ONLY if they are specific and challenge an assumption — never generic or rhetorical. Never vague.
+Apply the hook formula matching the selected tone:
+– PROFESSIONAL / EDUCATIONAL: Use a SPECIFIC number, name, or fact from the research.
+– CONTRARIAN: Lead with a bold opinion or uncomfortable truth. NO stat or percentage in line 1. The hook must make the reader feel something — not recite a number. Opening with a stat on a contrarian post is a failure.
+– STORYTELLING: Open with a vivid, grounded 1-sentence scene. NO stat in line 1.
+One sentence. Questions are allowed ONLY if they are specific and challenge an assumption — never generic or rhetorical.
 Leave one empty line after the hook before the body.
 
 BODY ({{PARAGRAPHS}}):
