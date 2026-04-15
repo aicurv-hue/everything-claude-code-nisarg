@@ -282,6 +282,15 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     if (!user) return;
     const key = `cridl_guide_seen_${user.uid}`;
     if (!localStorage.getItem(key)) {
+      // If account is older than 5 minutes, it's a returning user — skip onboarding
+      const createdAt = user.metadata?.creationTime;
+      if (createdAt) {
+        const ageMs = Date.now() - new Date(createdAt).getTime();
+        if (ageMs > 5 * 60 * 1000) {
+          localStorage.setItem(key, "1");
+          return;
+        }
+      }
       // Don't redirect if already on onboarding (avoids loop)
       if (!pathname.startsWith("/onboarding")) {
         router.replace("/onboarding");
