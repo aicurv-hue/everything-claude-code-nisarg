@@ -347,9 +347,16 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
   ].join("\n").trim();
 
   // ── User prompt ────────────────────────────────────────────────────────────
-  const insightLines = research.insights
-    .map((ins, i) => `${i + 1}. ${ins.title}: ${ins.content}`)
-    .join("\n");
+  // For Contrarian and Storytelling tones: the post is driven by opinion/narrative,
+  // not by data. Pass only 1 insight (the most relevant) and instruct Neel to use it
+  // sparingly — not as the structural backbone of the post.
+  const isOpinionTone = tone === "contrarian" || tone === "storytelling";
+  const insightLines = isOpinionTone
+    ? `${research.insights[0]?.title}: ${research.insights[0]?.content}`
+    : research.insights.map((ins, i) => `${i + 1}. ${ins.title}: ${ins.content}`).join("\n");
+  const insightLabel = isOpinionTone
+    ? `One supporting data point (use sparingly — max once in the post, mid-body only. The opinion carries the post, not this stat):`
+    : `Key insights to draw from:`;
 
   const sourceBlock = sourceContext
     ? `\nSource material (URL / image provided by user — use this as the primary factual foundation):\n"""\n${sanitizePromptInput(sourceContext, 2000)}\n"""\n`
@@ -366,7 +373,7 @@ ${sourceBlock}
 Research summary:
 ${research.summary}
 
-Key insights to draw from:
+${insightLabel}
 ${insightLines}
 
 Start directly with the hook line. Output nothing else.`;
