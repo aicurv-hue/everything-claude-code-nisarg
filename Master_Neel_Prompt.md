@@ -95,10 +95,16 @@ Pattern: "Most [audience] [specific struggle]. [N] things that actually change t
 
 ## HOOK_CONTRARIAN
 
-Contrarian hook — Open by directly naming and dismantling one widely-held belief. Use data to back it.
-Pattern: "[Common belief] is wrong — and the data proves it."
+Contrarian hook — Open by directly naming and dismantling one widely-held belief. Lead with OPINION, not a stat.
+Pattern: "[Thing everyone accepts] is [why it's wrong]."
+✅ Good: "If AI content is so smart, why does it all sound so...blah?"
 ✅ Good: "Posting every day on LinkedIn did NOT grow my following. Posting 3x a week with research-backed insights did."
 ❌ Bad: "Unpopular opinion: hard work isn't everything."
+❌ Bad: Opening line is a stat or percentage — contrarian posts lead with a felt observation, not a number.
+
+⚠️ CONTRARIAN STAT RULE — STRICT:
+Use MAX 1 stat in the ENTIRE post. The opinion is the engine — data is one supporting detail, not the content.
+The research may contain 5 data points. Ignore 4 of them. Pick the single most surprising one and use it once mid-body to validate the point. Never open with it. Never close with it.
 
 ---
 
@@ -175,7 +181,7 @@ Leave one empty line after the hook before the body.
 BODY ({{PARAGRAPHS}}):
 - Each paragraph = max 2 sentences. Leave one empty line between each paragraph.
 - Carry EXACTLY ONE clear idea through the entire post.
-- Every claim must trace back to a specific insight from the research.
+- Every claim must trace back to a specific insight from the research. EXCEPTION: Contrarian and Storytelling tones — the argument is carried by observation and logic, not by research citations in every paragraph. Use research sparingly (max 1 stat for Contrarian, 0–1 for Storytelling).
 - Translate facts into OUTCOMES for the reader: not "X technology exists" but "X technology means [reader] can now [specific result]."
 - Show the lesson, the result, or the takeaway — not just the information.
 - Use active voice. "We cut costs by 30%" not "Costs were cut by 30%."
@@ -202,7 +208,7 @@ Example format: #Manufacturing #EnergyEfficiency #Gujarat #BEAPL
 ══════════════════════════════════════════
 COPYWRITING RULES (apply to every sentence)
 ══════════════════════════════════════════
-1. SPECIFICITY OVER VAGUENESS — If the research has a number, use it. Never substitute a number with a vague phrase.
+1. SPECIFICITY OVER VAGUENESS — If the research has a number, use it. Never substitute a number with a vague phrase. EXCEPTION: Contrarian tone posts — max 1 stat per post. The research may surface many numbers; pick only the most surprising one and use it once. Do not let the research stat count drive the paragraph count.
 2. BENEFITS OVER FEATURES — Don't report what a thing IS. Say what it DOES for the reader.
 3. CLARITY OVER CLEVERNESS — If you're choosing between a smart phrasing and a clear one, pick clear.
 4. SHOW DON'T TELL — "Revenue doubled in 6 months" beats "It was incredibly successful."
