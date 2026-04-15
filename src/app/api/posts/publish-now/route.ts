@@ -158,8 +158,16 @@ export async function POST(req: NextRequest) {
     // Upload image if present
     let imageUrn: string | null = null;
     const imageUrl: string | undefined = post.image_url;
-    if (imageUrl && !imageUrl.startsWith("data:") && isAllowedImageUrl(imageUrl)) {
+    if (imageUrl && !imageUrl.startsWith("data:")) {
+      if (!isAllowedImageUrl(imageUrl)) {
+        await postRef.update({ status: "failed", failed_reason: "Image URL host not allowed.", updated_at: FieldValue.serverTimestamp() });
+        return NextResponse.json({ error: "Image URL host not allowed." }, { status: 400 });
+      }
       imageUrn = await uploadImage(accessToken, authorUrn, imageUrl);
+      if (!imageUrn) {
+        await postRef.update({ status: "failed", failed_reason: "Image upload to LinkedIn failed. The image URL may have expired — regenerate the image and try again.", updated_at: FieldValue.serverTimestamp() });
+        return NextResponse.json({ error: "Image upload to LinkedIn failed. The image URL may have expired — regenerate the image and try again." }, { status: 502 });
+      }
     }
 
     // Build LinkedIn post body
