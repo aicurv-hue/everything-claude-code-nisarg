@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
 
   const post = postSnap.data()!;
   if (post.user_id !== uid) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  if (post.status !== "scheduled" && post.status !== "failed") {
+  if (post.status !== "scheduled" && post.status !== "failed" && post.status !== "published") {
     return NextResponse.json({ error: "Post is not in a publishable state" }, { status: 400 });
   }
 
@@ -151,8 +151,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Post content is empty." }, { status: 400 });
   }
 
-  // Mark as processing to prevent double-publish
-  await postRef.update({ status: "processing", updated_at: FieldValue.serverTimestamp() });
+  const isRepost = post.status === "published";
+
+  // Mark as processing to prevent double-publish (skip for repost — keep status as published)
+  if (!isRepost) {
+    await postRef.update({ status: "processing", updated_at: FieldValue.serverTimestamp() });
+  }
 
   try {
     // Upload image if present
@@ -160,12 +164,12 @@ export async function POST(req: NextRequest) {
     const imageUrl: string | undefined = post.image_url;
     if (imageUrl && !imageUrl.startsWith("data:")) {
       if (!isAllowedImageUrl(imageUrl)) {
-        await postRef.update({ status: "failed", failed_reason: "Image URL host not allowed.", updated_at: FieldValue.serverTimestamp() });
+        if (!isRepost) await postRef.update({ status: "failed", failed_reason: "Image URL host not allowed.", updated_at: FieldValue.serverTimestamp() });
         return NextResponse.json({ error: "Image URL host not allowed." }, { status: 400 });
       }
       imageUrn = await uploadImage(accessToken, authorUrn, imageUrl);
       if (!imageUrn) {
-        await postRef.update({ status: "failed", failed_reason: "Image upload to LinkedIn failed. The image URL may have expired — regenerate the image and try again.", updated_at: FieldValue.serverTimestamp() });
+        if (!isRepost) await postRef.update({ status: "failed", failed_reason: "Image upload to LinkedIn failed. The image URL may have expired — regenerate the image and try again.", updated_at: FieldValue.serverTimestamp() });
         return NextResponse.json({ error: "Image upload to LinkedIn failed. The image URL may have expired — regenerate the image and try again." }, { status: 502 });
       }
     }
@@ -200,11 +204,13 @@ export async function POST(req: NextRequest) {
       const errText = await res.text();
       let liError = errText;
       try { liError = JSON.parse(errText).message || errText; } catch {}
-      await postRef.update({
-        status: "failed",
-        failed_reason: `LinkedIn API ${res.status}: ${liError}`,
-        updated_at: FieldValue.serverTimestamp(),
-      });
+      if (!isRepost) {
+        await postRef.update({
+          status: "failed",
+          failed_reason: `LinkedIn API ${res.status}: ${liError}`,
+          updated_at: FieldValue.serverTimestamp(),
+        });
+      }
       return NextResponse.json({ error: `LinkedIn API error: ${liError}` }, { status: res.status });
     }
 
@@ -219,11 +225,13 @@ export async function POST(req: NextRequest) {
     console.log(`[publish-now] ✅ Published post ${postId} → ${linkedinPostId}`);
     return NextResponse.json({ success: true, linkedinPostId });
   } catch (err: any) {
-    await postRef.update({
-      status: "failed",
-      failed_reason: err?.message || "Unknown error",
-      updated_at: FieldValue.serverTimestamp(),
-    });
+    if (!isRepost) {
+      await postRef.update({
+        status: "failed",
+        failed_reason: err?.message || "Unknown error",
+        updated_at: FieldValue.serverTimestamp(),
+      });
+    }
     return NextResponse.json({ error: err?.message || "Publish failed" }, { status: 500 });
   }
 }

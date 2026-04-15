@@ -407,14 +407,50 @@ export default function PostDetailDrawer({ post, onClose, onReschedule, onDelete
                   </button>
                 </>
               )}
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 border border-red-200 transition-all disabled:opacity-40"
-              >
-                <Trash2 className="w-4 h-4" />
-                {isDeleting ? "Deleting…" : "Delete Post"}
-              </button>
+
+              {/* Repost — only for published posts */}
+              {post.status === "published" && onPostNow && (
+                <>
+                  {postNowSuccess ? (
+                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-green-50 border border-green-200">
+                      <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                      <p className="text-xs font-medium text-green-700">Reposted to LinkedIn successfully!</p>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handlePostNow}
+                        disabled={isPostingNow}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#0A66C2] hover:bg-[#0854a0] transition-all disabled:opacity-50"
+                      >
+                        {isPostingNow ? (
+                          <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" /> Reposting…</>
+                        ) : (
+                          <><RotateCcw className="w-4 h-4" /> Repost to LinkedIn</>
+                        )}
+                      </button>
+                      {postNowError && (
+                        <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-red-50 border border-red-200">
+                          <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                          <p className="text-xs text-red-600">{postNowError}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* Delete — hidden for published posts */}
+              {post.status !== "published" && (
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 border border-red-200 transition-all disabled:opacity-40"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {isDeleting ? "Deleting…" : "Delete Post"}
+                </button>
+              )}
             </>
           )}
         </div>
