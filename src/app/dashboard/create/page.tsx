@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/context/auth";
 import { getIdToken } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
-import { Zap, Search, Brain, SlidersHorizontal, ChevronDown, ChevronUp, User, Building2, Sparkles, Link2, ImagePlus, X, CheckCircle2 } from "lucide-react";
+import { Zap, Search, Brain, SlidersHorizontal, ChevronDown, ChevronUp, User, Building2, Sparkles, Link2, ImagePlus, X, CheckCircle2, PenLine } from "lucide-react";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
 
 const TONES = [
@@ -55,6 +55,8 @@ export default function CreatePostPage() {
   const [sampleCount, setSampleCount]   = useState<number | null>(null);
   const [writingSamples, setWritingSamples] = useState<any[]>([]);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [mode, setMode] = useState<"ai" | "manual">("ai");
+  const [manualContent, setManualContent] = useState("");
   const router = useRouter();
 
   // B1: Restore draft inputs from localStorage on mount
@@ -256,6 +258,26 @@ export default function CreatePostPage() {
     }
   };
 
+  const handleManualPreview = () => {
+    if (!manualContent.trim()) return;
+    const activeProfile: ProfileSegment | undefined = userProfile ? userProfile[segment] : undefined;
+    localStorage.setItem("latest_post", JSON.stringify({
+      content: manualContent.trim(),
+      imagePrompt: null,
+      research: { insights: [], references: [], summary: "" },
+      referenceImagePreview: null,
+      intentType: "professional",
+      metadata: { topic: manualContent.trim().slice(0, 80), tone, audience, length, segment, customInstructions: null, memoryUsed: 0, model: null },
+      clientProfile: activeProfile || null,
+      systemPrompt: null,
+      memoryContext: null,
+      writingSamples: null,
+      sourceContext: null,
+      isManual: true,
+    }));
+    router.push("/dashboard/create/preview");
+  };
+
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto animate-fade-in">
 
@@ -271,6 +293,147 @@ export default function CreatePostPage() {
           </div>
         </div>
 
+        {/* Mode toggle */}
+        <div className="flex gap-2 mb-6 p-1 bg-slate-100 rounded-xl w-fit">
+          <button
+            onClick={() => setMode("ai")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              mode === "ai"
+                ? `bg-white shadow-sm ${accentColor}`
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            AI Generate
+          </button>
+          <button
+            onClick={() => setMode("manual")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              mode === "manual"
+                ? `bg-white shadow-sm ${accentColor}`
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <PenLine className="w-4 h-4" />
+            Write Manually
+          </button>
+        </div>
+
+        {/* Manual post mode */}
+        {mode === "manual" && (
+          <div className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 lg:col-span-8 space-y-5">
+              <div className="card p-6 space-y-3">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Write your post
+                </label>
+                <textarea
+                  rows={12}
+                  value={manualContent}
+                  onChange={(e) => setManualContent(e.target.value)}
+                  placeholder="Write your LinkedIn post here. Cridl will publish it exactly as written — no AI changes."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/30 focus:border-[#0A66C2] transition-all resize-none text-sm leading-relaxed"
+                />
+                <div className="flex justify-between items-center">
+                  <p className="text-[11px] text-slate-400">You can add an image, schedule, or post immediately on the next screen.</p>
+                  <span className={`text-[11px] font-medium ${manualContent.length > 2900 ? "text-amber-500" : "text-slate-400"}`}>
+                    {manualContent.length}/3000
+                  </span>
+                </div>
+              </div>
+
+              {/* Tone + Audience for manual (used for metadata only) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="card p-5 space-y-3">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Voice & Tone</label>
+                  <div className="space-y-2">
+                    {TONES.map((t) => (
+                      <button
+                        key={t.value}
+                        onClick={() => setTone(t.value)}
+                        className={`w-full p-3 rounded-lg border text-left transition-all text-sm flex items-center justify-between ${
+                          tone === t.value
+                            ? isCorporate
+                              ? "border-violet-300 bg-violet-50 text-violet-700"
+                              : "border-[#0A66C2]/40 bg-blue-50 text-[#0A66C2]"
+                            : "border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600"
+                        }`}
+                      >
+                        <span className="font-medium text-sm">{t.label}</span>
+                        {tone === t.value && (
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${isCorporate ? "bg-violet-500" : "bg-[#0A66C2]"}`} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-5">
+                  <div className="card p-5 space-y-3">
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Target Audience</label>
+                    <div className="flex flex-wrap gap-2">
+                      {AUDIENCES.map((a) => (
+                        <button
+                          key={a.value}
+                          onClick={() => setAudience(a.value)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                            audience === a.value
+                              ? isCorporate
+                                ? "bg-violet-600 text-white border-violet-600"
+                                : "bg-[#0A66C2] text-white border-[#0A66C2]"
+                              : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          {a.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleManualPreview}
+                disabled={!manualContent.trim()}
+                className={`w-full py-4 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-3 ${
+                  !manualContent.trim()
+                    ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                    : `${accentBtn} text-white shadow-sm active:scale-[0.99]`
+                }`}
+              >
+                <PenLine className="w-4 h-4" />
+                Preview & Post
+              </button>
+            </div>
+
+            {/* Sidebar for manual mode */}
+            <div className="col-span-12 lg:col-span-4 space-y-4">
+              <div className={`card p-5 border-l-4 ${isCorporate ? "border-l-violet-500" : "border-l-[#0A66C2]"}`}>
+                <div className="flex items-center gap-2 mb-4">
+                  <PenLine className={`w-4 h-4 ${accentColor}`} />
+                  <h4 className="text-sm font-semibold text-slate-800">Manual Mode</h4>
+                </div>
+                <div className="space-y-3 text-xs text-slate-500 leading-relaxed">
+                  <p>Your post is published <span className="font-semibold text-slate-700">exactly as written</span> — no AI rewrites.</p>
+                  <p>On the next screen you can:</p>
+                  <ul className="space-y-1 ml-3 list-disc">
+                    <li>Add or generate an image</li>
+                    <li>Post immediately or schedule</li>
+                    <li>Edit the text further</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="card p-4 bg-slate-50">
+                <p className="text-xs font-semibold text-slate-500 mb-1">💡 Tip</p>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Manual posts don't use AI credits. Scheduling and image generation credits still apply.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AI Generate mode */}
+        {mode === "ai" && (
         <div className="grid grid-cols-12 gap-6">
 
           {/* Main form */}
@@ -758,6 +921,7 @@ export default function CreatePostPage() {
             </div>
           </div>
         </div>
+        )}
     </div>
   );
 }
