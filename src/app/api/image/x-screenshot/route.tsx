@@ -4,14 +4,44 @@ import { verifyTokenEdge } from "@/lib/utils/verifyTokenEdge";
 
 export const runtime = "edge";
 
-/** Local truncation — no network call, instant. Takes first 2 sentences up to 280 chars. */
-function condensePost(post: string): string {
+const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || "";
+
+/** Local truncation fallback — instant, no network. */
+function truncateLocal(post: string): string {
   const clean = post.replace(/\n+/g, " ").trim();
-  // Try to end on a sentence boundary within 280 chars
-  const cut = clean.slice(0, 280);
+  const cut = clean.slice(0, 260);
   const lastPeriod = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
   if (lastPeriod > 80) return cut.slice(0, lastPeriod + 1).trim();
-  return cut.trim() + (clean.length > 280 ? "…" : "");
+  return cut.trim() + (clean.length > 260 ? "…" : "");
+}
+
+/** AI condense with 4s timeout — falls back to local truncation on any failure. */
+async function condensePost(post: string): Promise<string> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${OPENROUTER_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.0-flash-lite-001",
+        max_tokens: 80,
+        temperature: 0.6,
+        messages: [
+          { role: "system", content: "Condense this LinkedIn post to exactly 40–50 words. Keep the sharpest insight. Output ONLY the condensed text — no quotes, no labels." },
+          { role: "user", content: post },
+        ],
+      }),
+    });
+    clearTimeout(timer);
+    if (!res.ok) return truncateLocal(post);
+    const data = await res.json() as any;
+    const text = (data.choices?.[0]?.message?.content || "").trim();
+    return text || truncateLocal(post);
+  } catch {
+    return truncateLocal(post);
+  }
 }
 
 function rand(min: number, max: number) {

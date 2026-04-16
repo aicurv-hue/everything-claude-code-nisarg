@@ -318,7 +318,7 @@ export default function PostPreviewPage() {
           const err = await res.json().catch(() => ({}));
           throw new Error((err as any).error || "X screenshot generation failed.");
         }
-        // Convert PNG blob → data URL → Firebase Storage URL
+        // Convert PNG blob → data URL (no Firebase upload at preview time — upload happens at publish)
         const blob = await res.blob();
         const dataUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -326,8 +326,7 @@ export default function PostPreviewPage() {
           reader.onerror = reject;
           reader.readAsDataURL(blob);
         });
-        const firebaseUrl = await uploadDataUrlToStorage(dataUrl, `post-images/${Date.now()}-xshot.png`);
-        setImageUrl(firebaseUrl || dataUrl);
+        setImageUrl(dataUrl);
         return;
       }
 
