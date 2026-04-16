@@ -15,17 +15,16 @@ function truncateLocal(post: string): string {
   return cut.trim() + (clean.length > 260 ? "…" : "");
 }
 
-/** AI condense with 4s timeout — falls back to local truncation on any failure. */
+/** AI condense with 5s timeout — falls back to local truncation on any failure. */
 async function condensePost(post: string): Promise<string> {
+  if (!OPENROUTER_KEY) return truncateLocal(post);
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
-      signal: controller.signal,
+      signal: AbortSignal.timeout(5000),
       headers: { Authorization: `Bearer ${OPENROUTER_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-lite-001",
+        model: "google/gemini-2.0-flash-001",
         max_tokens: 80,
         temperature: 0.6,
         messages: [
@@ -34,7 +33,6 @@ async function condensePost(post: string): Promise<string> {
         ],
       }),
     });
-    clearTimeout(timer);
     if (!res.ok) return truncateLocal(post);
     const data = await res.json() as any;
     const text = (data.choices?.[0]?.message?.content || "").trim();

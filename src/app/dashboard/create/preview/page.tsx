@@ -315,8 +315,10 @@ export default function PostPreviewPage() {
           body: JSON.stringify({ post: postContent }),
         });
         if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error((err as any).error || "X screenshot generation failed.");
+          const errText = await res.text().catch(() => "");
+          let errMsg = "X screenshot generation failed.";
+          try { errMsg = JSON.parse(errText).error || errMsg; } catch { if (errText) errMsg = errText.slice(0, 120); }
+          throw new Error(errMsg);
         }
         // Convert PNG blob → data URL (no Firebase upload at preview time — upload happens at publish)
         const blob = await res.blob();
@@ -351,6 +353,10 @@ export default function PostPreviewPage() {
     if (mode !== "ai") { setImageUrl(null); setIsGeneratingImage(false); }
     if (mode !== "upload") { setUploadedFile(null); setUploadedPreview(null); }
     if (mode !== "face") { setFaceGeneratedUrl(null); setFaceError(null); }
+    // Auto-generate X screenshot when switching to AI mode
+    if (mode === "ai" && postData?.clientProfile?.imageStyle === "x_screenshot" && !imageUrl) {
+      setTimeout(() => generateImage(""), 50);
+    }
   };
 
   const generateFaceImage = async () => {
