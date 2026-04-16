@@ -18,7 +18,7 @@ import LinkedInPostCard from "@/components/preview/LinkedInPostCard";
 // Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
 import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 
-type ImageMode = "ai" | "upload" | "reference" | "face" | "none";
+type ImageMode = "ai" | "upload" | "reference" | "face" | "none" | "x_screenshot";
 
 export default function PostPreviewPage() {
   const { user } = useAuth();
@@ -307,7 +307,7 @@ export default function PostPreviewPage() {
 
       // X Screenshot style: render server-side HTML template, no fal.ai
       const imageStyle = postData?.clientProfile?.imageStyle;
-      if (imageStyle === "x_screenshot") {
+      if (imageStyle === "x_screenshot" || imageMode === "x_screenshot") {
         const postContent = editedContent || postData?.content || "";
         const res = await fetch("/api/image/x-screenshot", {
           method: "POST",
@@ -345,10 +345,15 @@ export default function PostPreviewPage() {
   const handleModeChange = (mode: ImageMode) => {
     setImageMode(mode);
     setImageError(null);
-    if (mode !== "ai") { setImageUrl(null); setIsGeneratingImage(false); }
+    if (mode !== "ai" && mode !== "x_screenshot") { setImageUrl(null); setIsGeneratingImage(false); }
     if (mode !== "upload") { setUploadedFile(null); setUploadedPreview(null); }
     if (mode !== "face") { setFaceGeneratedUrl(null); setFaceError(null); }
-    // Auto-generate X screenshot when switching to AI mode
+    // Auto-generate X screenshot when switching to x_screenshot mode
+    if (mode === "x_screenshot") {
+      setImageUrl(null);
+      setTimeout(() => generateImage(""), 50);
+    }
+    // Also auto-generate if profile style is x_screenshot and switching to ai
     if (mode === "ai" && postData?.clientProfile?.imageStyle === "x_screenshot" && !imageUrl) {
       setTimeout(() => generateImage(""), 50);
     }
@@ -479,6 +484,7 @@ export default function PostPreviewPage() {
 
   /* Resolve final image URL for publishing */
   const finalImageUrl =
+    imageMode === "x_screenshot" ? imageUrl :
     imageMode === "ai"        ? imageUrl :
     imageMode === "upload"    ? uploadedPreview :
     imageMode === "reference" ? referenceImagePreview :
@@ -656,7 +662,7 @@ export default function PostPreviewPage() {
       setScheduleMessage(`Scheduled for ${label} (${timezone})${imageStatusMsg}`);
       setShowSchedulePicker(false);
 
-      const isXShot = postData?.clientProfile?.imageStyle === "x_screenshot";
+      const isXShot = imageMode === "x_screenshot" || postData?.clientProfile?.imageStyle === "x_screenshot";
       if (imageMode === "ai" && !immediateImageUrl && (imagePrompt || isXShot) && saved?.id) {
         const bgPostContent = editedContent || postData?.content || "";
         getAuthToken().then(bgToken => fetch(
@@ -1090,6 +1096,21 @@ export default function PostPreviewPage() {
                 </button>
 
                 <button
+                  onClick={() => handleModeChange("x_screenshot")}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
+                    imageMode === "x_screenshot" ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "x_screenshot" ? "bg-black" : "bg-slate-100"}`}>
+                    <span className={`text-lg font-black leading-none ${imageMode === "x_screenshot" ? "text-white" : "text-slate-600"}`}>𝕏</span>
+                  </div>
+                  <div>
+                    <p className={`text-xs font-semibold ${imageMode === "x_screenshot" ? "text-white" : "text-slate-700"}`}>X Screenshot</p>
+                    <p className={`text-[10px] mt-0.5 leading-tight ${imageMode === "x_screenshot" ? "text-slate-400" : "text-slate-400"}`}>Twitter-style dark card</p>
+                  </div>
+                </button>
+
+                <button
                   onClick={() => { handleModeChange("upload"); if (fileInputRef.current) { fileInputRef.current.value = ""; fileInputRef.current.click(); } }}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
                     imageMode === "upload" ? "border-[#0A66C2] bg-blue-50" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
@@ -1204,14 +1225,14 @@ export default function PostPreviewPage() {
                 </div>
               )}
 
-              {imageMode === "ai" && isGeneratingImage && (
+              {(imageMode === "ai" || imageMode === "x_screenshot") && isGeneratingImage && (
                 <div className="flex flex-col items-center gap-3 text-slate-400">
                   <div className="w-7 h-7 border-2 border-[#0A66C2]/30 border-t-[#0A66C2] rounded-full animate-spin" />
-                  <p className="text-xs">Generating image with AI...</p>
+                  <p className="text-xs">{imageMode === "x_screenshot" ? "Creating X screenshot..." : "Generating image with AI..."}</p>
                 </div>
               )}
 
-              {imageMode === "ai" && !isGeneratingImage && imageError && (
+              {(imageMode === "ai" || imageMode === "x_screenshot") && !isGeneratingImage && imageError && (
                 <div className="flex flex-col items-center gap-3 text-center">
                   <AlertCircle className="w-6 h-6 text-red-400" />
                   <p className="text-sm text-red-500">{imageError}</p>
@@ -1219,7 +1240,7 @@ export default function PostPreviewPage() {
                 </div>
               )}
 
-              {imageMode === "ai" && !isGeneratingImage && imageUrl && !imageError && (
+              {(imageMode === "ai" || imageMode === "x_screenshot") && !isGeneratingImage && imageUrl && !imageError && (
                 <div className="w-full relative">
                   <img src={imageUrl} alt="AI generated LinkedIn image" className="w-full rounded-xl object-cover aspect-square" />
                   {imageHook && (
