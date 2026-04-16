@@ -320,15 +320,10 @@ export default function PostPreviewPage() {
           try { errMsg = JSON.parse(errText).error || errMsg; } catch { if (errText) errMsg = errText.slice(0, 120); }
           throw new Error(errMsg);
         }
-        // Convert PNG blob → data URL (no Firebase upload at preview time — upload happens at publish)
+        // Use blob: URL — renders instantly, avoids CSP issues with data: URLs
         const blob = await res.blob();
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-        setImageUrl(dataUrl);
+        const blobUrl = URL.createObjectURL(blob);
+        setImageUrl(blobUrl);
         return;
       }
 
@@ -529,16 +524,20 @@ export default function PostPreviewPage() {
       // Bake hook text into image before publishing — what you see is what gets posted
       let publishImageUrl: string | null = finalImageUrl;
       if (finalImageUrl && imageHook) {
-        const composited = await compositeImageWithHook(finalImageUrl, imageHook);
-        // If compositing produced a data: URL, upload it to Firebase Storage so the
-        // server receives a real HTTPS URL (data: URLs are blocked by SSRF guard and
-        // sending multi-MB base64 in the request body can corrupt content parsing).
-        if (composited.startsWith("data:")) {
-          const stored = await uploadDataUrlToStorage(composited);
-          publishImageUrl = stored || finalImageUrl; // fall back to original if upload fails
-        } else {
-          publishImageUrl = composited;
+        publishImageUrl = await compositeImageWithHook(finalImageUrl, imageHook);
+      }
+      // Upload blob: or data: URLs to Firebase Storage — LinkedIn API needs a real HTTPS URL
+      if (publishImageUrl && (publishImageUrl.startsWith("blob:") || publishImageUrl.startsWith("data:"))) {
+        let dataForUpload = publishImageUrl;
+        if (publishImageUrl.startsWith("blob:")) {
+          const blobRes = await fetch(publishImageUrl);
+          const blobData = await blobRes.blob();
+          dataForUpload = await new Promise<string>((res2, rej2) => {
+            const r = new FileReader(); r.onload = () => res2(r.result as string); r.onerror = rej2; r.readAsDataURL(blobData);
+          });
         }
+        const stored = await uploadDataUrlToStorage(dataForUpload);
+        publishImageUrl = stored || null;
       }
 
       const res = await fetch("/api/linkedin/publish", {
@@ -608,9 +607,17 @@ export default function PostPreviewPage() {
 
       let immediateImageUrl: string | undefined = undefined;
       if (scheduleImageSrc) {
-        if (scheduleImageSrc.startsWith("data:")) {
+        if (scheduleImageSrc.startsWith("blob:") || scheduleImageSrc.startsWith("data:")) {
           try {
-            const uploadPromise = uploadDataUrlToStorage(scheduleImageSrc, `post-images/${Date.now()}.jpg`);
+            let dataForUpload = scheduleImageSrc;
+            if (scheduleImageSrc.startsWith("blob:")) {
+              const blobRes = await fetch(scheduleImageSrc);
+              const blobData = await blobRes.blob();
+              dataForUpload = await new Promise<string>((res2, rej2) => {
+                const r = new FileReader(); r.onload = () => res2(r.result as string); r.onerror = rej2; r.readAsDataURL(blobData);
+              });
+            }
+            const uploadPromise = uploadDataUrlToStorage(dataForUpload, `post-images/${Date.now()}.png`);
             const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000));
             const uploaded = await Promise.race([uploadPromise, timeoutPromise]);
             immediateImageUrl = uploaded || undefined;
