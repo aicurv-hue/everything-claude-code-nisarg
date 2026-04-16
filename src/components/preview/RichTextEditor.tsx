@@ -19,14 +19,23 @@ export default function RichTextEditor({
   disabled = false,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const isTypingRef = useRef(false);
 
-  // Initialize content only on mount — never again (avoids cursor jump)
+  // Initialize on mount
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.innerText = value;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sync external value changes (e.g. regenerate) into the DOM
+  useEffect(() => {
+    if (!editorRef.current || isTypingRef.current) return;
+    if (editorRef.current.innerText !== value) {
+      editorRef.current.innerText = value;
+    }
+  }, [value]);
 
   function exec(command: string) {
     editorRef.current?.focus();
@@ -52,9 +61,12 @@ export default function RichTextEditor({
   }
 
   function handleInput() {
+    isTypingRef.current = true;
     if (editorRef.current) {
       onChange(htmlToLinkedInText(editorRef.current.innerHTML));
     }
+    // Reset after a short delay so external updates (regenerate) can still sync
+    setTimeout(() => { isTypingRef.current = false; }, 500);
   }
 
   const toolbarGroups = [
