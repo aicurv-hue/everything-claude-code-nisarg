@@ -86,10 +86,19 @@ Output the post text ONLY. No labels, no preamble, no commentary after.
 
 ## HOOK_PROFESSIONAL
 
-Value hook — Lead with a SPECIFIC insight or counterintuitive stat pulled directly from research.
-Pattern: "[Exact number or named fact from research]. Here's what most [audience] don't act on:"
-✅ Good: "72% of factory owners in Gujarat overpay for energy because of one overlooked meter setting."
+Value hook — Lead with the SHARPEST, most specific insight from research. This could be a surprising number, a counterintuitive named fact, or a finding that reframes what the reader assumed was true. Numbers are one tool — not the default. The test: could this sentence appear in a Bloomberg headline? If yes, it earns the hook. If not, sharpen it.
+
+Pattern options:
+– "[Surprising specific finding] — and most [audience] don't know what to do with it."
+– "[Specific thing that sounds wrong but is true about the industry]."
+– "[Named fact or data point that reframes a common assumption]."
+
+✅ Good (number-led, genuinely surprising): "72% of factory owners in Gujarat overpay for energy because of one overlooked meter setting."
+✅ Good (fact-led, no number needed): "The highest-performing B2B sales teams don't update their CRM daily — they batch it once a week."
+✅ Good (reframe): "LinkedIn's algorithm doesn't reward consistency. It rewards dwell time."
 ❌ Bad: "Energy costs are rising and it's a problem."
+❌ Bad: "Here are some important trends in manufacturing."
+❌ Bad: Opening with a number just because the research has one — only use it if the number itself is the surprising thing.
 
 ---
 
@@ -234,7 +243,7 @@ Example format: #Manufacturing #EnergyEfficiency #Gujarat #{{BRAND_HASHTAG}}
 ══════════════════════════════════════════
 COPYWRITING RULES (apply to every sentence)
 ══════════════════════════════════════════
-1. SPECIFICITY OVER VAGUENESS — If the research has a number, use it. Never substitute a number with a vague phrase. EXCEPTION: Contrarian tone posts — max 1 stat per post. The research may surface many numbers; pick only the most surprising one and use it once. Do not let the research stat count drive the paragraph count.
+1. SPECIFICITY OVER VAGUENESS — If the research has a number, use it — but use AT MOST 2 precise numbers per post. For any additional stats beyond those 2, convert to a written approximation: "48%" → "close to half", "87%" → "nearly 9 in 10", "23%" → "roughly 1 in 4", "67%" → "two thirds". This keeps the post reading like a sharp human, not a data dump. EXCEPTION: Contrarian tone posts — max 1 stat per post total. Pick only the single most surprising number and use it once mid-body.
 2. BENEFITS OVER FEATURES — Don't report what a thing IS. Say what it DOES for the reader.
 3. CLARITY OVER CLEVERNESS — If you're choosing between a smart phrasing and a clear one, pick clear.
 4. SHOW DON'T TELL — "Revenue doubled in 6 months" beats "It was incredibly successful."
@@ -294,10 +303,15 @@ C. NARRATIVE TENSION — what is the before/after or contrast?
    → Chaos → control | Complexity → clarity | Invisible work → visible result | Doubt → conviction
 
 ═══ STEP 2 — TRANSLATE EMOTION TO IMAGE ═══
-Do NOT illustrate the topic literally. Illustrate the FEELING.
-   Post about automation? Don't show robots. Show ONE person doing more than a crowd.
-   Post about leadership? Don't show a podium. Show the quiet moment before the decision.
-   Post about growth? Don't show arrows. Show the person who did the work, alone, in their environment.
+The image must serve the post's ARGUMENT, not float above it. A reader glancing at the image should feel the same thing the post is arguing — not a random emotion that happens to be cinematic.
+
+Rule: Start from the post's actual subject and world. Then find the emotional angle within THAT world.
+   Post about LinkedIn vs Meta? Don't show an abstract trading floor. Show the professional world LinkedIn belongs to — a deal, a handshake, a focused operator — and make Meta feel like noise in the background.
+   Post about automation? Don't show robots. Show ONE person doing more than a crowd in an industrial context.
+   Post about leadership? Don't show a podium. Show the quiet moment before the decision in a real leadership environment.
+   Post about growth? Don't show arrows. Show the person who did the work, alone, in THEIR specific industry environment.
+
+The gap between "post topic" and "image subject" should be zero. Abstract cinema is the failure mode — subject-first, then emotion.
 
 ═══ FIXED FRAME RULES — ALWAYS APPLY ═══
 - NO full faces — subjects must be partially turned, looking away, shown from chest-down, or seen from behind. Faces in profile are acceptable. This prevents LinkedIn uncanny-valley effect with AI-generated faces.

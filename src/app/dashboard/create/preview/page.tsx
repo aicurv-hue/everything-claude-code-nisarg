@@ -304,6 +304,33 @@ export default function PostPreviewPage() {
     setImageUrl(null);
     try {
       const token = await getAuthToken();
+
+      // X Screenshot style: render server-side HTML template, no fal.ai
+      const imageStyle = postData?.clientProfile?.imageStyle;
+      if (imageStyle === "x_screenshot") {
+        const postContent = editedContent || postData?.content || "";
+        const res = await fetch("/api/image/x-screenshot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify({ post: postContent }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error((err as any).error || "X screenshot generation failed.");
+        }
+        // Convert PNG blob → data URL → Firebase Storage URL
+        const blob = await res.blob();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        const firebaseUrl = await uploadDataUrlToStorage(dataUrl, `post-images/${Date.now()}-xshot.png`);
+        setImageUrl(firebaseUrl || dataUrl);
+        return;
+      }
+
       const res = await fetch("/api/image/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -617,13 +644,32 @@ export default function PostPreviewPage() {
       setScheduleMessage(`Scheduled for ${label} (${timezone})${imageStatusMsg}`);
       setShowSchedulePicker(false);
 
-      if (imageMode === "ai" && !immediateImageUrl && imagePrompt && saved?.id) {
-        getAuthToken().then(bgToken => fetch("/api/image/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...(bgToken ? { Authorization: `Bearer ${bgToken}` } : {}) },
-          body: JSON.stringify({ prompt: imagePrompt }),
-        }))
-          .then((r) => r.ok ? r.json() : null)
+      const isXShot = postData?.clientProfile?.imageStyle === "x_screenshot";
+      if (imageMode === "ai" && !immediateImageUrl && (imagePrompt || isXShot) && saved?.id) {
+        const bgPostContent = editedContent || postData?.content || "";
+        getAuthToken().then(bgToken => fetch(
+          isXShot ? "/api/image/x-screenshot" : "/api/image/generate",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(bgToken ? { Authorization: `Bearer ${bgToken}` } : {}) },
+            body: JSON.stringify(isXShot ? { post: bgPostContent } : { prompt: imagePrompt }),
+          }
+        ))
+          .then(async (r) => {
+            if (!r.ok) return null;
+            if (isXShot) {
+              const blob = await r.blob();
+              const dataUrl = await new Promise<string>((res2, rej2) => {
+                const reader = new FileReader();
+                reader.onload = () => res2(reader.result as string);
+                reader.onerror = rej2;
+                reader.readAsDataURL(blob);
+              });
+              const fbUrl = await uploadDataUrlToStorage(dataUrl, `post-images/${Date.now()}-xshot.png`);
+              return fbUrl ? { url: fbUrl } : null;
+            }
+            return r.json();
+          })
           .then((d) => {
             if (d?.url && saved.id) {
               updatePost(saved.id, { image_url: d.url }).catch(() => {});
@@ -1133,13 +1179,13 @@ export default function PostPreviewPage() {
                   </div>
                   <button
                     onClick={() => generateImage(imagePrompt)}
-                    disabled={!imagePrompt || isRegeneratingImage}
+                    disabled={(postData?.clientProfile?.imageStyle !== "x_screenshot" && !imagePrompt) || isRegeneratingImage}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#0A66C2] hover:bg-[#0958A8] text-sm font-medium text-white transition-all disabled:opacity-40"
                   >
                     <Sparkles className="w-4 h-4" />
-                    Generate Image
+                    {postData?.clientProfile?.imageStyle === "x_screenshot" ? "Create X Screenshot" : "Generate Image"}
                   </button>
-                  {!imagePrompt && (
+                  {!imagePrompt && postData?.clientProfile?.imageStyle !== "x_screenshot" && (
                     <p className="text-[11px] text-amber-600">No image prompt available. Regenerate the post first.</p>
                   )}
                 </div>

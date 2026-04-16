@@ -6,7 +6,7 @@ import {
   serverTimestamp 
 } from "firebase/firestore";
 
-export type ImageStyle = "photo" | "illustration" | "abstract" | "3d" | "lineart" | "bw_photo";
+export type ImageStyle = "photo" | "illustration" | "abstract" | "3d" | "lineart" | "bw_photo" | "x_screenshot";
 
 export interface ProfileSegment {
   // Identity
