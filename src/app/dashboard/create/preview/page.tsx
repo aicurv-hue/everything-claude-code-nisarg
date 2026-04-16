@@ -951,12 +951,13 @@ export default function PostPreviewPage() {
           {/* LinkedIn Preview sticky panel */}
           <div className="lg:sticky lg:top-6">
             <LinkedInPostCard
-              name={linkedInUser?.name ?? profileName ?? 'You'}
-              avatarUrl={linkedInUser?.picture ?? profilePhotoUrl ?? ''}
+              name={isCorp ? (profileName ?? 'Company Page') : (linkedInUser?.name ?? profileName ?? 'You')}
+              avatarUrl={isCorp ? '' : (linkedInUser?.picture ?? profilePhotoUrl ?? '')}
               content={editedContent}
               imageUrl={finalImageUrl ?? undefined}
               imageHook={imageHook || undefined}
               isUploadedImage={imageMode === "upload"}
+              isCompany={isCorp}
             />
           </div>
 

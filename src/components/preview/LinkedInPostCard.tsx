@@ -9,6 +9,7 @@ interface LinkedInPostCardProps {
   imageUrl?: string;
   imageHook?: string;
   isUploadedImage?: boolean;
+  isCompany?: boolean;
 }
 
 export default function LinkedInPostCard({
@@ -18,10 +19,13 @@ export default function LinkedInPostCard({
   imageUrl,
   imageHook,
   isUploadedImage = false,
+  isCompany = false,
 }: LinkedInPostCardProps) {
   const initials = name
     ? name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
     : '?';
+
+  const avatarShape = isCompany ? 'rounded-md' : 'rounded-full';
 
   return (
     <div>
@@ -35,10 +39,10 @@ export default function LinkedInPostCard({
             <img
               src={avatarUrl}
               alt={name}
-              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+              className={`w-10 h-10 ${avatarShape} object-cover flex-shrink-0`}
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-xs font-semibold text-gray-600 flex-shrink-0">
+            <div className={`w-10 h-10 ${avatarShape} ${isCompany ? 'bg-violet-100 text-violet-700' : 'bg-gray-300 text-gray-600'} flex items-center justify-center text-xs font-semibold flex-shrink-0`}>
               {initials}
             </div>
           )}
