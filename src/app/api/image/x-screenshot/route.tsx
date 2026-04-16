@@ -4,33 +4,14 @@ import { verifyTokenEdge } from "@/lib/utils/verifyTokenEdge";
 
 export const runtime = "edge";
 
-const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || "";
-const MODEL = "google/gemini-2.0-flash-001";
-
-async function condensePost(post: string): Promise<string> {
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${OPENROUTER_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 120,
-      temperature: 0.7,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a viral content writer. Condense the given LinkedIn post to exactly 40–50 words. Keep the single sharpest insight. Make it feel urgent, real, and scroll-stopping. Output ONLY the condensed text — no labels, no quotes, no preamble.",
-        },
-        { role: "user", content: post },
-      ],
-    }),
-  });
-  if (!res.ok) throw new Error("OpenRouter condensing failed");
-  const data = (await res.json()) as any;
-  return (data.choices?.[0]?.message?.content || "").trim();
+/** Local truncation — no network call, instant. Takes first 2 sentences up to 280 chars. */
+function condensePost(post: string): string {
+  const clean = post.replace(/\n+/g, " ").trim();
+  // Try to end on a sentence boundary within 280 chars
+  const cut = clean.slice(0, 280);
+  const lastPeriod = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+  if (lastPeriod > 80) return cut.slice(0, lastPeriod + 1).trim();
+  return cut.trim() + (clean.length > 280 ? "…" : "");
 }
 
 function rand(min: number, max: number) {
@@ -48,7 +29,7 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: "Missing post text." }), { status: 400 });
   }
 
-  const condensed = await condensePost(post);
+  const condensed = condensePost(post);
 
   // Random engagement numbers (all under 1000)
   const replies   = rand(120, 999);
