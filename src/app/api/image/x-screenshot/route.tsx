@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: "Missing post text." }), { status: 400 });
   }
 
-  const condensed = condensePost(post);
+  const condensed = await condensePost(post);
 
   // Random engagement numbers (all under 1000)
   const replies   = rand(120, 999);
