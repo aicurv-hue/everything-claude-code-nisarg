@@ -45,6 +45,27 @@ export default function SchedulePage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Poll publish-due every 5 min so scheduled posts go live even if cron-job.org misfires
+  useEffect(() => {
+    if (!user) return;
+    const trigger = async () => {
+      try {
+        const token = await getAuthToken();
+        if (!token) return;
+        await fetch("/api/cron/trigger", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        load(true); // refresh post list after trigger
+      } catch {
+        // silent — don't disrupt the UI
+      }
+    };
+    trigger(); // run once on mount
+    const id = setInterval(trigger, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [user, load]);
+
   const handleReschedule = async (postId: string, newDate: Date, tz: string) => {
     const token = await getAuthToken();
     if (!token) return;
