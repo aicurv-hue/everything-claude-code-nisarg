@@ -43,9 +43,9 @@ const IMAGE_STYLE_PREFIXES: Record<string, string> = {
 
 // Maps length label to explicit word-count range and paragraph guidance
 const LENGTH_SPEC: Record<string, { words: string; paragraphs: string }> = {
-  short:  { words: "80–120 words",  paragraphs: "3–4 short paragraphs" },
-  medium: { words: "180–250 words", paragraphs: "5–7 short paragraphs" },
-  long:   { words: "350–450 words", paragraphs: "8–12 short paragraphs" },
+  short:  { words: "120–180 words",  paragraphs: "4–6 short paragraphs" },
+  medium: { words: "200–300 words", paragraphs: "6–9 short paragraphs" },
+  long:   { words: "350–450 words", paragraphs: "9–14 short paragraphs" },
 };
 
 // ─── Prompt section accessor ───────────────────────────────────────────────────

@@ -76,55 +76,90 @@ Never open with it. Use it once mid-body only to validate the point. Never close
 STRUCTURE — FOLLOW EXACTLY
 ══════════════════════════════════════════
 
-HOOK (line 1):
-This is the ONLY line visible before "see more." It must earn the click.
+CHARACTER COUNT TARGET: Aim for 1,200–2,500 characters total (~200–400 words). This is the LinkedIn sweet spot for dwell time. Posts under 500 characters underperform. Posts over 3,000 have diminishing returns.
+
+HOOK (line 1–2):
+This is the ONLY content visible before "see more." It must earn the click.
+– Max 2 lines, ideally 1 line. Each line under 49 characters (mobile truncation).
+– Mobile shows only 3–5 lines (~210 characters) before "see more" — everything critical must be above this fold.
 Apply the hook formula matching the selected tone:
 – PROFESSIONAL / EDUCATIONAL: Use a SPECIFIC number, name, or fact from the research.
 – CONTRARIAN: Lead with a bold opinion or uncomfortable truth. NO stat or percentage in line 1. The hook must make the reader feel something — not recite a number. Opening with a stat on a contrarian post is a failure.
 – STORYTELLING: Open with a vivid, grounded 1-sentence scene. NO stat in line 1.
 One sentence. Questions are allowed ONLY if they are specific and challenge an assumption — never generic or rhetorical.
+– Create a CURIOSITY GAP — the reader must open "see more" to resolve the tension.
+– Front-load the most interesting word in the sentence.
+– Never start with: "I wanted to share...", "Excited to announce...", "In today's digital age..."
 Leave one empty line after the hook before the body.
 
 BODY ({{PARAGRAPHS}}):
 - Each paragraph = max 2 sentences. Leave one empty line between each paragraph.
 - Carry EXACTLY ONE clear idea through the entire post.
+- Keep sentences to 10–19 words each. Write at Grade 5–7 reading level. Short sentences build rhythm and dwell time.
 - Every claim must trace back to a specific insight from the research. EXCEPTION: Contrarian and Storytelling tones — argument is carried by observation and logic. Use research sparingly: max 1 stat for Contrarian, 0–1 for Storytelling.
+- STAT INTEGRITY: Only include a stat if the research provides a verifiable source. Never generate stats from thin air. Prefer first-party data over attributed third-party stats that can't be verified.
 - Translate facts into OUTCOMES for the reader: not "X technology exists" but "X technology means [reader] can now [specific result]."
 - Show the lesson, the result, or the takeaway — not just the information.
 - Use active voice. "We cut costs by 30%" not "Costs were cut by 30%."
 - Be specific over vague: "4 hours to 15 minutes" not "saves time."
-- Never use: streamline, optimize, innovative, leverage, empower, synergy, game-changer, unlock, journey.
+- Never use: streamline, optimize, innovative, leverage, empower, synergy, game-changer, unlock, journey, ecosystem, paradigm.
 Leave one empty line after the body before the CTA.
 
 CTA (1-2 lines):
 Make it specific and low-friction. One of these patterns:
-- Ask a pointed question that invites the reader to share their experience: "What's the one thing holding [audience] back from [specific outcome]?"
-- Name what you want them to do: "Drop a comment if you've seen this in your industry."
+- Ask a specific, easy-to-answer question: "What's your go-to hook format?" or "What's the trade-off you've seen in practice?"
+- Invite a specific response: "Drop your 5 topics below — I'll tell you which would perform best."
+- Sometimes NO question is better — a strong declarative ending works if the body earned it.
 - Never: "Follow me for more tips." "Like and share." "Let me know your thoughts." (too generic)
+- Never: "What's the one thing holding you back from [X]?" — formulaic and overused, LinkedIn NLP flags template patterns.
+- Never: "Drop a 🔥 if you'd try this" or "Comment YES if you agree" — engagement bait triggers immediate reach throttling.
 
-HASHTAGS (mandatory final line):
-3–5 hashtags. Mix 1 broad tag, 2–3 niche tags specific to the topic, and ALWAYS end with #BEAPL.
-Example format: #Manufacturing #EnergyEfficiency #Gujarat #BEAPL
+HASHTAGS (optional final line):
+0–3 hashtags maximum. LinkedIn's 2025–2026 algorithm uses text/topic detection, NOT hashtags. Every hashtag after the 3rd costs reach (up to 81% reduction).
+- Only use hashtags that join real community conversations (#BuildInPublic, #SaaS, #LinkedInMarketing).
+- If the user has a brand hashtag configured (e.g. #BEAPL), include it as one of the 3.
+- If no strong community hashtag exists for the topic, use 0 hashtags. Zero is valid.
+- Never stack 4+ hashtags — reads as spam and triggers algorithmic penalty.
 
 ⚠️ NEVER write the words "BLANK LINE", "HOOK", "BODY", "CTA", "HASHTAGS" or any section labels in the output. Output only the post text itself with real empty lines separating sections.`,
 
   COPYWRITING_RULES: `══════════════════════════════════════════
 COPYWRITING RULES (apply to every sentence)
 ══════════════════════════════════════════
-1. SPECIFICITY OVER VAGUENESS — If the research has a number, use it. Never substitute a number with a vague phrase. EXCEPTION: Contrarian tone — max 1 stat in the entire post. Pick the most surprising one, use it once mid-body. Do not let the research stat count drive the paragraph count.
+1. SPECIFICITY OVER VAGUENESS — If the research has a number, use it — but use AT MOST 2 precise numbers per post. For any additional stats beyond those 2, convert to a written approximation: "48%" → "close to half", "87%" → "nearly 9 in 10". EXCEPTION: Contrarian tone — max 1 stat total.
 2. BENEFITS OVER FEATURES — Don't report what a thing IS. Say what it DOES for the reader.
 3. CLARITY OVER CLEVERNESS — If you're choosing between a smart phrasing and a clear one, pick clear.
 4. SHOW DON'T TELL — "Revenue doubled in 6 months" beats "It was incredibly successful."
 5. NO EXCLAMATION POINTS — They signal weak copy. Let the content carry the energy.
 6. ONE IDEA ONLY — If a second idea creeps in, cut it. One post = one idea = one takeaway.
-7. PATTERN INTERRUPT — The hook must feel unexpected. Challenge what the reader assumes they already know.`,
+7. PATTERN INTERRUPT — The hook must feel unexpected. Challenge what the reader assumes they already know.
+8. NO STAT-VOMIT — Never stack 3+ stats in consecutive paragraphs. Real observations beat fabricated data. If you don't have a verifiable source, drop the stat entirely.
+9. HAVE A POV — Be opinionated. Posts with a clear stance outperform neutral "explainer" posts.
+
+══════════════════════════════════════════
+AI SLOP DETECTION — AVOID THESE PATTERNS
+══════════════════════════════════════════
+LinkedIn's algorithm and readers both catch these telltale signs of AI-generated content (30% lower interaction, 55% less engagement):
+- ❌ Excessive em dashes (—) — use sparingly, max 2–3 per post
+- ❌ "In today's digital age...", "In the ever-evolving landscape..."
+- ❌ Corporate jargon: game-changer, leverage, synergy, ecosystem, paradigm, cutting-edge, revolutionary
+- ❌ Perfect-sounding but empty sentences with no concrete detail
+- ❌ Every paragraph being exactly 2 sentences with identical rhythm
+- ❌ Symmetric structure (exactly 3 bullets, exactly 3 stats, exactly 3 examples) — vary the count
+- ❌ Overly smooth transitions: "Furthermore," "Moreover," "Additionally," "That being said,"
+- ❌ Suspiciously clean round numbers: "exactly 40%", "precisely 55%" — real data has odd numbers
+- ❌ Using * or ** for bullets or bold — LinkedIn renders asterisks literally, signals AI immediately
+- ❌ Vague motivational fluff: "You got this!", "The future is now", "It's time to level up"`,
 
   FORMATTING: `══════════════════════════════════════════
-FORMATTING
+FORMATTING — OPTIMIZED FOR DWELL TIME
 ══════════════════════════════════════════
-- EMOJIS: 2–3 max. Place one near the hook area, one mid-body for emphasis, one optional in CTA. Never decorate every line.
-- LINE BREAKS: One blank line between every paragraph. LinkedIn collapses walls of text.
-- ALL CAPS: 1–2 words max per post, for single key emphasis only. Never full sentences.`,
+- EMOJIS: 1–3 max. Use as visual anchors (✅, →) to replace bullets, not as decoration. Never decorate every line with random emojis (⏱️🤔💪🤖 = AI slop signature).
+- LINE BREAKS: One blank line between every paragraph. Break every 1–2 sentences. White space drives dwell time — LinkedIn's algorithm tracks a "silent stopwatch" when your post enters someone's screen. Dense text blocks = fast scroll-past = negative signal.
+- ALL CAPS: 1–2 words max per post, for single key emphasis only. Never full sentences.
+- NO ASTERISKS: Never use * or ** for bullets or bold. Use – (en-dash) for list items.
+- SENTENCE LENGTH: Keep sentences to 10–19 words. Grade 5–7 reading level. Short declarative sentences build scroll-stopping rhythm.
+- NO EXTERNAL LINKS: Never include URLs in the post body — causes 60% reach reduction. If linking is needed, write "link in comments."`,
 
   INTENT_DETECTION: `══════════════════════════════════════════
 STEP ZERO — READ THE TOPIC BEFORE WRITING ANYTHING
