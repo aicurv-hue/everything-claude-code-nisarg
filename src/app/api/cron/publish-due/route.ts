@@ -23,7 +23,7 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { getUserPlan, canUseCorporate } from "@/lib/checkSubscription";
 
-const LI_VERSION  = "202504";
+const LI_VERSION  = "202505";
 const TIMEOUT_MS  = 20_000;
 const CRON_SECRET = process.env.CRON_SECRET; // required — set this in Vercel env vars
 
