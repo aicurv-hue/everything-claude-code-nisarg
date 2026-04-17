@@ -447,7 +447,7 @@ function PostDetailModal({
 export default function HistoryPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { segment, isIndividual, isCorporate } = useSegment();
+  const { segment, isIndividual, isCorporate, segmentReady } = useSegment();
   const [posts, setPosts]               = useState<Post[]>([]);
   const [isLoading, setIsLoading]       = useState(true);
   const [searchTerm, setSearchTerm]     = useState("");
@@ -472,7 +472,7 @@ export default function HistoryPage() {
     : "bg-blue-50 border-blue-300 text-[#0A66C2]";
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !segmentReady) return;
     async function loadHistory() {
       setIsLoading(true);
       try {
@@ -490,7 +490,7 @@ export default function HistoryPage() {
       }
     }
     loadHistory();
-  }, [segment, user]);
+  }, [segment, user, segmentReady]);
 
   const sortSecs = (p: Post) => {
     if (p.status === "published") return p.published_at?.seconds ?? p.created_at?.seconds ?? 0;

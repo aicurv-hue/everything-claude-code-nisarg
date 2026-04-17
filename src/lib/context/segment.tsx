@@ -9,6 +9,7 @@ interface SegmentContextValue {
   setSegment: (s: Segment) => void;
   isIndividual: boolean;
   isCorporate: boolean;
+  segmentReady: boolean;
 }
 
 const SegmentContext = createContext<SegmentContextValue>({
@@ -16,14 +17,16 @@ const SegmentContext = createContext<SegmentContextValue>({
   setSegment: () => {},
   isIndividual: true,
   isCorporate: false,
+  segmentReady: false,
 });
 
 const STORAGE_KEY = "cridl_active_segment";
 
 export function SegmentProvider({ children }: { children: React.ReactNode }) {
   const [segment, setSegmentState] = useState<Segment>("individual");
+  const [segmentReady, setSegmentReady] = useState(false);
 
-  // Read from localStorage on mount
+  // Read from localStorage on mount — sets segmentReady when done
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY) as Segment | null;
@@ -31,6 +34,7 @@ export function SegmentProvider({ children }: { children: React.ReactNode }) {
         setSegmentState(stored);
       }
     } catch {}
+    setSegmentReady(true);
   }, []);
 
   const setSegment = useCallback((s: Segment) => {
@@ -44,6 +48,7 @@ export function SegmentProvider({ children }: { children: React.ReactNode }) {
       setSegment,
       isIndividual: segment === "individual",
       isCorporate:  segment === "corporate",
+      segmentReady,
     }}>
       {children}
     </SegmentContext.Provider>

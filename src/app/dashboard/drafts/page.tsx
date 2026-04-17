@@ -12,7 +12,7 @@ import { FileText, Clock, Edit3, Trash2, Send, RefreshCw } from "lucide-react";
 export default function DraftsPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { segment, isIndividual, isCorporate } = useSegment();
+  const { segment, isIndividual, isCorporate, segmentReady } = useSegment();
   const [drafts, setDrafts]     = useState<Post[]>([]);
   const [loading, setLoading]   = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -22,6 +22,7 @@ export default function DraftsPage() {
   const accentBadge = isCorporate ? "bg-violet-50 text-violet-700 border-violet-200" : "bg-blue-50 text-blue-700 border-blue-200";
 
   const loadDrafts = useCallback(async () => {
+    if (!segmentReady) return;
     setLoading(true);
     try {
       const token = await getAuthToken();
@@ -41,7 +42,7 @@ export default function DraftsPage() {
     } finally {
       setLoading(false);
     }
-  }, [segment, user]);
+  }, [segment, user, segmentReady]);
 
   useEffect(() => { loadDrafts(); }, [loadDrafts]);
 

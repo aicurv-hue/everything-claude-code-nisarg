@@ -16,14 +16,14 @@ const STATUS_CONFIG = {
 
 export default function CampaignsPage() {
   const { user } = useAuth();
-  const { segment } = useSegment();
+  const { segment, segmentReady } = useSegment();
   const router = useRouter();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
 
   const load = async () => {
-    if (!user) return;
+    if (!user || !segmentReady) return;
     setLoading(true);
     try {
       const token = await getAuthToken();
@@ -37,7 +37,7 @@ export default function CampaignsPage() {
     }
   };
 
-  useEffect(() => { load(); }, [user, segment]);
+  useEffect(() => { load(); }, [user, segment, segmentReady]);
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();

@@ -14,7 +14,7 @@ import PostDetailDrawer from "@/components/schedule/PostDetailDrawer";
 
 export default function SchedulePage() {
   const { user } = useAuth();
-  const { segment, isCorporate } = useSegment();
+  const { segment, isCorporate, segmentReady } = useSegment();
   const router = useRouter();
 
   const [posts, setPosts]         = useState<Post[]>([]);
@@ -26,7 +26,7 @@ export default function SchedulePage() {
   const accentBg    = isCorporate ? "bg-violet-50 border-violet-200" : "bg-blue-50 border-blue-200";
 
   const load = useCallback(async (silent = false) => {
-    if (!user) return; // wait for auth to hydrate
+    if (!user || !segmentReady) return; // wait for auth and segment to hydrate
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
@@ -41,7 +41,7 @@ export default function SchedulePage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [segment, user]);
+  }, [segment, user, segmentReady]);
 
   useEffect(() => { load(); }, [load]);
 

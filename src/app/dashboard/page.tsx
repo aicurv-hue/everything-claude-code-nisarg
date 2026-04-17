@@ -101,7 +101,7 @@ const STATUS_ICON_BG: Record<string, string> = {
 
 export default function DashboardHomePage() {
   const { user } = useAuth();
-  const { segment, isIndividual, isCorporate } = useSegment();
+  const { segment, isIndividual, isCorporate, segmentReady } = useSegment();
   const searchParams = useSearchParams();
   const [welcomeDismissed, setWelcomeDismissed] = useState(true); // default hidden until checked
   const welcomePlan = searchParams.get("plan") || "Pro";
@@ -132,7 +132,7 @@ export default function DashboardHomePage() {
   const accentBg    = isCorporate ? "bg-violet-50 border-violet-200" : "bg-blue-50 border-blue-200";
 
   const loadAll = useCallback(async (silent = false) => {
-    if (!user) return;
+    if (!user || !segmentReady) return;
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
@@ -170,9 +170,9 @@ export default function DashboardHomePage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user, segment]);
+  }, [user, segment, segmentReady]);
 
-  useEffect(() => { if (user) loadAll(); }, [user, segment, loadAll]);
+  useEffect(() => { if (user && segmentReady) loadAll(); }, [user, segment, segmentReady, loadAll]);
 
   // Handle ?linkedin_connected=true redirect from OAuth callback
   useEffect(() => {

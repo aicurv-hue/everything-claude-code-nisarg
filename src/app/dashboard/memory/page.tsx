@@ -52,7 +52,7 @@ const TONE_BAR: Record<string, string> = {
 
 export default function MemoryPage() {
   const { user }                               = useAuth();
-  const { segment, isIndividual, isCorporate } = useSegment();
+  const { segment, isIndividual, isCorporate, segmentReady } = useSegment();
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const [samples,  setSamples]  = useState<PostMemory[]>([]);   // user_upload
@@ -82,6 +82,7 @@ export default function MemoryPage() {
 
   // ── Load ──────────────────────────────────────────────────────────────────
   const load = useCallback(async (silent = false) => {
+    if (!segmentReady) return;
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
@@ -124,7 +125,7 @@ export default function MemoryPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [segment, user]);
+  }, [segment, user, segmentReady]);
 
   const commitDelete = async (id: string, sourceType: "auto" | "user_upload" | "user_url") => {
     setDeletingId(id);
