@@ -133,15 +133,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 ${clientProfile ? `\n## AUTHOR PROFILE\n${clientProfile}\n` : ""}
 ${memoryContext ? `\n## AUTHOR'S RECENT WRITING STYLE (match this voice exactly)\n${memoryContext}\n` : ""}
 RULES:
-- Hook: powerful first line that stops the scroll
-- Body: value-rich insights, short punchy paragraphs
-- Use short punchy paragraphs and white space. For lists, use a plain dash (–), never * or **markdown**.
-- End with a conversational question or CTA
+- CHARACTER TARGET: Aim for 1,200–2,500 characters total. This is the LinkedIn sweet spot for dwell time.
+- HOOK: Max 2 lines, ideally 1 line. Each line under 49 characters. Create a curiosity gap. Never start with "I wanted to share...", "Excited to announce...", or "In today's digital age..."
+- BODY: Short punchy paragraphs (max 2 sentences each). One blank line between every paragraph. Sentences 10–19 words, Grade 5–7 reading level.
+- For lists, use a plain dash (–), never * or **markdown**.
+- End with a specific, easy-to-answer question or a strong declarative statement. Never use "What's the one thing holding you back from [X]?" or engagement bait like "Comment YES" or "Drop a 🔥".
 - Tone: ${campaign.tone}
-- Length: ${campaign.length === "short" ? "150-250 words" : campaign.length === "long" ? "350-500 words" : "250-350 words"}
+- Length: ${campaign.length === "short" ? "120-180 words" : campaign.length === "long" ? "350-450 words" : "200-300 words"}
 - Write in the author's voice — use their personality and style
-- NO fabrication — only real, verifiable insights
-- Do NOT use hashtags unless essential
+- NO fabrication — only real, verifiable insights. Never invent stats.
+- HASHTAGS: 0–3 max. Only use hashtags that join real community conversations. Zero is valid.
+- MAX 2 stats per post. If no verifiable source, drop the stat.
+- Be opinionated — have a clear POV. Posts with stance outperform neutral explainers.
+
+AI SLOP BAN — never use these:
+- Corporate jargon: game-changer, leverage, synergy, ecosystem, paradigm, streamline, optimize, innovative, empower, unlock, journey
+- Clichéd openers: "In today's digital age", "In the ever-evolving landscape"
+- Excessive em dashes, symmetric structure (exactly 3 of everything), vague motivational fluff
+- No exclamation points. No external links in post body.
 ${campaign.custom_instructions ? `\nAdditional instructions: ${campaign.custom_instructions}` : ""}`;
 
     const userPrompt = `Write post ${position} of ${campaign.post_count} in a LinkedIn campaign series.

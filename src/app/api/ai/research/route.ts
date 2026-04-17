@@ -20,6 +20,21 @@ function extractJSON(text: string): any {
   }
 }
 
+// ── Intent detection — matches research.ts server action logic ────────────
+const PERSONAL_SIGNALS = [
+  /\bwatched\b/, /\bsaw\b/, /\bfilm\b/, /\bmovie\b/, /\bbook\b/,
+  /\bpodcast\b/, /\blistened\b/, /\bread\b/,
+  /\bsharing my thoughts?\b/, /\bjust (thinking|reflecting)\b/,
+  /\bmy (opinion|view|take)\b/, /\bi (realized|noticed|felt)\b/,
+  /\bpersonal(ly)?\b/, /\blife lesson\b/, /\bunpopular opinion\b/,
+  /\brecently i\b/,
+];
+
+function detectIntent(topic: string): "personal" | "professional" {
+  const lower = topic.toLowerCase();
+  return PERSONAL_SIGNALS.some((re) => re.test(lower)) ? "personal" : "professional";
+}
+
 export async function POST(req: NextRequest) {
   const uid = await verifyTokenEdge(req.headers.get("authorization"));
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -33,6 +48,7 @@ export async function POST(req: NextRequest) {
 
     const { segment = "individual", tone = "professional", audience: rawAudience = "general", length = "medium", clientProfile } = options;
     const audience = sanitizePromptInput(rawAudience, 150);
+    const intentType = detectIntent(topic);
 
     // Check in-process cache — skip AI call if same user+topic+audience was researched recently
     // (Only cache when there's no custom sourceContext — cached results won't reflect new source material)
@@ -44,10 +60,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // For personal topics: strip brand/product fields so research doesn't inject industry content
     const profileLines = clientProfile ? [
-      clientProfile.niche         && `- Niche: ${clientProfile.niche}`,
-      clientProfile.bioOrOffering && `- Offering: ${clientProfile.bioOrOffering}`,
-      clientProfile.icp           && `- Target customer: ${clientProfile.icp}`,
+      intentType === "professional" && clientProfile.niche         && `- Niche: ${clientProfile.niche}`,
+      intentType === "professional" && clientProfile.bioOrOffering && `- Offering: ${clientProfile.bioOrOffering}`,
+      intentType === "professional" && clientProfile.icp           && `- Target customer: ${clientProfile.icp}`,
     ].filter(Boolean) : [];
     const clientContext = profileLines.length > 0 ? `\nClient context:\n${profileLines.join("\n")}` : "";
 
@@ -55,16 +72,26 @@ export async function POST(req: NextRequest) {
       ? `\n\nSOURCE MATERIAL PROVIDED BY USER — treat this as primary context for the research:\n"""\n${sourceContext}\n"""\nExtract insights, data points, and angles directly from this material where relevant.`
       : "";
 
-    const prompt = `You are an expert LinkedIn content researcher.
+    const researcherRole = intentType === "personal"
+      ? `You are a research journalist and cultural analyst.`
+      : `You are an expert LinkedIn content researcher.`;
+
+    const researchRules = intentType === "personal"
+      ? `Rules:
+- This is a personal story or reflection post. Research the TOPIC ITSELF — factual context, cultural/historical background, relevant human truths.
+- Do NOT inject business metrics, automation statistics, or industry data unless the topic explicitly mentions them.
+- Every insight must deepen or contextualize the topic as a human experience.`
+      : `Rules: specific data-backed insights (numbers, companies, trends), prefer 2024-2026 data, no generic claims.`;
+
+    const prompt = `${researcherRole}
 
 Produce a research report to power a single LinkedIn post:
 - Topic: "${topic}"
-- Tone: ${tone}
-- Audience: ${audience}
+- Tone: ${tone}${intentType === "professional" ? `\n- Audience: ${audience}` : ""}
 - Length: ${length}
 - Voice: ${segment === "individual" ? "personal brand, first-person" : "corporate brand"}${clientContext}${sourceBlock}
 
-Rules: specific data-backed insights (numbers, companies, trends), prefer 2024-2026 data, no generic claims.
+${researchRules}
 
 Return ONLY valid JSON:
 {
@@ -121,6 +148,7 @@ Return ONLY valid JSON:
         summary: `Research on "${topic}" is currently unavailable. The post will be generated from your existing brand context and the topic description.`,
         insights: [{ title: topic, content: `Explore the key dimensions of ${topic} relevant to ${audience}.`, source: "Fallback" }],
         references: [],
+        intentType,
       });
     }
 
@@ -132,10 +160,11 @@ Return ONLY valid JSON:
         topic, summary: `Research on "${topic}" completed.`,
         insights: [{ title: "Topic Overview", content: `Key aspects of ${topic} for ${audience}.`, source: "AI" }],
         references: [],
+        intentType,
       });
     }
 
-    const result = { topic, ...synthesis };
+    const result = { topic, ...synthesis, intentType };
     // Store in cache (only when no sourceContext was used — cached results are topic-generic)
     if (!sourceContext) {
       researchCache.set(cacheKey, { result, cachedAt: Date.now() });
