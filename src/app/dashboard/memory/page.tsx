@@ -199,7 +199,7 @@ export default function MemoryPage() {
       if (data.entries?.length > 0) {
         setSamples((prev) => [data.entries[0], ...prev]);
       }
-      setUploadMsg({ type: "success", text: "Writing sample added! Neel will use it from your next post." });
+      setUploadMsg({ type: "success", text: "Writing sample added! Cortex will use it from your next post." });
       setPastedText("");
       setTimeout(() => { setShowModal(false); setUploadMsg(null); }, 2000);
     } catch (err: any) {
@@ -244,7 +244,7 @@ export default function MemoryPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Memory Bank</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            {isIndividual ? "Personal" : "Corporate"} · What Neel knows about your writing voice and past content
+            {isIndividual ? "Personal" : "Corporate"} · What Cortex knows about your writing voice and past content
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -279,7 +279,7 @@ export default function MemoryPage() {
               </span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Paste real posts you wrote before using Cridl. Neel uses these as your voice bible — making every post sound unmistakably like you.
+              Paste real posts you wrote before using Cridl. Cortex uses these as your voice bible — making every post sound unmistakably like you.
             </p>
           </div>
           <button
@@ -317,7 +317,7 @@ export default function MemoryPage() {
             <Sparkles className={`w-8 h-8 mx-auto mb-3 ${isCorporate ? "text-violet-300" : "text-blue-300"}`} />
             <p className="text-sm font-semibold text-slate-700 mb-1">No writing samples yet</p>
             <p className="text-xs text-slate-500 mb-4 max-w-sm mx-auto leading-relaxed">
-              Paste 3–5 of your best past LinkedIn posts. Neel will analyse your sentence rhythm, vocabulary, and style to write posts that sound exactly like you.
+              Paste 3–5 of your best past LinkedIn posts. Cortex will analyse your sentence rhythm, vocabulary, and style to write posts that sound exactly like you.
             </p>
             <button
               onClick={() => { setPastedText(""); setUploadMsg(null); setShowModal(true); }}
@@ -397,7 +397,7 @@ export default function MemoryPage() {
             <span className="text-xs font-normal text-slate-400 ml-1">({memories.length})</span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Automatically built from every post that went live via Cridl. Neel reads these to avoid repeating the same angles.
+            Automatically built from every post that went live via Cridl. Cortex reads these to avoid repeating the same angles.
           </p>
         </div>
 
@@ -406,7 +406,7 @@ export default function MemoryPage() {
             <Brain className="w-8 h-8 mx-auto mb-3 text-slate-300" />
             <p className="text-sm font-semibold text-slate-700 mb-2">No published posts yet</p>
             <p className="text-xs text-slate-500 mb-5 max-w-sm mx-auto">
-              Publish your first post and Neel will automatically save the topic, angle, and style fingerprint here.
+              Publish your first post and Cortex will automatically save the topic, angle, and style fingerprint here.
             </p>
             <Link
               href="/dashboard/create"
@@ -500,11 +500,11 @@ export default function MemoryPage() {
               {/* How memory works */}
               <div className={`card p-5 border-l-4 ${accentBorder} space-y-4`}>
                 <h3 className={`text-sm font-semibold flex items-center gap-2 ${accentColor}`}>
-                  <Brain className="w-3.5 h-3.5" /> How Neel Uses This
+                  <Brain className="w-3.5 h-3.5" /> How Cortex Uses This
                 </h3>
                 <div className="space-y-3">
                   {[
-                    "Before writing, Neel retrieves your 5 most relevant past entries based on your topic.",
+                    "Before writing, Cortex retrieves your 5 most relevant past entries based on your topic.",
                     "He reads the summaries AND your writing style to understand what has been covered and how you write.",
                     "He decides: deepen the same thread, or take a fresh dimension — always sounding like you.",
                     "He never invents personal facts. Only what's in your profile or the research is used.",
@@ -589,7 +589,7 @@ export default function MemoryPage() {
               <div>
                 <h3 className="text-base font-bold text-slate-900">Add Writing Sample</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Paste a real LinkedIn post you wrote. Neel will learn your voice, rhythm, and style.
+                  Paste a real LinkedIn post you wrote. Cortex will learn your voice, rhythm, and style.
                 </p>
               </div>
               <button
@@ -634,7 +634,7 @@ export default function MemoryPage() {
               <textarea
                 value={pastedText}
                 onChange={(e) => setPastedText(e.target.value)}
-                placeholder="Paste a LinkedIn post you wrote here. The more authentic the better — this teaches Neel exactly how you write..."
+                placeholder="Paste a LinkedIn post you wrote here. The more authentic the better — this teaches Cortex exactly how you write..."
                 rows={8}
                 className="w-full text-sm border border-slate-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 text-slate-700 leading-relaxed placeholder:text-slate-300"
               />

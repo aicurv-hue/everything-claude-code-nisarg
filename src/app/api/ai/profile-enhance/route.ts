@@ -3,7 +3,7 @@
  *
  * Enhances a single settings profile field using Gemini Flash.
  * Takes the field name, current value, and other filled profile fields as context.
- * Returns an improved version optimised for Neel's AI pipeline.
+ * Returns an improved version optimised for Cortex's AI pipeline.
  *
  * Edge Runtime — no timeout limit.
  */
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
       ? `\n\nPROFILE CONTEXT — use this to make the output specific and relevant to this person:\n${contextLines.join("\n")}`
       : "";
 
-    const systemPrompt = `You are an expert LinkedIn content strategist helping a ${profileType === "corporate" ? "company" : "professional"} set up their AI writing profile. Your job is to take rough, vague profile inputs and transform them into sharp, specific descriptions that will make an AI content generator (called Neel) produce far better LinkedIn posts.
+    const systemPrompt = `You are an expert LinkedIn content strategist helping a ${profileType === "corporate" ? "company" : "professional"} set up their AI writing profile. Your job is to take rough, vague profile inputs and transform them into sharp, specific descriptions that will make an AI content generator (called Cortex) produce far better LinkedIn posts.
 
 Every output must be concrete, specific, and immediately useful. No fluff. No marketing clichés. No generic advice.${contextBlock}`;
 

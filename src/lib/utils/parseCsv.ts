@@ -2,10 +2,10 @@
  * CSV parser for bulk post scheduling.
  *
  * Column structure (new format — date + time split):
- *   topic        REQ  — What the post is about. Neel generates the post from this.
+ *   topic        REQ  — What the post is about. Cortex generates the post from this.
  *   date         REQ  — Publish date: YYYY-MM-DD (e.g. 2026-06-15)
  *   time         REQ  — Publish time: HH:mm 24-hour (e.g. 09:30)
- *   content      OPT  — Pre-written post text. If provided, used as-is. If blank, Neel generates at publish time.
+ *   content      OPT  — Pre-written post text. If provided, used as-is. If blank, Cortex generates at publish time.
  *   tone         OPT  — professional | storytelling | educational | contrarian (default: professional)
  *   audience     OPT  — Your target reader description (default: general)
  *   length       OPT  — short | medium | long (default: medium)
@@ -18,7 +18,7 @@
 export interface ParsedCsvRow {
   topic: string;
   scheduled_at: string;   // ISO string, derived from date+time or scheduled_at column
-  content?: string;       // Optional pre-written post. If absent, Neel generates at publish.
+  content?: string;       // Optional pre-written post. If absent, Cortex generates at publish.
   tone?: string;
   audience?: string;
   length?: string;
@@ -140,7 +140,7 @@ export function parseCsv(rawText: string): ParseCsvResult {
 
   // Require: topic + (date & time) OR (scheduled_at)
   if (!hasTopicCol) {
-    return { rows: [], validations: [], errors: [], fileError: 'Missing required column: "topic". This is what the post is about — Neel generates from it.' };
+    return { rows: [], validations: [], errors: [], fileError: 'Missing required column: "topic". This is what the post is about — Cortex generates from it.' };
   }
   if (!hasDateCol && !hasScheduledAt) {
     return { rows: [], validations: [], errors: [], fileError: 'Missing required column: "date" (format: YYYY-MM-DD, e.g. 2026-06-15)' };
@@ -227,7 +227,7 @@ export function parseCsv(rawText: string): ParseCsvResult {
       tone:     tone || "(default: professional)",
       audience: audience || "(default: general)",
       length:   length || "(default: medium)",
-      content:  content ? `${content.slice(0, 60)}${content.length > 60 ? "…" : ""}` : "(Neel generates this)",
+      content:  content ? `${content.slice(0, 60)}${content.length > 60 ? "…" : ""}` : "(Cortex generates this)",
       timezone: timezone || "(uses your browser timezone)",
       errors:   fieldErrors,
       isValid,
@@ -255,4 +255,4 @@ export function parseCsv(rawText: string): ParseCsvResult {
 
 export const CSV_TEMPLATE = `topic,date,time,content,tone,audience,length,timezone
 My first LinkedIn topic — what the post is about,01-Apr-26,09:00,,professional,LinkedIn professionals,medium,Asia/Kolkata
-Second topic — Neel generates if content is blank,03-Apr-26,17:00,,storytelling,Startup founders,short,Asia/Kolkata`;
+Second topic — Cortex generates if content is blank,03-Apr-26,17:00,,storytelling,Startup founders,short,Asia/Kolkata`;

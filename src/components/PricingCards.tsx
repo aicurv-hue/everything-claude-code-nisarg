@@ -10,7 +10,7 @@ const LIMIT_NOTE = "Each generation & regeneration counts toward your monthly li
 const FREE_PLAN = {
   name: "Free",
   price: "₹0",
-  features: ["10 posts/month", "5 AI images/month", "Scheduling", LIMIT_NOTE],
+  features: ["5 posts/month", "2 AI images/month", "Scheduling", LIMIT_NOTE],
   popular: false,
   planId: null,
 };
@@ -22,7 +22,7 @@ const PAID_PLANS = [
     yearlyPrice: 4990,
     monthlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_STARTER || "").trim(),
     yearlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_STARTER_YEARLY || "").trim(),
-    features: ["45 posts/month", "20 AI images/month", "5 Face images/month", "Scheduling", LIMIT_NOTE],
+    features: ["30 posts/month", "10 AI images/month", "5 Face images/month", "Scheduling", LIMIT_NOTE],
     popular: false,
   },
   {
@@ -31,7 +31,7 @@ const PAID_PLANS = [
     yearlyPrice: 9990,
     monthlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_PRO || "").trim(),
     yearlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_PRO_YEARLY || "").trim(),
-    features: ["100 posts/month", "50 AI images/month", "10 Face images/month", "Scheduling", "Campaigns", "Company page", LIMIT_NOTE],
+    features: ["100 posts/month", "50 AI images/month", "20 Face images/month", "Scheduling", "Campaigns", "Company page", LIMIT_NOTE],
     popular: true,
   },
   {
@@ -40,7 +40,7 @@ const PAID_PLANS = [
     yearlyPrice: 19990,
     monthlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_BUSINESS || "").trim(),
     yearlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_BUSINESS_YEARLY || "").trim(),
-    features: ["Unlimited posts", "100 AI images/month", "20 Face images/month", "Scheduling", "Campaigns", "Company page", LIMIT_NOTE],
+    features: ["Unlimited posts", "Unlimited AI images", "Unlimited Face images", "Scheduling", "Campaigns", "Company page", LIMIT_NOTE],
     popular: false,
   },
 ];

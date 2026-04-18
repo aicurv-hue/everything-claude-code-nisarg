@@ -3,10 +3,10 @@ import { adminDb } from "./firebase-admin";
 export type PlanName = "free" | "starter" | "pro" | "business";
 
 export const PLAN_LIMITS = {
-  free:     { postsPerMonth: 10,  imagesPerMonth: 5,   faceImagesPerMonth: 0,  profiles: 1, companyPages: 0, campaigns: false, corporate: false },
-  starter:  { postsPerMonth: 45,  imagesPerMonth: 20,  faceImagesPerMonth: 5,  profiles: 1, companyPages: 0, campaigns: false, corporate: false },
-  pro:      { postsPerMonth: 100, imagesPerMonth: 50,  faceImagesPerMonth: 10, profiles: 1, companyPages: 1, campaigns: true,  corporate: true  },
-  business: { postsPerMonth: 9999, imagesPerMonth: 100, faceImagesPerMonth: 20, profiles: 3, companyPages: 3, campaigns: true,  corporate: true  },
+  free:     { postsPerMonth: 5,    imagesPerMonth: 2,    faceImagesPerMonth: 0,  profiles: 1, companyPages: 0, campaigns: false, corporate: false },
+  starter:  { postsPerMonth: 30,   imagesPerMonth: 10,   faceImagesPerMonth: 5,  profiles: 1, companyPages: 0, campaigns: false, corporate: false },
+  pro:      { postsPerMonth: 100,  imagesPerMonth: 50,   faceImagesPerMonth: 20, profiles: 1, companyPages: 1, campaigns: true,  corporate: true  },
+  business: { postsPerMonth: 9999, imagesPerMonth: 9999, faceImagesPerMonth: 9999, profiles: 3, companyPages: 3, campaigns: true,  corporate: true  },
 } as const;
 
 export const PLAN_IDS: Record<string, PlanName> = {

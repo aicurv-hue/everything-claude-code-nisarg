@@ -476,7 +476,7 @@ export default function SettingsPage() {
         {activeTab === "identity" && (
           <div className="space-y-5">
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700 leading-relaxed">
-              <strong>This tab tells Neel who you are.</strong> Every post will be written from this identity. The more specific you are here, the more authoritative and grounded your posts will sound.
+              <strong>This tab tells Cortex who you are.</strong> Every post will be written from this identity. The more specific you are here, the more authoritative and grounded your posts will sound.
             </div>
 
             {/* Profile Photo — Individual only */}
@@ -556,7 +556,7 @@ export default function SettingsPage() {
                   placeholder={profileType === "individual" ? "e.g. AI Workflow Automation for mid-size manufacturers" : "e.g. Enterprise CRM solutions for logistics companies"}
                   className={inputClass}
                 />
-                <FieldHint>Neel will stay inside this lane — every post reinforces your authority in this exact space.</FieldHint>
+                <FieldHint>Cortex will stay inside this lane — every post reinforces your authority in this exact space.</FieldHint>
               </div>
               {profileType === "corporate" && (
                 <div className="col-span-2">
@@ -587,7 +587,7 @@ export default function SettingsPage() {
                     ? "Tell your story: background, what you do, what you've built or achieved. Be specific — real details create real credibility."
                     : "What your company does, who you serve, what results you deliver. Include founding story or key milestones if relevant."}
                 />
-                <FieldHint>The richer this is, the more personal and genuine the posts will feel. Neel draws from this — never fabricates beyond it.</FieldHint>
+                <FieldHint>The richer this is, the more personal and genuine the posts will feel. Cortex draws from this — never fabricates beyond it.</FieldHint>
               </div>
             </div>
           </div>
@@ -597,7 +597,7 @@ export default function SettingsPage() {
         {activeTab === "audience" && (
           <div className="space-y-5">
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700 leading-relaxed">
-              <strong>This tab tells Neel who is reading the post.</strong> Research sub-questions and every insight will be filtered to be relevant to these exact people — not a generic audience.
+              <strong>This tab tells Cortex who is reading the post.</strong> Research sub-questions and every insight will be filtered to be relevant to these exact people — not a generic audience.
             </div>
             <div>
               <label className={`${labelClass} flex items-center gap-1.5`}>
@@ -634,7 +634,7 @@ export default function SettingsPage() {
                 <input value={currentProfile.jtbd} onChange={e => handleFieldChange("jtbd", e.target.value)}
                   placeholder="e.g. Reduce energy costs by 15–30% without buying new equipment"
                   className={inputClass} />
-                <FieldHint>Neel probes this exact outcome in research — making every post feel like it addresses what your buyer cares about most.</FieldHint>
+                <FieldHint>Cortex probes this exact outcome in research — making every post feel like it addresses what your buyer cares about most.</FieldHint>
                 <ProfileAIAssist field="jtbd" value={currentProfile.jtbd} context={currentProfile as unknown as Record<string,string>} profileType={profileType} onApply={v => handleFieldChange("jtbd", v)} />
               </div>
             </div>
@@ -645,7 +645,7 @@ export default function SettingsPage() {
         {activeTab === "branding" && (
           <div className="space-y-5">
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700 leading-relaxed">
-              <strong>This tab defines your brand lane.</strong> Neel will only write about your content pillars and will weave your USP and personality into every post naturally.
+              <strong>This tab defines your brand lane.</strong> Cortex will only write about your content pillars and will weave your USP and personality into every post naturally.
             </div>
             <div>
               <label className={`${labelClass} flex items-center gap-1.5`}>
@@ -659,7 +659,7 @@ export default function SettingsPage() {
               <input value={currentProfile.pillars} onChange={e => handleFieldChange("pillars", e.target.value)}
                 placeholder="e.g. Energy Efficiency, Manufacturing Operations, Sustainability, Cost Reduction"
                 className={inputClass} />
-              <FieldHint>Separate topics with commas. Neel will stay inside these lanes and never stray into unrelated territory.</FieldHint>
+              <FieldHint>Separate topics with commas. Cortex will stay inside these lanes and never stray into unrelated territory.</FieldHint>
               <ProfileAIAssist field="pillars" value={currentProfile.pillars} context={currentProfile as unknown as Record<string,string>} profileType={profileType} onApply={v => handleFieldChange("pillars", v)} />
             </div>
             <div>
@@ -677,13 +677,13 @@ export default function SettingsPage() {
               <label className={`${labelClass} flex items-center gap-1.5`}>
                 Unique Selling Proposition
                 <HelpTooltip
-                  text="What makes you or your company different from a direct competitor? Be specific — generic USPs like 'we care about clients' don't help Neel differentiate your content."
+                  text="What makes you or your company different from a direct competitor? Be specific — generic USPs like 'we care about clients' don't help Cortex differentiate your content."
                   example="e.g. 'The only energy auditor in Gujarat who guarantees 15% savings in writing before starting the engagement'"
                   width="w-80"
                 />
               </label>
               <textarea value={currentProfile.usp} onChange={e => handleFieldChange("usp", e.target.value)} placeholder="e.g. The only [category] that [specific differentiator] — with [proof]." rows={3} className={textareaClass} />
-              <FieldHint>Neel weaves this in naturally — it differentiates your posts from anyone else writing about the same topics.</FieldHint>
+              <FieldHint>Cortex weaves this in naturally — it differentiates your posts from anyone else writing about the same topics.</FieldHint>
               <ProfileAIAssist field="usp" value={currentProfile.usp} context={currentProfile as unknown as Record<string,string>} profileType={profileType} onApply={v => handleFieldChange("usp", v)} />
             </div>
           </div>
@@ -693,7 +693,7 @@ export default function SettingsPage() {
         {activeTab === "voice" && (
           <div className="space-y-5">
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700 leading-relaxed">
-              <strong>This is the highest-impact tab for hook quality.</strong> Neel uses your customer's exact language to write hooks that make readers think "this post is written for me."
+              <strong>This is the highest-impact tab for hook quality.</strong> Cortex uses your customer's exact language to write hooks that make readers think "this post is written for me."
             </div>
             <div>
               <label className={`${labelClass} flex items-center gap-1.5`}>
@@ -708,7 +708,7 @@ export default function SettingsPage() {
               <textarea value={currentProfile.customerPains} onChange={e => handleFieldChange("customerPains", e.target.value)}
                 placeholder="e.g. They worry their energy bill is eating margins but don't know where to start. They've tried audits before that found nothing."
                 rows={3} className={textareaClass} />
-              <FieldHint>Neel opens these wounds in the hook, then closes them with your solution. The more specific, the more powerful.</FieldHint>
+              <FieldHint>Cortex opens these wounds in the hook, then closes them with your solution. The more specific, the more powerful.</FieldHint>
               <ProfileAIAssist field="customerPains" value={currentProfile.customerPains} context={currentProfile as unknown as Record<string,string>} profileType={profileType} onApply={v => handleFieldChange("customerPains", v)} />
             </div>
             <div className="grid grid-cols-2 gap-5">
@@ -725,14 +725,14 @@ export default function SettingsPage() {
                 <input value={currentProfile.verbatimLanguage} onChange={e => handleFieldChange("verbatimLanguage", e.target.value)}
                   placeholder='e.g. "our bills are crazy", "we just guess", "audit found nothing"'
                   className={inputClass} />
-                <FieldHint>Neel weaves these in so readers feel seen. Copied from real conversations = highest resonance.</FieldHint>
+                <FieldHint>Cortex weaves these in so readers feel seen. Copied from real conversations = highest resonance.</FieldHint>
                 <ProfileAIAssist field="verbatimLanguage" value={currentProfile.verbatimLanguage} context={currentProfile as unknown as Record<string,string>} profileType={profileType} onApply={v => handleFieldChange("verbatimLanguage", v)} buttonLabel="Expand with AI" />
               </div>
               <div>
                 <label className={`${labelClass} flex items-center gap-1.5`}>
                   Words to Avoid
                   <HelpTooltip
-                    text="Words that feel overused, corporate, or misaligned with your brand. Neel will hard-ban these and never use them in your posts."
+                    text="Words that feel overused, corporate, or misaligned with your brand. Cortex will hard-ban these and never use them in your posts."
                     example="e.g. synergy, leverage, paradigm, unlock, disruptive, holistic, empower"
                   />
                 </label>
@@ -779,7 +779,7 @@ export default function SettingsPage() {
                 <label className={`${labelClass} flex items-center gap-1.5`}>
                   Profile System Prompt
                   <HelpTooltip
-                    text="This is appended to Neel's built-in rules for every post in this profile. Use it to add industry-specific rules, recurring narrative themes, or persistent dos and don'ts that apply to ALL your posts."
+                    text="This is appended to Cortex's built-in rules for every post in this profile. Use it to add industry-specific rules, recurring narrative themes, or persistent dos and don'ts that apply to ALL your posts."
                     example="e.g. 'Always reference Indian market data when available. Never mention competitor brand names. End every post with a question to the reader.'"
                     width="w-80"
                     position="left"
@@ -847,7 +847,7 @@ export default function SettingsPage() {
 
             {!currentProfile.imageStyle && (
               <p className="text-[11px] text-slate-400">
-                No style selected — Neel will generate images without a style constraint. Select one above and save to lock your visual brand.
+                No style selected — Cortex will generate images without a style constraint. Select one above and save to lock your visual brand.
               </p>
             )}
 

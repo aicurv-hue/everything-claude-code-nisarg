@@ -67,7 +67,7 @@ After 1 month of usage, every post generation carries a much larger input contex
 
 | Context block | Tokens added to EVERY generate call |
 |---|---|
-| Neel system prompt (base) | ~2,000 tokens |
+| Cortex system prompt (base) | ~2,000 tokens |
 | Brand profile / settings | ~400 tokens |
 | Writing samples (10 uploads, capped at 2,500 chars) | ~625 tokens |
 | Past post memory (10 entries, capped at 2,000 chars) | ~500 tokens |
@@ -99,7 +99,7 @@ A new user (no memory/samples) runs at ~3,000 input tokens. So full memory adds 
 | Memory extraction (GPT-4o-mini) | 600 | 200 | $0.00020 |
 | Best Time AI | 400 | 200 | $0.00012 |
 
-> Full memory breakdown per generation: Neel system prompt ~2,000 + brand profile ~400 + writing samples (10×, capped 2,500 chars) ~625 + past post memory (10×, capped 2,000 chars) ~500 + research + user prompt ~800 = **~4,325 tokens input**
+> Full memory breakdown per generation: Cortex system prompt ~2,000 + brand profile ~400 + writing samples (10×, capped 2,500 chars) ~625 + past post memory (10×, capped 2,000 chars) ~500 + research + user prompt ~800 = **~4,325 tokens input**
 
 ---
 

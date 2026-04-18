@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
   if (imageUrn) {
     postBody.content = {
       media: {
-        title: "AI generated image by Neel",
+        title: "AI generated image by Cortex",
         id: imageUrn,
       },
     };

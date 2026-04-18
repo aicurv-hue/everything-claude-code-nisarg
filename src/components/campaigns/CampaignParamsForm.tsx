@@ -28,7 +28,7 @@ export default function CampaignParamsForm({ value, onChange, onSubmit, loading 
   return (
     <div className="space-y-5">
       <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700 leading-relaxed">
-        <strong>Define your campaign.</strong> Neel will generate all posts in sequence, each taking a fresh angle on your topic. You can review and edit every post before scheduling.
+        <strong>Define your campaign.</strong> Cortex will generate all posts in sequence, each taking a fresh angle on your topic. You can review and edit every post before scheduling.
       </div>
 
       <div>

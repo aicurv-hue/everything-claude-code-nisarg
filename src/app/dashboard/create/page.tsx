@@ -480,10 +480,10 @@ export default function CreatePostPage() {
                     </p>
                     <p className="text-[11px] text-slate-400 mt-0.5">
                       {sourceStatus === "ready"
-                        ? "✓ Context extracted — Neel will read it before writing"
+                        ? "✓ Context extracted — Cortex will read it before writing"
                         : sourceUrl || sourceImage
                         ? "Source added — will be extracted on generate"
-                        : "Paste a URL or upload an image for Neel to read"}
+                        : "Paste a URL or upload an image for Cortex to read"}
                     </p>
                   </div>
                 </div>
@@ -514,7 +514,7 @@ export default function CreatePostPage() {
                         </button>
                       )}
                     </div>
-                    <p className="text-[10px] text-slate-400">Neel will read the page and extract key facts, data, and angles from it.</p>
+                    <p className="text-[10px] text-slate-400">Cortex will read the page and extract key facts, data, and angles from it.</p>
                   </div>
 
                   {/* Image upload */}
@@ -524,7 +524,7 @@ export default function CreatePostPage() {
                       <div className="flex items-start gap-3">
                         <img src={sourceImage.preview} alt="Source" className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
                         <div className="flex-1 space-y-1">
-                          <p className="text-xs text-slate-600">Image uploaded — Neel will analyse it with vision AI</p>
+                          <p className="text-xs text-slate-600">Image uploaded — Cortex will analyse it with vision AI</p>
                           <button
                             onClick={() => { setSourceImage(null); setSourceContext(null); setSourceStatus("idle"); }}
                             className="text-[11px] text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1"
@@ -545,7 +545,7 @@ export default function CreatePostPage() {
                         />
                       </label>
                     )}
-                    <p className="text-[10px] text-slate-400">Charts, screenshots, infographics — Neel will describe what it sees and weave it into the post.</p>
+                    <p className="text-[10px] text-slate-400">Charts, screenshots, infographics — Cortex will describe what it sees and weave it into the post.</p>
                   </div>
 
                   {/* Extract preview button */}
@@ -572,7 +572,7 @@ export default function CreatePostPage() {
                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
                       <div className="flex items-center justify-between">
                         <p className="text-[11px] font-semibold text-green-700 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Context extracted successfully</p>
-                        <span className="text-[10px] text-green-500">{sourceContext.length.toLocaleString()} chars → Neel</span>
+                        <span className="text-[10px] text-green-500">{sourceContext.length.toLocaleString()} chars → Cortex</span>
                       </div>
                       <div className="max-h-56 overflow-y-auto rounded border border-green-100 bg-white p-2">
                         <p className="text-[11px] text-slate-600 leading-relaxed whitespace-pre-wrap">{sourceContext}</p>
@@ -627,7 +627,7 @@ export default function CreatePostPage() {
                   <div className="flex items-center gap-1.5">
                     <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Target Audience</label>
                     <HelpTooltip
-                      text="Neel filters research insights to what this audience cares about and frames every claim from their perspective."
+                      text="Cortex filters research insights to what this audience cares about and frames every claim from their perspective."
                       example="Founders → ROI & speed. Engineers → technical depth. Marketers → metrics & growth."
                       position="bottom"
                     />
@@ -857,8 +857,8 @@ export default function CreatePostPage() {
                     <Brain className={`w-3.5 h-3.5 ${accentColor}`} />
                     <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide">Memory</p>
                     <HelpTooltip
-                      text="Neel reads your past 5 most relevant posts before writing. He matches your style, avoids repeating the same angles, and decides whether to deepen a thread or take a new direction."
-                      example="The more posts you generate, the smarter and more consistent Neel becomes."
+                      text="Cortex reads your past 5 most relevant posts before writing. He matches your style, avoids repeating the same angles, and decides whether to deepen a thread or take a new direction."
+                      example="The more posts you generate, the smarter and more consistent Cortex becomes."
                       position="left"
                     />
                   </div>
@@ -866,7 +866,7 @@ export default function CreatePostPage() {
                     {memoryCount === null ? "Loading..." : memoryCount === 0 ? "First post — no history yet" : `${memoryCount} posts in memory`}
                   </p>
                   {memoryCount === 0 && (
-                    <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">After you generate, Neel will remember this post and use it to keep your future posts consistent.</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">After you generate, Cortex will remember this post and use it to keep your future posts consistent.</p>
                   )}
                 </div>
 
@@ -876,7 +876,7 @@ export default function CreatePostPage() {
                     <Sparkles className={`w-3.5 h-3.5 ${accentColor}`} />
                     <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide">Sample Memory</p>
                     <HelpTooltip
-                      text="Paste real posts you have written before using Cridl. Neel studies them to calibrate your exact voice, sentence rhythm, and vocabulary — making every post sound unmistakably like you."
+                      text="Paste real posts you have written before using Cridl. Cortex studies them to calibrate your exact voice, sentence rhythm, and vocabulary — making every post sound unmistakably like you."
                       example="Upload 3–5 of your best past LinkedIn posts for the strongest voice match."
                       position="left"
                     />
@@ -890,7 +890,7 @@ export default function CreatePostPage() {
                         <div>
                           <p className="text-[11px] font-semibold text-amber-800">No writing samples yet</p>
                           <p className="text-[10px] text-amber-700 mt-0.5 leading-relaxed">
-                            Neel will write in a generic LinkedIn voice. Add samples so he can match your unique style.
+                            Cortex will write in a generic LinkedIn voice. Add samples so he can match your unique style.
                           </p>
                         </div>
                       </div>

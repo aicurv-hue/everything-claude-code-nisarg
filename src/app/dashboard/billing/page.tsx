@@ -151,10 +151,10 @@ export default function BillingPage() {
 
   // Use plan from sub (authoritative) to determine limits, overriding stale usage.limits
   const BILLING_LIMITS: Record<string, { postsPerMonth: number; imagesPerMonth: number; faceImagesPerMonth: number }> = {
-    free:     { postsPerMonth: 10,   imagesPerMonth: 5,   faceImagesPerMonth: 0  },
-    starter:  { postsPerMonth: 45,   imagesPerMonth: 20,  faceImagesPerMonth: 5  },
-    pro:      { postsPerMonth: 100,  imagesPerMonth: 50,  faceImagesPerMonth: 10 },
-    business: { postsPerMonth: 9999, imagesPerMonth: 100, faceImagesPerMonth: 20 },
+    free:     { postsPerMonth: 5,    imagesPerMonth: 2,    faceImagesPerMonth: 0    },
+    starter:  { postsPerMonth: 30,   imagesPerMonth: 10,   faceImagesPerMonth: 5    },
+    pro:      { postsPerMonth: 100,  imagesPerMonth: 50,   faceImagesPerMonth: 20   },
+    business: { postsPerMonth: 9999, imagesPerMonth: 9999, faceImagesPerMonth: 9999 },
   };
   const effectivePlan = sub?.plan || "free";
   const displayLimits = usage ? (BILLING_LIMITS[effectivePlan] ?? usage.limits) : null;
@@ -219,7 +219,7 @@ export default function BillingPage() {
                 <Sparkles className="w-5 h-5 text-amber-600 shrink-0" />
                 <div>
                   <p className="text-sm font-semibold text-amber-900">You&apos;re on the Free plan</p>
-                  <p className="text-xs text-amber-700 mt-0.5">10 posts/month, 5 AI images. Upgrade for more.</p>
+                  <p className="text-xs text-amber-700 mt-0.5">5 posts/month, 2 AI images. Upgrade for more.</p>
                 </div>
               </div>
             )}

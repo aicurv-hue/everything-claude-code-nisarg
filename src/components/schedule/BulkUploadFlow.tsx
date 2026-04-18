@@ -157,7 +157,7 @@ export default function BulkUploadFlow({ segment, onComplete, onViewCalendar }: 
           <div>
             <p className="text-xs font-semibold text-slate-700 mb-0.5">How it works</p>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Fill in your topics and schedule dates. Neel will generate the post text automatically at publish time.
+              Fill in your topics and schedule dates. Cortex will generate the post text automatically at publish time.
               If you already have written posts, paste them in the <code className="bg-slate-100 px-1 rounded">content</code> column — they'll be used as-is.
             </p>
           </div>
@@ -169,7 +169,7 @@ export default function BulkUploadFlow({ segment, onComplete, onViewCalendar }: 
             {[
               {
                 col: "topic", req: true,
-                note: "What this post is about — Neel generates the post from this",
+                note: "What this post is about — Cortex generates the post from this",
                 help: "Be specific: 'How AI is reducing energy costs in Indian manufacturing' is better than 'AI'. The more detail, the better the generated post.",
               },
               {
@@ -184,8 +184,8 @@ export default function BulkUploadFlow({ segment, onComplete, onViewCalendar }: 
               },
               {
                 col: "content", req: false,
-                note: "Pre-written post text (optional — Neel generates if left blank)",
-                help: "Leave blank = Neel generates the post automatically using your topic + profile. Fill in = your text is used as-is, no generation happens.",
+                note: "Pre-written post text (optional — Cortex generates if left blank)",
+                help: "Leave blank = Cortex generates the post automatically using your topic + profile. Fill in = your text is used as-is, no generation happens.",
               },
               {
                 col: "tone", req: false,
@@ -396,7 +396,7 @@ export default function BulkUploadFlow({ segment, onComplete, onViewCalendar }: 
                       {v.errors.content ? (
                         <ValidationCell value={v.content} error={v.errors.content} />
                       ) : (
-                        <span className={`text-[11px] ${v.content === "(Neel generates this)" ? "text-slate-400 italic" : "text-slate-600"}`}>
+                        <span className={`text-[11px] ${v.content === "(Cortex generates this)" ? "text-slate-400 italic" : "text-slate-600"}`}>
                           {v.content}
                         </span>
                       )}
@@ -484,7 +484,7 @@ export default function BulkUploadFlow({ segment, onComplete, onViewCalendar }: 
 
       <div className="max-w-sm text-[12px] text-slate-500 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-left space-y-1.5">
         <p>✅ Posts are now visible on your <strong>Schedule calendar</strong></p>
-        <p>🤖 Neel will generate post text automatically at publish time (for rows where content was left blank)</p>
+        <p>🤖 Cortex will generate post text automatically at publish time (for rows where content was left blank)</p>
         <p>🔗 Posts publish automatically once you connect your LinkedIn account</p>
         <p>✏️ Click any post in the calendar to reschedule or delete it</p>
       </div>

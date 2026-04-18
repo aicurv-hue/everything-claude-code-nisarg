@@ -1,12 +1,12 @@
 # NEEL — Complete Pipeline Documentation
 
-> Neel is the AI author powering Cridl. This document covers every input layer that reaches Neel, how each one influences the output, where it is set, and what happens when it is missing.
+> Cortex is the AI author powering Cridl. This document covers every input layer that reaches Cortex, how each one influences the output, where it is set, and what happens when it is missing.
 >
 > **Purpose:** Single source of truth for building user SOPs, internal onboarding, and future feature design. Keep this updated whenever `generate.ts`, `research.ts`, memory, profiles, settings, or the create/preview pages change.
 
 ---
 
-## How Neel Works — Pipeline Overview
+## How Cortex Works — Pipeline Overview
 
 ```
 User fills Create form
@@ -18,7 +18,7 @@ User fills Create form
 [Layer B] Research (Stage 1 & 2) ── Sub-questions → Insights│
          │                                                   │
          ▼                                                   ▼
-[Layer C] Memory Context ─────────► Neel generates post ◄───┤
+[Layer C] Memory Context ─────────► Cortex generates post ◄───┤
          │                                                   │
          ▼                                                   │
 [Layer D] Brand Profile (from Settings) ────────────────────┤
@@ -75,11 +75,11 @@ If ≥1 signal matches → `intentType = "personal"`. Otherwise → `"profession
 | **Generate brand label** | `"BRAND CONTEXT — treat every item below as a non-negotiable constraint:"` | `"VOICE & STYLE REFERENCE — use these to match writing voice and style. Do NOT override the topic's personal nature."` |
 | **Generate brand fields** | All fields included (ICP, niche, pillars, USP, offering, pains) | Only name, roleOrIndustry, personality, verbatimLanguage, wordsToAvoid |
 | **Generate override instruction** | None | `⛔ INTENT OVERRIDE: This topic is a personal story. Write about it directly. Do NOT inject product, service, or business niche. Do NOT add automation/AI/industry statistics.` |
-| **Neel's system prompt** | Standard | INTENT_DETECTION section (injected) classifies to Type B, blocks business framing |
+| **Cortex's system prompt** | Standard | INTENT_DETECTION section (injected) classifies to Type B, blocks business framing |
 
 ### Four Topic Types (Prompt-Level)
 
-| Type | Signal | Neel's approach |
+| Type | Signal | Cortex's approach |
 |------|--------|----------------|
 | **A — Service/Product Promo** | Topic is about the user's business, tool, or expertise | Full brand context, audience focus, conversion-driven |
 | **B — Personal Story** | Movie, trip, life event, observation unrelated to work | Write the story authentically — voice/style from profile apply but brand subject matter does NOT override the human story |
@@ -125,7 +125,7 @@ ResearchResult.intentType ────────┤
 |------|------|
 | `src/lib/ai/research.ts` | `detectIntent()` + conditional brand stripping + `intentType` in `ResearchResult` |
 | `src/lib/ai/generate.ts` | `intentType` in `PostRequest`, conditional brand context assembly, `⛔ INTENT OVERRIDE` |
-| `src/lib/ai/neel-prompt-sections.ts` | `INTENT_DETECTION` section injected into Neel's system prompt |
+| `src/lib/ai/neel-prompt-sections.ts` | `INTENT_DETECTION` section injected into Cortex's system prompt |
 | `src/app/dashboard/create/page.tsx` | Extracts `intentType` from research, passes to generate, stores in localStorage |
 | `src/app/dashboard/create/preview/page.tsx` | Reads `intentType` from localStorage for regeneration |
 
@@ -136,12 +136,12 @@ ResearchResult.intentType ────────┤
 **Where set:** Create Post page (`/dashboard/create`)
 **Passed to:** `performResearch()` + `generatePost()`
 
-| Field | Type | Options | Effect on Neel |
+| Field | Type | Options | Effect on Cortex |
 |---|---|---|---|
 | `topic` | Free text | Any | The core idea. Drives research sub-questions and the entire post angle. **Most critical input.** |
 | `tone` | Enum | professional, storytelling, educational, contrarian | Selects a specific hook formula. Each tone has a distinct opening pattern with ✅/❌ examples baked in. |
-| `audience` | Enum | founders, marketers, engineers, general | Research is filtered to surface insights valuable to this audience. Neel frames every claim from their perspective. |
-| `length` | Enum | short (~100w), medium (~200w), long (~400w) | Sets exact word-count range and paragraph count in the prompt. Neel is given an explicit spec: "180–250 words, 5–7 paragraphs." |
+| `audience` | Enum | founders, marketers, engineers, general | Research is filtered to surface insights valuable to this audience. Cortex frames every claim from their perspective. |
+| `length` | Enum | short (~100w), medium (~200w), long (~400w) | Sets exact word-count range and paragraph count in the prompt. Cortex is given an explicit spec: "180–250 words, 5–7 paragraphs." |
 | `segment` | Context | individual, corporate | Switches entire voice mode. Individual = first-person, grounded in profile facts only. Corporate = company voice, business outcomes, named proof. |
 
 **AI Context sidebar (right panel on Create page) shows:**
@@ -149,7 +149,7 @@ ResearchResult.intentType ────────┤
 - Active niche
 - Active brand voice
 - **Active image style** (new — shows which visual style will be applied to generated images)
-- Memory count (number of past posts Neel has read)
+- Memory count (number of past posts Cortex has read)
 
 **What happens if topic is vague?**
 Research falls back to generic sub-questions (trends, pain points, statistics) — the post will be weaker. Specific topics = specific research = better hooks.
@@ -161,7 +161,7 @@ Research falls back to generic sub-questions (trends, pain points, statistics) �
 **Where generated:** `src/lib/ai/research.ts`
 **Passed to:** `generatePost()` as `research: ResearchResult`
 
-This is a 2-stage process run before Neel writes anything.
+This is a 2-stage process run before Cortex writes anything.
 
 ### Stage 1 — Sub-question Generation
 The AI generates 4–5 targeted research questions based on `topic + tone + audience + segment + clientProfile`. These focus on: statistics, trends, surprising insights, pain points, and audience-specific outcomes.
@@ -177,10 +177,10 @@ The AI generates 4–5 targeted research questions based on `topic + tone + audi
 ### Stage 2 — Research Synthesis
 Each sub-question is answered and synthesised into:
 
-| Field | Description | Used by Neel |
+| Field | Description | Used by Cortex |
 |---|---|---|
-| `summary` | 2–3 sentence executive summary with the KEY finding | Neel reads this first — it sets the post's central claim |
-| `insights[]` | Array of `{ title, content, source }` — specific findings with data | Neel draws EVERY claim from these — no fabrication allowed |
+| `summary` | 2–3 sentence executive summary with the KEY finding | Cortex reads this first — it sets the post's central claim |
+| `insights[]` | Array of `{ title, content, source }` — specific findings with data | Cortex draws EVERY claim from these — no fabrication allowed |
 | `references[]` | URLs of sources | Shown on preview sidebar; stored in DB |
 
 **Profile fields used in research:**
@@ -191,7 +191,7 @@ Each sub-question is answered and synthesised into:
 - `customerPains` — research probes pain points the audience feels
 
 **What happens if research fails?**
-A graceful fallback is used: `"Research on [topic] could not be completed. The post will be generated from the topic alone."` — Neel still writes but without data-backed claims. Quality drops significantly.
+A graceful fallback is used: `"Research on [topic] could not be completed. The post will be generated from the topic alone."` — Cortex still writes but without data-backed claims. Quality drops significantly.
 
 ---
 
@@ -201,7 +201,7 @@ A graceful fallback is used: `"Research on [topic] could not be completed. The p
 **Where retrieved:** `src/lib/db/memory.ts` → `memoryService.getRelevant()`
 **Passed to:** `generatePost()` as `memoryContext: PostMemory[]`
 
-After the first post is generated, Neel builds a persistent memory of everything he has written. Before each new generation, the top 5 most relevant past posts are retrieved and injected into his prompt.
+After the first post is generated, Cortex builds a persistent memory of everything he has written. Before each new generation, the top 5 most relevant past posts are retrieved and injected into his prompt.
 
 ### What is stored in each memory entry:
 
@@ -216,7 +216,7 @@ After the first post is generated, Neel builds a persistent memory of everything
 | `segment` | individual or corporate (kept separate) |
 | `created_at` | Timestamp — used for recency scoring |
 
-**Memory entries can be deleted** by the user from `/dashboard/memory`. Hover any entry to reveal the delete (trash) icon. Deleting removes it from Neel's future context immediately.
+**Memory entries can be deleted** by the user from `/dashboard/memory`. Hover any entry to reveal the delete (trash) icon. Deleting removes it from Cortex's future context immediately.
 
 ### Relevance Scoring (pure JS — zero tokens):
 ```
@@ -228,7 +228,7 @@ score = keyword overlap with current topic words × 2
 
 If no relevant matches exist (score = 0 for all), the 3 most recent entries are used as a continuity fallback.
 
-### What Neel does with memory:
+### What Cortex does with memory:
 
 **VOICE & STYLE — always applied first:**
 - Mirror the writing style from `style_notes` — sentence rhythm, vocabulary, data density
@@ -241,7 +241,7 @@ If no relevant matches exist (score = 0 for all), the 3 most recent entries are 
 - Avoid restating the EXACT same argument with different words
 - If topic is different from past posts: write fresh, reference established positioning if relevant
 
-**Individual and Corporate memories are completely separate.** Switching segment gives Neel a different memory pool.
+**Individual and Corporate memories are completely separate.** Switching segment gives Cortex a different memory pool.
 
 ---
 
@@ -251,22 +251,22 @@ If no relevant matches exist (score = 0 for all), the 3 most recent entries are 
 **Passed to:** `performResearch()` as `clientProfile` + `generatePost()` as `clientProfile`
 **File:** `src/lib/db/profiles.ts`
 
-This is the most impactful layer after the topic itself. Every field is a non-negotiable constraint for Neel.
+This is the most impactful layer after the topic itself. Every field is a non-negotiable constraint for Cortex.
 
 ### Tab 1 — Identity
 
 | Field | Key | Effect |
 |---|---|---|
-| Full Name / Company Name | `name` | Neel writes in your name — "I built X" vs "CompanyName achieved X" |
+| Full Name / Company Name | `name` | Cortex writes in your name — "I built X" vs "CompanyName achieved X" |
 | Role / Industry | `roleOrIndustry` | Sets the authority context — framing your expertise |
-| Expertise / Niche | `niche` | Neel stays in this lane — every post reinforces your niche authority |
-| Personal Bio / Company Overview | `bioOrOffering` | Provides narrative context — Neel references your story/offering naturally |
+| Expertise / Niche | `niche` | Cortex stays in this lane — every post reinforces your niche authority |
+| Personal Bio / Company Overview | `bioOrOffering` | Provides narrative context — Cortex references your story/offering naturally |
 
 ### Tab 2 — Audience Strategy
 
 | Field | Key | Effect |
 |---|---|---|
-| Ideal Customer Profile (ICP) | `icp` | Research sub-questions are aimed at this exact buyer. Neel frames outcomes for them. |
+| Ideal Customer Profile (ICP) | `icp` | Research sub-questions are aimed at this exact buyer. Cortex frames outcomes for them. |
 | Company Stage / Audience Stage | `companyStage` | Calibrates language — seed founders vs. enterprise buyers need different framing |
 | Jobs to be Done (JTBD) | `jtbd` | The single most important audience signal. Research probes what they're "hiring" you for. |
 
@@ -274,24 +274,24 @@ This is the most impactful layer after the topic itself. Every field is a non-ne
 
 | Field | Key | Effect |
 |---|---|---|
-| Content Pillars | `pillars` | Neel stays inside these topic clusters — reinforces topical authority |
+| Content Pillars | `pillars` | Cortex stays inside these topic clusters — reinforces topical authority |
 | Brand Personality / Tone | `personality` | Layered on top of the post tone — "authoritative yet conversational" shapes sentence rhythm |
-| Unique Selling Proposition | `usp` | Neel can work this in naturally — differentiates every post from competitors |
+| Unique Selling Proposition | `usp` | Cortex can work this in naturally — differentiates every post from competitors |
 
 ### Tab 4 — Customer Voice
 
 | Field | Key | Effect |
 |---|---|---|
-| Core Pains & Emotional Tensions | `customerPains` | Neel opens wounds before closing them — hooks become more visceral |
-| Verbatim Language | `verbatimLanguage` | Exact phrases your customers use — Neel weaves these in so readers feel seen |
-| Words to Avoid | `wordsToAvoid` | Hard ban — Neel will never use these. Example: "synergy, leverage, paradigm shift" |
+| Core Pains & Emotional Tensions | `customerPains` | Cortex opens wounds before closing them — hooks become more visceral |
+| Verbatim Language | `verbatimLanguage` | Exact phrases your customers use — Cortex weaves these in so readers feel seen |
+| Words to Avoid | `wordsToAvoid` | Hard ban — Cortex will never use these. Example: "synergy, leverage, paradigm shift" |
 
 ### Tab 5 — AI Config
 
 | Field | Key | Effect |
 |---|---|---|
-| Model | `model` | Which LLM Neel uses for this segment. Each segment can have a different model. |
-| System Prompt | `systemPrompt` | Appended AFTER all built-in rules. Overrides or extends Neel's default behaviour. Use for persistent per-segment dos/don'ts. |
+| Model | `model` | Which LLM Cortex uses for this segment. Each segment can have a different model. |
+| System Prompt | `systemPrompt` | Appended AFTER all built-in rules. Overrides or extends Cortex's default behaviour. Use for persistent per-segment dos/don'ts. |
 
 ### Tab 6 — Image Style *(new in v1.2)*
 
@@ -310,9 +310,9 @@ This is the most impactful layer after the topic itself. Every field is a non-ne
 | `lineart` | ✏️ Line Art | Minimal black ink line art on white, clean strokes, no fill, sketch style |
 | `bw_photo` | ⬛ B&W Photo | Cinematic black and white photography, high contrast, film grain, editorial style, desaturated |
 
-**How it works:** When the user saves a style, the corresponding prefix string is prepended to every AI-generated image prompt by `generate.ts` before it reaches fal.ai. This locks the visual rendering medium across all posts. The underlying emotional/compositional prompt is still generated by Neel per-post — the style prefix constrains HOW it looks, not WHAT it shows.
+**How it works:** When the user saves a style, the corresponding prefix string is prepended to every AI-generated image prompt by `generate.ts` before it reaches fal.ai. This locks the visual rendering medium across all posts. The underlying emotional/compositional prompt is still generated by Cortex per-post — the style prefix constrains HOW it looks, not WHAT it shows.
 
-**⚠️ Critical: Image style is segment-specific.** Individual and Corporate can have completely independent visual identities. If no style is set, images are generated without a style constraint (Neel's cinematic editorial defaults still apply).
+**⚠️ Critical: Image style is segment-specific.** Individual and Corporate can have completely independent visual identities. If no style is set, images are generated without a style constraint (Cortex's cinematic editorial defaults still apply).
 
 ---
 
@@ -332,7 +332,7 @@ This is a per-post override. Use it for:
 
 **Quick-add chips available:** Use a question as the hook, Include a statistic, Start with a story, No hashtags, Keep it under 150 words, Use bullet points.
 
-**What happens if left blank?** Neel uses his default rules. Custom instructions are optional but powerful for specific campaign requirements.
+**What happens if left blank?** Cortex uses his default rules. Custom instructions are optional but powerful for specific campaign requirements.
 
 ---
 
@@ -342,11 +342,11 @@ This is a per-post override. Use it for:
 **Passed to:** `generatePost()` as `systemPrompt`
 **Priority:** High — appended after built-in rules, before custom instructions.
 
-This is Neel's persistent persona layer for this segment. The default contains the Gold-Standard LinkedIn format rules. You can customise it to:
+This is Cortex's persistent persona layer for this segment. The default contains the Gold-Standard LinkedIn format rules. You can customise it to:
 - Add industry-specific copywriting rules
 - Set recurring narrative themes
 - Enforce specific structural patterns
-- Give Neel persistent dos/don'ts that apply to every post in this segment
+- Give Cortex persistent dos/don'ts that apply to every post in this segment
 
 **⚠️ Warning:** Modifying this affects every future post in this segment until changed. The UI shows a "Custom Prompt Active" warning badge.
 
@@ -399,7 +399,7 @@ The AI chooses the visual approach based on the post type — NOT a generic defa
 | ✏️ Line Art | Minimal black ink line art on white, clean strokes, no fill, sketch style |
 | ⬛ B&W Photo | Cinematic black and white photography, high contrast, film grain, editorial style |
 
-The style prefix is the **highest-priority visual directive** — it defines the rendering medium. Neel's emotional/compositional prompt defines WHAT is shown. Both combine at generation time.
+The style prefix is the **highest-priority visual directive** — it defines the rendering medium. Cortex's emotional/compositional prompt defines WHAT is shown. Both combine at generation time.
 
 ### Fixed Frame Rules (Always Applied)
 
@@ -489,10 +489,10 @@ After every successful generation, this runs silently:
 
 ---
 
-## Complete Prompt Architecture (Neel's System Prompt Order)
+## Complete Prompt Architecture (Cortex's System Prompt Order)
 
 ```
-1. Neel's identity + OUTPUT RULES (hardcoded — never changes)
+1. Cortex's identity + OUTPUT RULES (hardcoded — never changes)
 2. POST PARAMETERS (tone, audience, word count, hook formula)
 3. SEGMENT VOICE (individual vs corporate — hardcoded rules)
 4. STRUCTURE (hook → body → CTA → hashtags — exact format)
@@ -504,7 +504,7 @@ After every successful generation, this runs silently:
 
 Then (post-prompt, not in system prompt):
 10. IMAGE STYLE PREFIX (from Layer G) prepended to image prompt output
-11. IMAGE HOOK (from Layer H) — separate call, not part of Neel's prompt
+11. IMAGE HOOK (from Layer H) — separate call, not part of Cortex's prompt
 ```
 
 **User prompt (sent as the `user` turn):**
@@ -536,7 +536,7 @@ Posts with `status: "scheduled"` are picked up by the cron worker at `/api/cron/
 5. Upload image to LinkedIn Images API (if image_url is set and not a data: URL)
 6. POST to LinkedIn /rest/posts
 7. Mark post as "published" + store linkedin_post_id
-8. Fire-and-forget: save to Neel's memory (savePostMemory)
+8. Fire-and-forget: save to Cortex's memory (savePostMemory)
 9. On failure: mark post as "failed"
 ```
 
@@ -578,16 +578,16 @@ Likes and comments are synced hourly via the cron worker's engagement sync block
 | Missing Field | Impact on Post Quality | Action |
 |---|---|---|
 | `topic` is vague | Research uses generic sub-questions → weak, generic insights | Be specific: include numbers, contexts, questions |
-| Profile `name` empty | Neel writes without author attribution | Fill in Settings → Identity |
+| Profile `name` empty | Cortex writes without author attribution | Fill in Settings → Identity |
 | Profile `niche` empty | Posts lack authority positioning | Fill in Settings → Identity |
 | Profile `icp` empty | Research is audience-agnostic | Fill in Settings → Audience |
 | Profile `jtbd` empty | Research doesn't probe what customers need most | Fill in Settings → Audience |
 | Profile `customerPains` empty | Hooks lack emotional resonance | Fill in Settings → Customer Voice |
-| Profile `verbatimLanguage` empty | Neel uses generic professional language | Fill in Settings → Customer Voice |
-| Profile `wordsToAvoid` empty | Neel may use banned words | Fill in Settings → Customer Voice |
+| Profile `verbatimLanguage` empty | Cortex uses generic professional language | Fill in Settings → Customer Voice |
+| Profile `wordsToAvoid` empty | Cortex may use banned words | Fill in Settings → Customer Voice |
 | Profile `usp` empty | No differentiation from competitors | Fill in Settings → Branding |
 | Profile `imageStyle` not set | Images generated without visual style lock — inconsistent across posts | Choose a style in Settings → Image Style |
-| Memory empty (new user) | No continuity — Neel writes without history | Grows automatically with every generation |
+| Memory empty (new user) | No continuity — Cortex writes without history | Grows automatically with every generation |
 | Corporate profile blank | Corporate posts get no brand context | Fill in Settings with Corporate selected |
 
 ---
@@ -597,12 +597,12 @@ Likes and comments are synced hourly via the cron worker's engagement sync block
 | # | Bug / Issue | Fix Applied |
 |---|---|---|
 | 1 | Model name `google/gemini-2.0-flash-001` in settings — doesn't exist on OpenRouter | Changed to `google/gemini-2.0-flash` |
-| 2 | `customerPains` never passed to research — Neel didn't probe pain points | Added to research `clientContext` |
+| 2 | `customerPains` never passed to research — Cortex didn't probe pain points | Added to research `clientContext` |
 | 3 | Empty profile fields appeared as `"undefined"` in prompt | Filter-before-append — only non-empty fields included |
 | 4 | Dynamic Tailwind class purged at build time | Replaced with static conditional strings |
 | 5 | Dashboard stats didn't refresh on segment switch | Fixed `loadAll()` dependency array |
 | 6 | Create page used disconnected local segment state | Replaced with `useSegment()` context |
-| 7 | **Hallucination** — Neel invented family members, locations, personal stories not in the profile | Added `⛔ NO FABRICATION` rule in `SEGMENT_INDIVIDUAL` and `SEGMENT_CORPORATE` |
+| 7 | **Hallucination** — Cortex invented family members, locations, personal stories not in the profile | Added `⛔ NO FABRICATION` rule in `SEGMENT_INDIVIDUAL` and `SEGMENT_CORPORATE` |
 | 8 | **Always-different-angle** — memory rule forced pivot every time | Replaced with nuanced logic: deepen (Part 2) or new dimension — don't always pivot |
 | 9 | **Voice drift** — memory stored angles but not HOW the user writes | Added `style_notes` field — 1-sentence style fingerprint extracted per post |
 | 10 | **No memory delete** — bad entries poisoned future posts | Added `memoryService.delete(id)` + hover-reveal trash button on `/dashboard/memory` |
@@ -624,18 +624,18 @@ Likes and comments are synced hourly via the cron worker's engagement sync block
 
 | File | Role |
 |---|---|
-| `Master_Neel_Prompt.md` | **Human-editable source of truth** for all Neel prompt text — edit here, then sync to `neel-prompt-sections.ts` |
+| `Master_Cortex_Prompt.md` | **Human-editable source of truth** for all Cortex prompt text — edit here, then sync to `neel-prompt-sections.ts` |
 | `src/lib/ai/neel-prompt-sections.ts` | **Inlined TS constants** for every prompt section — Edge Runtime compatible |
 | `src/app/dashboard/create/page.tsx` | Collects Layers A, E — triggers full pipeline; shows active image style in AI Context sidebar |
 | `src/app/dashboard/create/preview/page.tsx` | Editable post preview — image picker, image overlay + hook editor, schedule button, Regenerate Post/Image |
 | `src/lib/ai/research.ts` | Runs Layer B — Edge Runtime, 2-stage research pipeline |
-| `src/lib/ai/generate.ts` | Assembles prompt, calls Neel via OpenRouter. Exports `generatePost()`, `generateImagePrompt()`, `generateImageHook()`. Contains `IMAGE_STYLE_PREFIXES` map. |
+| `src/lib/ai/generate.ts` | Assembles prompt, calls Cortex via OpenRouter. Exports `generatePost()`, `generateImagePrompt()`, `generateImageHook()`. Contains `IMAGE_STYLE_PREFIXES` map. |
 | `src/lib/db/memory.ts` | Stores + retrieves Layer C — memory |
 | `src/lib/ai/memory-extract.ts` | Extracts Layer I — post-generation memory indexing |
 | `src/lib/db/profiles.ts` | Stores Layer D — brand profile. Contains `ImageStyle` type and `imageStyle` field on `ProfileSegment`. |
 | `src/lib/db/posts.ts` | Post CRUD. Contains `image_hook` field (Layer H overlay text). |
 | `src/app/dashboard/settings/page.tsx` | UI for Layers D + F + Image Style (6 tabs) + LinkedIn connect/disconnect |
-| `src/app/dashboard/memory/page.tsx` | Dashboard for Layer C — view + delete Neel's memory entries |
+| `src/app/dashboard/memory/page.tsx` | Dashboard for Layer C — view + delete Cortex's memory entries |
 | `src/lib/context/segment.tsx` | Global segment state (individual/corporate) |
 | `src/lib/ai/openrouter.ts` | OpenRouter client — `DEFAULT_MODEL: google/gemini-2.0-flash-001` |
 | `src/lib/ai/save-memory.ts` | `savePostMemory()` — called after confirmed LinkedIn publish |
@@ -656,11 +656,11 @@ Likes and comments are synced hourly via the cron worker's engagement sync block
 
 `generate.ts` imports `NEEL_SECTIONS` from `neel-prompt-sections.ts` — a TypeScript constant containing all prompt sections. Dynamic values use `{{PLACEHOLDER}}` syntax substituted at call time.
 
-`Master_Neel_Prompt.md` is the human-readable copy. When you edit it, **manually sync the changed section** into `neel-prompt-sections.ts` to apply in production.
+`Master_Cortex_Prompt.md` is the human-readable copy. When you edit it, **manually sync the changed section** into `neel-prompt-sections.ts` to apply in production.
 
 | Section | Controls |
 |---|---|
-| `IDENTITY` | Neel's core persona and role statement |
+| `IDENTITY` | Cortex's core persona and role statement |
 | `OUTPUT_RULES` | Hard rules — no preamble, no labels, start with hook |
 | `HOOK_PROFESSIONAL / STORYTELLING / EDUCATIONAL / CONTRARIAN` | Per-tone hook formulas with ✅/❌ examples |
 | `SEGMENT_INDIVIDUAL` | First-person voice + NO FABRICATION prohibition |
@@ -723,16 +723,16 @@ Go to **Settings → Image Style tab**:
 - **Schedule** or **Publish directly**
 
 ### Step 6 — Repeat & Refine
-- After 3–5 posts, Neel's memory grows and posts become more consistent
-- Check **Memory** page to see what Neel has stored
+- After 3–5 posts, Cortex's memory grows and posts become more consistent
+- Check **Memory** page to see what Cortex has stored
 - If a post was bad, delete its memory entry to prevent it from influencing future posts
 
 ---
 
 ## SOP — Internal Team Reference
 
-### Changing Neel's Writing Behaviour
-1. Edit the relevant section in `Master_Neel_Prompt.md`
+### Changing Cortex's Writing Behaviour
+1. Edit the relevant section in `Master_Cortex_Prompt.md`
 2. Copy the changed section into the matching key in `src/lib/ai/neel-prompt-sections.ts`
 3. Test locally — `npm run dev`, generate a post, check output
 4. Push via `bash push-all.sh`
@@ -753,7 +753,7 @@ Go to **Settings → Image Style tab**:
 ### Environment Variables (Vercel)
 | Variable | Purpose |
 |---|---|
-| `OPENROUTER_API_KEY` | AI generation (Neel, research, image prompts, hook) |
+| `OPENROUTER_API_KEY` | AI generation (Cortex, research, image prompts, hook) |
 | `FAL_API_KEY` | Image generation via fal.ai |
 | `FIREBASE_*` | Firestore + Auth |
 | `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` | OAuth |
@@ -778,9 +778,9 @@ Go to **Settings → Image Style tab**:
 - Brand fields stripped from research prompt for personal topics (ICP, niche, offering, JTBD, pains)
 - Brand context label changed in generate for personal topics: "VOICE & STYLE REFERENCE" instead of "non-negotiable constraint"
 - `⛔ INTENT OVERRIDE` injected for personal topics — blocks brand/product content from personal story posts
-- `INTENT_DETECTION` section added to `neel-prompt-sections.ts` — injected as Step 0 in Neel's system prompt
+- `INTENT_DETECTION` section added to `neel-prompt-sections.ts` — injected as Step 0 in Cortex's system prompt
 - `intentType` flows through: `research.ts` → `ResearchResult` → `create/page.tsx` → generate API → `preview/page.tsx` regeneration
-- **Image Diversity:** `neel-prompt-sections.ts` IMAGE_PROMPT_SYSTEM synced from `Master_Neel_Prompt.md`
+- **Image Diversity:** `neel-prompt-sections.ts` IMAGE_PROMPT_SYSTEM synced from `Master_Cortex_Prompt.md`
 - Old reference prompts ("woman at monitors", "man with wall of glowing screens") replaced with 4 diverse examples
 - Added "OVERUSED DEFAULTS" ban to BANNED IMAGERY section
 - Added VISUAL DIVERSITY section: 3 visual approaches mapped to personal/business/contrarian post types
@@ -792,7 +792,7 @@ Go to **Settings → Image Style tab**:
 - **TEXT ZONE RULE** updated for square 1:1: top-left quadrant (top 45%, left 50%) reserved for hook text, subject always center-right or lower-right
 - Hook text width constrained to 44% of image to prevent subject overlap
 - Diagonal gradient (top-left dark → transparent) replaces bottom-bar gradient
-- `Master_Neel_Prompt.md` updated to v1.3 with all square format rules
+- `Master_Cortex_Prompt.md` updated to v1.3 with all square format rules
 - `neel-prompt-sections.ts` updated with square TEXT ZONE RULE and FIXED FRAME RULES
 
 *Last audited: 2026-03-28 | Pipeline version: 4.3.1 (Mobile-First Square Images + Codex Hook Typography)*

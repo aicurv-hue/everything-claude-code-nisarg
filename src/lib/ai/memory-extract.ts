@@ -1,7 +1,7 @@
 /**
  * Memory Extraction — Post-generation summarisation pipeline
  *
- * After Neel writes a post, this module extracts:
+ * After Cortex writes a post, this module extracts:
  *   - A 2-sentence summary capturing the angle + core argument
  *   - 5–10 concrete keywords for relevance scoring in future retrievals
  *

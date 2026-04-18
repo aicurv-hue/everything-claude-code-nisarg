@@ -31,7 +31,7 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
-    // ── Memory (Neel's post memory per user) ─────────────────────────────────
+    // ── Memory (Cortex's post memory per user) ─────────────────────────────────
     match /post_memories/{memoryId} {
       allow read, write: if isOwner(resource.data.user_id);
       allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;

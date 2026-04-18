@@ -2,7 +2,7 @@
  * Post Memory Layer
  *
  * Persistent, per-user, per-segment content memory.
- * Neel reads this before generating to avoid repetition and build narrative progression.
+ * Cortex reads this before generating to avoid repetition and build narrative progression.
  *
  * Storage: Firestore collection `post_memories` (+ localStorage mock fallback)
  * Design principle: summaries + keywords only — never full content — to minimise token cost.

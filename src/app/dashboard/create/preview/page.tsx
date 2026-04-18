@@ -188,7 +188,7 @@ export default function PostPreviewPage() {
           memoryContext:      postData.memoryContext     ?? undefined,
           writingSamples:     postData.writingSamples   ?? undefined,
           sourceContext:      postData.sourceContext     ?? undefined,
-          // Pass current post so Neel iterates rather than restarts
+          // Pass current post so Cortex iterates rather than restarts
           previousPost:       editedContent             || undefined,
         }),
       });
@@ -405,7 +405,7 @@ export default function PostPreviewPage() {
     if (!imageUrl) return;
     const a = document.createElement("a");
     a.href = imageUrl;
-    a.download = "neel-linkedin-image.png";
+    a.download = "cridl-linkedin-image.png";
     a.target = "_blank";
     a.click();
   };
@@ -911,7 +911,7 @@ export default function PostPreviewPage() {
             {showRegenHint && !isRegeneratingPost && (
               <div className="px-5 py-3 border-b border-slate-100 bg-slate-50 space-y-2">
                 <p className="text-[11px] text-slate-500">
-                  Give Neel a direction hint (optional) — e.g. <span className="italic">"make it shorter"</span>, <span className="italic">"more storytelling"</span>, <span className="italic">"less salesy"</span>
+                  Give Cortex a direction hint (optional) — e.g. <span className="italic">"make it shorter"</span>, <span className="italic">"more storytelling"</span>, <span className="italic">"less salesy"</span>
                 </p>
                 <div className="flex gap-2">
                   <input
@@ -1091,7 +1091,7 @@ export default function PostPreviewPage() {
                   </div>
                   <div>
                     <p className={`text-xs font-semibold ${imageMode === "ai" ? "text-[#0A66C2]" : "text-slate-700"}`}>AI Generate</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">Let Neel create a matching image</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">Let Cortex create a matching image</p>
                   </div>
                 </button>
 
@@ -1209,7 +1209,7 @@ export default function PostPreviewPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-slate-700">Ready to generate your image</p>
-                    <p className="text-xs text-slate-400 mt-1">Neel will create a professional image based on your post content</p>
+                    <p className="text-xs text-slate-400 mt-1">Cortex will create a professional image based on your post content</p>
                   </div>
                   <button
                     onClick={() => generateImage(imagePrompt)}

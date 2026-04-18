@@ -25,7 +25,7 @@ export interface PostRequest {
   writingSamples?: PostMemory[];  // User-uploaded writing samples — style/voice ground truth
   imageStyle?: string;            // Layer 1: art style key (photo|illustration|abstract|3d|lineart|bw_photo)
   sourceContext?: string;         // Extracted text from user-provided URL + image description
-  previousPost?: string;          // Current post content when regenerating — Neel iterates on this, not a blank slate
+  previousPost?: string;          // Current post content when regenerating — Cortex iterates on this, not a blank slate
   intentType?: "personal" | "professional"; // Detected from topic — controls brand context application
 }
 
@@ -67,8 +67,8 @@ function section(name: string, replacements?: Record<string, string>): string {
  * Builds a writing-samples block from user-uploaded posts.
  *
  * These are real posts the author wrote BEFORE using this tool.
- * Neel treats these as ground truth for voice/style calibration — not as
- * content history. The goal: make Neel sound indistinguishable from the author.
+ * Cortex treats these as ground truth for voice/style calibration — not as
+ * content history. The goal: make Cortex sound indistinguishable from the author.
  *
  * Token budget: hard-capped at ~2500 chars. Style notes are the highest-signal
  * field — always included. Summaries included for angle awareness.
@@ -105,7 +105,7 @@ function buildWritingSamplesBlock(samples: PostMemory[]): string {
     "══ VOICE CALIBRATION MANDATE ══",
     "Your output MUST sound like it came from the SAME PERSON who wrote these samples.",
     "Not similar — the SAME. If the reader compared your post side-by-side with the samples,",
-    "they should not be able to tell which one Neel wrote.",
+    "they should not be able to tell which one Cortex wrote.",
     "Any deviation from the established voice patterns above is a failure.",
     "══════════════════════════════════════════",
   );
@@ -117,7 +117,7 @@ function buildWritingSamplesBlock(samples: PostMemory[]): string {
 // ─── Memory block builder ──────────────────────────────────────────────────────
 
 /**
- * Builds a compact memory context block for Neel's system prompt.
+ * Builds a compact memory context block for Cortex's system prompt.
  *
  * Token budget: hard-capped at ~500 tokens regardless of how many entries.
  * Captures TWO things: what was COVERED (to avoid exact repetition) and
@@ -217,7 +217,7 @@ function sanitizePost(raw: string): string {
 /**
  * Stage 3: Generate a single, publish-ready LinkedIn post.
  *
- * All prompt content is loaded from Master_Neel_Prompt.md.
+ * All prompt content is loaded from Master_Cortex_Prompt.md.
  * Skills applied:
  *   - ECC: content-engine (platform-native LinkedIn format, hooks, one-idea rule)
  *   - marketing-skills-all: social-content (LinkedIn-specific structure, CTA, tone mapping)
@@ -230,7 +230,7 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
 
   // ── Brand context block ────────────────────────────────────────────────────
   // For personal topics: only pass voice/style fields (name, role, personality, word rules).
-  // Brand/product fields (niche, ICP, pillars, offering, pains) are stripped so Neel
+  // Brand/product fields (niche, ICP, pillars, offering, pains) are stripped so Cortex
   // doesn't inject the user's service into a post about a movie or personal reflection.
   const clientBranding = clientProfile
     ? [
@@ -256,12 +256,12 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
       ].filter(Boolean).join("\n")
     : "No brand profile — write in a clear, credible professional voice.";
 
-  // ── Assemble system prompt from Master_Neel_Prompt.md sections ────────────
+  // ── Assemble system prompt from Master_Cortex_Prompt.md sections ────────────
   const hookKey = `HOOK_${tone.toUpperCase()}` as const;
   const segmentKey = segment === "individual" ? "SEGMENT_INDIVIDUAL" : "SEGMENT_CORPORATE";
 
   // For personal topics: inject a hard override at the very top — before any other instruction.
-  // This ensures it is the first thing Neel reads and cannot be overridden by memory or brand context.
+  // This ensures it is the first thing Cortex reads and cannot be overridden by memory or brand context.
   const personalTopOverride = !isProfessional
     ? [
         `══════════════════════════════════════════`,
@@ -348,7 +348,7 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
 
   // ── User prompt ────────────────────────────────────────────────────────────
   // For Contrarian and Storytelling tones: the post is driven by opinion/narrative,
-  // not by data. Pass only 1 insight (the most relevant) and instruct Neel to use it
+  // not by data. Pass only 1 insight (the most relevant) and instruct Cortex to use it
   // sparingly — not as the structural backbone of the post.
   const isOpinionTone = tone === "contrarian" || tone === "storytelling";
   const insightLines = isOpinionTone
@@ -394,7 +394,7 @@ Start directly with the hook line. Output nothing else.`;
     } catch (err: any) {
       const status = err?.status || err?.code;
       if (status === 500 || status === 502 || status === 503 || status === 429) {
-        console.warn(`[Neel] ${primary} returned ${status} — retrying with ${FALLBACK_MODEL}`);
+        console.warn(`[Cortex] ${primary} returned ${status} — retrying with ${FALLBACK_MODEL}`);
         return await openRouter.chat.completions.create({ model: FALLBACK_MODEL, messages, temperature, max_tokens: 1200 });
       }
       throw err;
@@ -402,7 +402,7 @@ Start directly with the hook line. Output nothing else.`;
   };
 
   try {
-    // Stage 1: Neel writes the LinkedIn post
+    // Stage 1: Cortex writes the LinkedIn post
     const completion = await chatWithFallback(
       [
         { role: "system", content: systemInstructions },

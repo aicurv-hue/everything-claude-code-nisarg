@@ -96,7 +96,7 @@ function parseCsv(rawText) {
     if (length && !VALID_LENGTHS.includes(length)) fieldErrors.length = `"${length}" is not valid.`;
     if (content && content.length > 3000) fieldErrors.content = `Too long.`;
     const isValid = Object.keys(fieldErrors).length === 0;
-    validations.push({ row:rowNum, topic, date:dateStr, time:timeStr, tone:tone||"(default: professional)", audience:audience||"(default: general)", length:length||"(default: medium)", content:content?`${content.slice(0,60)}`:"(Neel generates this)", timezone:timezone||"(browser timezone)", errors:fieldErrors, isValid });
+    validations.push({ row:rowNum, topic, date:dateStr, time:timeStr, tone:tone||"(default: professional)", audience:audience||"(default: general)", length:length||"(default: medium)", content:content?`${content.slice(0,60)}`:"(Cortex generates this)", timezone:timezone||"(browser timezone)", errors:fieldErrors, isValid });
     if (!isValid) { errors.push({ row:rowNum, content_preview:topic.slice(0,40), reason:Object.values(fieldErrors)[0] }); continue; }
     rows.push({ topic, scheduled_at: parsed.toISOString(), content:content||undefined, tone:tone||undefined, audience:audience||undefined, length:length||undefined, timezone:timezone||undefined });
   }

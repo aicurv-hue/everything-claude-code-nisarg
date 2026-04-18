@@ -549,7 +549,7 @@ export default function DashboardHomePage() {
           <div className="space-y-3">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Live Status</p>
             {system && [
-              { label: "AI Engine (Neel)", key: system.aiEngine, icon: Zap },
+              { label: "Cridl Cortex", key: system.aiEngine, icon: Zap },
               { label: "Image Engine", key: system.imageEngine, icon: Image },
               { label: "Profile Sync", key: system.profileSync, icon: Activity },
               { label: "LinkedIn", key: system.linkedin, icon: system.linkedin === "connected" ? Wifi : WifiOff },

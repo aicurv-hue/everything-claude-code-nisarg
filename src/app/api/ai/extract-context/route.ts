@@ -93,13 +93,13 @@ export async function POST(req: NextRequest) {
                 },
                 {
                   type: "text",
-                  text: `You are helping a LinkedIn ghostwriter called Neel craft a post. Describe this image in ONE plain prose paragraph (150-250 words). NEVER output JSON, code, bullet points, headers, or markdown.
+                  text: `You are helping a LinkedIn ghostwriter called Cortex craft a post. Describe this image in ONE plain prose paragraph (150-250 words). NEVER output JSON, code, bullet points, headers, or markdown.
 
 Extract and emphasize:
 1. The core insight or data (what changed? what's surprising? what's the business impact?)
 2. Every number, percentage, metric visible — transcribe exactly
 3. What audience this resonates with (founders, engineers, marketers, etc?)
-4. 2–3 specific angles Neel could turn this into a LinkedIn hook (e.g., "the hidden cost of X", "why Y failed", "the pattern nobody talks about")
+4. 2–3 specific angles Cortex could turn this into a LinkedIn hook (e.g., "the hidden cost of X", "why Y failed", "the pattern nobody talks about")
 5. Emotional hooks: what makes this story worth sharing? (risk, growth, disruption, counterintuitive, etc)
 
 Be vivid but factual. Focus on what makes this post-worthy.`,

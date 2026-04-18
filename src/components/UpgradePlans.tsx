@@ -11,7 +11,7 @@ const PLANS = [
     yearlyPrice: 4990,
     monthlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_STARTER || "").trim(),
     yearlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_STARTER_YEARLY || "").trim(),
-    features: ["45 posts/month", "20 AI images", "5 face images/month", "Post scheduling"],
+    features: ["30 posts/month", "10 AI images", "5 face images/month", "Post scheduling"],
     popular: false,
   },
   {
@@ -20,7 +20,7 @@ const PLANS = [
     yearlyPrice: 9990,
     monthlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_PRO || "").trim(),
     yearlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_PRO_YEARLY || "").trim(),
-    features: ["100 posts/month", "50 AI images", "10 face images/month", "Campaigns", "Company page"],
+    features: ["100 posts/month", "50 AI images", "20 face images/month", "Campaigns", "Company page"],
     popular: true,
   },
   {
@@ -29,7 +29,7 @@ const PLANS = [
     yearlyPrice: 19990,
     monthlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_BUSINESS || "").trim(),
     yearlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_BUSINESS_YEARLY || "").trim(),
-    features: ["Unlimited posts", "100 AI images", "20 face images/month", "Campaigns", "Company page"],
+    features: ["Unlimited posts", "Unlimited AI images", "Unlimited face images", "Campaigns", "Company page"],
     popular: false,
   },
 ];

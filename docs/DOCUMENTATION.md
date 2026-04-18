@@ -23,7 +23,7 @@ Welcome to the official documentation hub for **Cridl — LinkedIn Automation Po
 ## Key Files (Quick Reference)
 | File | Purpose |
 |------|---------|
-| `Master_Neel_Prompt.md` | Single source of truth for all AI prompt text |
+| `Master_Cortex_Prompt.md` | Single source of truth for all AI prompt text |
 | `NEEL.md` | AI pipeline documentation |
 | `push-all.sh` | Always use this to deploy |
 | `capacitor.config.ts` | Mobile app config (live Vercel URL, splash screen) |

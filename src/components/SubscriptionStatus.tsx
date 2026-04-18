@@ -55,7 +55,7 @@ export default function SubscriptionStatus() {
     return (
       <div className="rounded-xl border border-gray-200 p-6">
         <p className="font-semibold text-gray-900 mb-1">Free plan</p>
-        <p className="text-sm text-gray-500 mb-4">5 posts/month · 2 AI images · 1 profile</p>
+        <p className="text-sm text-gray-500 mb-4">5 posts/month · 2 AI images · 1 profile · Free forever</p>
         <a href="#upgrade" className="inline-block bg-[#0A66C2] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#0A66C2]/90">
           Upgrade
         </a>

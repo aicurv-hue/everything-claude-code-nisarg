@@ -79,7 +79,7 @@ function SignupForm() {
             required
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="Neel Shah"
+            placeholder="John Doe"
             className="w-full bg-slate-800 border border-white/[0.08] rounded-lg px-4 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-[#0A66C2] transition-colors"
           />
         </div>
