@@ -42,10 +42,19 @@ export async function GET(req: NextRequest) {
     const subDoc = await adminDb.collection("subscriptions").doc(subscriptionId).get();
     const sub = subDoc.data() || {};
 
+    // Determine billing period from planId
+    const YEARLY_PLAN_IDS = [
+      process.env.RAZORPAY_PLAN_STARTER_YEARLY,
+      process.env.RAZORPAY_PLAN_PRO_YEARLY,
+      process.env.RAZORPAY_PLAN_BUSINESS_YEARLY,
+    ].filter(Boolean).map(id => id!.trim());
+    const billingPeriod = sub.planId && YEARLY_PLAN_IDS.includes(sub.planId) ? "yearly" : "monthly";
+
     return NextResponse.json({
       plan,
       status: planStatus,
       subscriptionId,
+      billingPeriod,
       trialEndsAt: sub.trialEndsAt?.toDate?.()?.toISOString() || null,
       currentPeriodEnd: sub.currentPeriodEnd?.toDate?.()?.toISOString() || null,
     }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=30" } });
