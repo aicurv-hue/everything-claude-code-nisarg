@@ -1,5 +1,7 @@
 # Master Cortex Prompt
 
+> **NOTE:** Filename is `Master_Neel_Prompt.md` (legacy name from April 2026 rebrand). Content is all Cortex. See [rebrand_neel_cortex.md](./memory/rebrand_neel_cortex.md) for details.
+
 > **This is the single source of truth for every word Cridl Cortex is instructed with.**
 > Edit this file to change Cortex's behaviour — no TypeScript changes required.
 > Placeholders use `{{DOUBLE_BRACES}}` and are filled by `generate.ts` at runtime.

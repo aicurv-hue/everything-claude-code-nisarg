@@ -1,5 +1,7 @@
 # NEEL — Complete Pipeline Documentation
 
+> **NOTE:** Filename is `NEEL.md` (legacy name from April 2026 rebrand). Content documents Cortex pipeline. See [rebrand_neel_cortex.md](./memory/rebrand_neel_cortex.md) for details.
+
 > Cortex is the AI author powering Cridl. This document covers every input layer that reaches Cortex, how each one influences the output, where it is set, and what happens when it is missing.
 >
 > **Purpose:** Single source of truth for building user SOPs, internal onboarding, and future feature design. Keep this updated whenever `generate.ts`, `research.ts`, memory, profiles, settings, or the create/preview pages change.
