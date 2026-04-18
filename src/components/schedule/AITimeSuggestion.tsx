@@ -40,7 +40,17 @@ export default function AITimeSuggestion({ suggestions, isLoading, onSelect, onR
     );
   }
 
-  if (!suggestions.length) return null;
+  if (!suggestions.length) {
+    return (
+      <div className="space-y-2 pt-1">
+        <div className="flex items-center gap-1.5 mb-2">
+          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+          <span className="text-xs font-semibold text-slate-700">AI Best Times</span>
+        </div>
+        <p className="text-xs text-slate-400">No available time slots for this date. Try selecting a different date.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2 pt-1">

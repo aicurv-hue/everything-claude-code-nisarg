@@ -70,13 +70,7 @@ export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId
 
   const inputClass = `w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 transition-all ${focusRing}`;
 
-  const DEFAULT_SUGGESTIONS = [
-    { slot: "", day_of_week: "Tuesday",   time_label: "9:00 AM",  score: 88, reasoning: "B2B audiences are most active Tuesday mornings before meetings begin." },
-    { slot: "", day_of_week: "Thursday",  time_label: "5:00 PM",  score: 82, reasoning: "End-of-day Thursday sees high scroll activity as professionals wind down." },
-    { slot: "", day_of_week: "Wednesday", time_label: "12:00 PM", score: 76, reasoning: "Midweek lunch breaks are a strong secondary engagement window on LinkedIn." },
-  ];
-
-  const fetchSuggestions = async (forceRefresh = false) => {
+  const fetchSuggestions = async (targetDate?: string, forceRefresh = false) => {
     setAiLoading(true);
     if (forceRefresh) setSuggestions([]);
     const controller = new AbortController();
@@ -90,23 +84,23 @@ export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ userId, segment, ...(forceRefresh ? { forceRefresh: true } : {}) }),
+        body: JSON.stringify({ userId, segment, targetDate: targetDate || date, timezone, ...(forceRefresh ? { forceRefresh: true } : {}) }),
       });
       const d = await res.json();
       if (d.suggestions?.length) {
         setSuggestions(d.suggestions);
       } else {
-        setSuggestions(DEFAULT_SUGGESTIONS);
+        setSuggestions([]);
       }
     } catch {
-      setSuggestions(DEFAULT_SUGGESTIONS);
+      setSuggestions([]);
     } finally {
       clearTimeout(timer);
       setAiLoading(false);
     }
   };
 
-  useEffect(() => { fetchSuggestions(); }, [userId, segment]); // eslint-disable-line
+  useEffect(() => { fetchSuggestions(date); }, [userId, segment]); // eslint-disable-line
 
   const handleApplySuggestion = (slot: string) => {
     const d = new Date(slot);
@@ -163,7 +157,7 @@ export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId
                 type="date"
                 value={date}
                 min={minDate}
-                onChange={(e) => { setDate(e.target.value); setBestApplied(false); setSubmitError(null); }}
+                onChange={(e) => { setDate(e.target.value); setBestApplied(false); setSubmitError(null); fetchSuggestions(e.target.value); }}
                 className={inputClass}
               />
             </div>
@@ -194,7 +188,7 @@ export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId
             suggestions={suggestions}
             isLoading={aiLoading}
             onSelect={handleApplySuggestion}
-            onRefresh={() => fetchSuggestions(true)}
+            onRefresh={() => fetchSuggestions(date, true)}
             isCorporate={isCorporate}
           />
 
