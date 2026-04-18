@@ -34,7 +34,9 @@ const PLANS = [
   },
 ];
 
-export default function UpgradePlans() {
+const PLAN_RANK: Record<string, number> = { free: 0, starter: 1, pro: 2, business: 3 };
+
+export default function UpgradePlans({ currentPlan = "free" }: { currentPlan?: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -118,7 +120,7 @@ export default function UpgradePlans() {
         </div>
       )}
       <div className="grid grid-cols-1 gap-3">
-        {PLANS.map((plan) => {
+        {PLANS.filter((plan) => (PLAN_RANK[plan.name.toLowerCase()] ?? 0) > (PLAN_RANK[currentPlan] ?? 0)).map((plan) => {
           const displayPrice = yearly
             ? `₹${(plan.yearlyPrice / 12).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`
             : `₹${plan.monthlyPrice.toLocaleString("en-IN")}`;

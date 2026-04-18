@@ -300,7 +300,7 @@ export default function BillingPage() {
                   {isTrial ? "Upgrade before your trial ends" : isPaid ? "Change your plan" : "Upgrade your plan"}
                 </p>
               </div>
-              <UpgradePlans />
+              <UpgradePlans currentPlan={effectivePlan} />
             </div>
           )}
         </>
