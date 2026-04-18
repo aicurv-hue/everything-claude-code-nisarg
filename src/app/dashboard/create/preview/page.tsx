@@ -974,7 +974,7 @@ export default function PostPreviewPage() {
               content={editedContent}
               imageUrl={finalImageUrl ?? undefined}
               imageHook={imageHook || undefined}
-              isUploadedImage={imageMode === "upload"}
+              isUploadedImage={imageMode === "upload" || imageMode === "reference"}
               isCompany={isCorp}
             />
           </div>
