@@ -22,6 +22,8 @@ interface UsageData {
     imagesPerMonth: number;
     faceImagesPerMonth: number;
   };
+  cycleStart: string | null;
+  cycleEnd: string | null;
 }
 
 // ── UsageBar ───────────────────────────────────────────────────────────────────
@@ -345,7 +347,11 @@ export default function BillingPage() {
 
               <div className="border-t border-slate-100 px-6 py-3 flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                <p className="text-xs text-slate-400">Usage resets on the 1st of each month.</p>
+                <p className="text-xs text-slate-400">
+                  {usage.cycleEnd
+                    ? `Usage resets on ${formatDate(new Date(usage.cycleEnd))}.`
+                    : "Usage resets on the 1st of each month."}
+                </p>
               </div>
             </div>
           )}

@@ -7,8 +7,34 @@ function currentMonthKey(): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-function usageDocId(userId: string): string {
-  return `${userId}_${currentMonthKey()}`;
+/**
+ * Get the billing cycle key for a user.
+ * - Paid users: based on currentPeriodStart from their subscription
+ * - Free/trial users: calendar month (YYYY-MM)
+ */
+async function getBillingCycleKey(userId: string): Promise<{ key: string; cycleStart: Date | null; cycleEnd: Date | null }> {
+  const userDoc = await adminDb.collection("users").doc(userId).get();
+  const userData = userDoc.data() || {};
+  const subscriptionId = userData.subscriptionId;
+
+  if (subscriptionId && userData.planStatus === "active") {
+    const subDoc = await adminDb.collection("subscriptions").doc(subscriptionId).get();
+    const sub = subDoc.data();
+    if (sub?.currentPeriodStart && sub?.currentPeriodEnd) {
+      const start = sub.currentPeriodStart.toDate ? sub.currentPeriodStart.toDate() : new Date(sub.currentPeriodStart);
+      const end = sub.currentPeriodEnd.toDate ? sub.currentPeriodEnd.toDate() : new Date(sub.currentPeriodEnd);
+      // Use ISO date of cycle start as the key
+      const key = start.toISOString().slice(0, 10);
+      return { key, cycleStart: start, cycleEnd: end };
+    }
+  }
+
+  // Free/trial users: calendar month
+  return { key: currentMonthKey(), cycleStart: null, cycleEnd: null };
+}
+
+function usageDocId(userId: string, cycleKey: string): string {
+  return `${userId}_${cycleKey}`;
 }
 
 export interface MonthlyUsage {
@@ -17,19 +43,24 @@ export interface MonthlyUsage {
   faceImagesGenerated: number;
   uid: string;
   month: string;
+  cycleStart: string | null;
+  cycleEnd: string | null;
 }
 
 export async function getMonthlyUsage(userId: string): Promise<MonthlyUsage> {
-  const snap = await adminDb.collection("usage").doc(usageDocId(userId)).get();
+  const { key, cycleStart, cycleEnd } = await getBillingCycleKey(userId);
+  const snap = await adminDb.collection("usage").doc(usageDocId(userId, key)).get();
   const base: MonthlyUsage = {
     postsGenerated: 0,
     imagesGenerated: 0,
     faceImagesGenerated: 0,
     uid: userId,
-    month: currentMonthKey(),
+    month: key,
+    cycleStart: cycleStart?.toISOString() || null,
+    cycleEnd: cycleEnd?.toISOString() || null,
   };
   if (!snap.exists) return base;
-  return { ...base, ...(snap.data() as Partial<MonthlyUsage>) };
+  return { ...base, ...(snap.data() as Partial<MonthlyUsage>), cycleStart: cycleStart?.toISOString() || null, cycleEnd: cycleEnd?.toISOString() || null };
 }
 
 export type UsageAction = "post" | "image" | "faceImage";
@@ -63,8 +94,9 @@ export async function checkAndIncrementBulk(
 ): Promise<UsageCheckResult> {
   const plan = await getUserPlan(userId);
   const { field, limit } = getFieldAndLimit(plan, action);
-  const docRef = adminDb.collection("usage").doc(usageDocId(userId));
-  const month = currentMonthKey();
+  const { key } = await getBillingCycleKey(userId);
+  const docRef = adminDb.collection("usage").doc(usageDocId(userId, key));
+  const month = key;
 
   let allowed = false;
   let finalUsed = 0;
