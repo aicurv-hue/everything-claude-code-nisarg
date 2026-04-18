@@ -93,7 +93,16 @@ export async function POST(req: NextRequest) {
                 },
                 {
                   type: "text",
-                  text: `You are describing an image for a LinkedIn ghostwriter called Neel who cannot see it. Write ONLY a single plain prose paragraph of 150-250 words. NEVER output JSON, bounding boxes, coordinates, code blocks, bullet points, headers, or markdown. Cover: what the image shows (screenshot, chart, photo, infographic, etc.), all visible text and numbers transcribed exactly, what business situation or result it represents, and two specific LinkedIn post angles Neel could take. Be factual and precise.`,
+                  text: `You are helping a LinkedIn ghostwriter called Neel craft a post. Describe this image in ONE plain prose paragraph (150-250 words). NEVER output JSON, code, bullet points, headers, or markdown.
+
+Extract and emphasize:
+1. The core insight or data (what changed? what's surprising? what's the business impact?)
+2. Every number, percentage, metric visible — transcribe exactly
+3. What audience this resonates with (founders, engineers, marketers, etc?)
+4. 2–3 specific angles Neel could turn this into a LinkedIn hook (e.g., "the hidden cost of X", "why Y failed", "the pattern nobody talks about")
+5. Emotional hooks: what makes this story worth sharing? (risk, growth, disruption, counterintuitive, etc)
+
+Be vivid but factual. Focus on what makes this post-worthy.`,
                 },
               ],
             }],
