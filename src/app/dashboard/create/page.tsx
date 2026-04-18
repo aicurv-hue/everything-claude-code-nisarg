@@ -135,9 +135,13 @@ export default function CreatePostPage() {
     if (!sourceUrl.trim() && !sourceImage) return null;
     setSourceStatus("extracting");
     try {
+      const token = auth.currentUser ? await getIdToken(auth.currentUser) : null;
       const res = await fetch("/api/ai/extract-context", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           url: sourceUrl.trim() || undefined,
           imageBase64: sourceImage?.base64 || undefined,
