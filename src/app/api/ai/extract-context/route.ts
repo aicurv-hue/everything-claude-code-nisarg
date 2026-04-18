@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
             "X-Title": "Cridl",
           },
           body: JSON.stringify({
-            model: "google/gemini-2.0-flash-001",
+            model: "openai/gpt-4o-mini",
             messages: [{
               role: "user",
               content: [
@@ -92,7 +92,8 @@ export async function POST(req: NextRequest) {
                   image_url: { url: `data:${imageType};base64,${imageBase64}` },
                 },
                 {
-                  text: `Describe this image for a LinkedIn ghostwriter called Neel who cannot see it. Write one plain paragraph under 250 words with no bullet points no headers no markdown no special symbols. Cover: what the main subject is, materials condition colour and setting, any visible text labels or numbers transcribed exactly, the industry and technical purpose, what business story or pain point this represents, and two specific LinkedIn post angles Neel could use. Be factual and precise only.`,
+                  type: "text",
+                  text: `You are describing an image for a LinkedIn ghostwriter called Neel who cannot see it. Write ONLY a single plain prose paragraph of 150-250 words. NEVER output JSON, bounding boxes, coordinates, code blocks, bullet points, headers, or markdown. Cover: what the image shows (screenshot, chart, photo, infographic, etc.), all visible text and numbers transcribed exactly, what business situation or result it represents, and two specific LinkedIn post angles Neel could take. Be factual and precise.`,
                 },
               ],
             }],
