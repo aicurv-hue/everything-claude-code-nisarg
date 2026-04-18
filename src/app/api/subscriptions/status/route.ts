@@ -12,7 +12,14 @@ export async function GET(req: NextRequest) {
 
     const OWNER_UIDS = ["iYmoobFP0ChkrYZzDLQokuKcXcw2"];
     if (OWNER_UIDS.includes(userId)) {
-      return NextResponse.json({ plan: "business", status: "active" }, { headers: { "Cache-Control": "no-store" } });
+      return NextResponse.json({
+        plan: "business",
+        status: "active",
+        billingPeriod: null,
+        currentPeriodEnd: null,
+        subscriptionId: null,
+        isOwner: true,
+      }, { headers: { "Cache-Control": "no-store" } });
     }
 
     const userDoc = await adminDb.collection("users").doc(userId).get();
