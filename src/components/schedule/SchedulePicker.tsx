@@ -151,7 +151,7 @@ export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-                <CalendarDays className="w-3 h-3" /> Date
+                <CalendarDays className="w-3 h-3 text-slate-500 dark:text-slate-400" /> Date
               </label>
               <input
                 type="date"
@@ -163,7 +163,7 @@ export default function SchedulePicker({ onSchedule, onCancel, isLoading, userId
             </div>
             <div>
               <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-                <Clock className="w-3 h-3" /> Time
+                <Clock className="w-3 h-3 text-slate-500 dark:text-slate-400" /> Time
               </label>
               <input
                 type="time"
