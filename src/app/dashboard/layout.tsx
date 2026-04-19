@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, UserCircle2, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut, BookOpen, HelpCircle, TrendingUp, Rocket, CreditCard, Lightbulb, Zap, MoreHorizontal } from "lucide-react";
+import { LayoutDashboard, UserCircle2, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut, BookOpen, HelpCircle, TrendingUp, Rocket, CreditCard, Lightbulb, Zap } from "lucide-react";
 import { SegmentProvider, useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
@@ -112,12 +112,12 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
 
       {/* Segment Toggle */}
       <div className="px-3 pb-3">
-        <div className="bg-[var(--toggle-bg)] rounded-lg p-[3px] flex gap-[2px]">
+        <div className="bg-[var(--background)] rounded-lg p-[3px] flex gap-[2px] border border-[var(--border)]">
           <button
             onClick={() => setSegment("individual")}
-            className={`flex-1 py-[5px] rounded-md text-[11.5px] font-medium transition-all ${
+            className={`flex-1 py-[6px] rounded-md text-[11.5px] font-semibold transition-all ${
               isIndividual
-                ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm"
+                ? "bg-[var(--primary)] text-white shadow-sm"
                 : "text-[var(--text-muted)] hover:text-[var(--text-sub)]"
             }`}
           >
@@ -125,9 +125,9 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
           </button>
           <button
             onClick={() => setSegment("corporate")}
-            className={`flex-1 py-[5px] rounded-md text-[11.5px] font-medium transition-all ${
+            className={`flex-1 py-[6px] rounded-md text-[11.5px] font-semibold transition-all ${
               isCorporate
-                ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm"
+                ? "bg-[var(--primary)] text-white shadow-sm"
                 : "text-[var(--text-muted)] hover:text-[var(--text-sub)]"
             }`}
           >
@@ -194,10 +194,10 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
             </div>
             <button
               onClick={async () => { await logOut(); router.replace("/login"); }}
-              className="text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors shrink-0"
-              title="More"
+              className="text-[var(--text-muted)] hover:text-red-400 transition-colors shrink-0"
+              title="Log out"
             >
-              <MoreHorizontal className="w-3.5 h-3.5" />
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           </>
         )}

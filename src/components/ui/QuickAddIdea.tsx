@@ -16,11 +16,12 @@ export default function QuickAddIdea() {
     setSaving(true);
     try {
       const token = await getAuthToken();
-      await fetch("/api/ideas", {
+      const res = await fetch("/api/ideas", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ title: title.trim(), segment, source: "manual" }),
       });
+      if (!res.ok) throw new Error("Save failed");
       setTitle("");
       setOpen(false);
     } catch (err) {
@@ -43,10 +44,10 @@ export default function QuickAddIdea() {
   }
 
   return (
-    <div className="fixed bottom-20 right-5 md:bottom-6 md:right-6 z-50 w-80 bg-[var(--card)] rounded-xl shadow-2xl border border-gray-200 p-4">
+    <div className="fixed bottom-20 right-5 md:bottom-6 md:right-6 z-50 w-80 bg-[var(--card)] rounded-xl shadow-2xl border border-[var(--border)] p-4">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-semibold text-gray-900">Quick Add Idea</span>
-        <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
+        <span className="text-sm font-semibold text-[var(--foreground)]">Quick Add Idea</span>
+        <button onClick={() => setOpen(false)} className="text-[var(--text-muted)] hover:text-[var(--foreground)]">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -56,7 +57,7 @@ export default function QuickAddIdea() {
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && handleSave()}
         placeholder="e.g. Why most founders ignore their best channel"
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/30 focus:border-[#0A66C2]"
+        className="w-full px-3 py-2 text-sm bg-[var(--input)] border border-[var(--input-border)] rounded-lg text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-[var(--primary)]"
         autoFocus
       />
       <button

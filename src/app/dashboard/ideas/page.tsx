@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Lightbulb, Sparkles, Trash2, PenSquare, Archive, Filter } from "lucide-react";
+import { Lightbulb, Sparkles, Trash2, PenSquare, Archive } from "lucide-react";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
@@ -128,27 +128,27 @@ export default function IdeaBankPage() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-[22px] font-bold text-[var(--foreground)] flex items-center gap-2">
             <Lightbulb className="w-5 h-5 text-amber-500" />
             Idea Bank
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Save and organize content ideas. Convert to posts with one click.</p>
+          <p className="text-[13px] text-[var(--text-muted)] mt-1">Save and organize content ideas. Convert to posts with one click.</p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setShowAdd(true)}
-            className="px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-3 py-2 text-[13px] font-medium border border-[var(--border)] rounded-lg bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--card-hover)] transition-colors"
           >
             + Add Idea
           </button>
           <button
             onClick={handleGenerate}
             disabled={generating}
-            className="px-3 py-2 text-sm font-semibold bg-[var(--primary)] text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5 transition-colors"
+            className="px-3 py-2 text-[13px] font-semibold bg-[var(--primary)] text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5 transition-colors"
           >
             <Sparkles className="w-4 h-4" />
             {generating ? "Generating..." : "AI Suggestions"}
@@ -165,13 +165,13 @@ export default function IdeaBankPage() {
             onChange={(e) => setAddTitle(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             placeholder="Type your content idea..."
-            className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/30"
+            className="flex-1 px-3 py-2 text-sm bg-[var(--input)] border border-[var(--input-border)] rounded-lg text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
             autoFocus
           />
           <button onClick={handleAdd} className="px-4 py-2 text-sm font-semibold bg-[var(--primary)] text-white rounded-lg hover:opacity-90">
             Save
           </button>
-          <button onClick={() => { setShowAdd(false); setAddTitle(""); }} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700">
+          <button onClick={() => { setShowAdd(false); setAddTitle(""); }} className="px-3 py-2 text-sm text-[var(--text-sub)] hover:text-[var(--foreground)]">
             Cancel
           </button>
         </div>
@@ -184,7 +184,7 @@ export default function IdeaBankPage() {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
-              filter === f ? "bg-[var(--primary)] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              filter === f ? "bg-[var(--primary)] text-white" : "bg-[var(--card)] text-[var(--text-sub)] border border-[var(--border)] hover:bg-[var(--card-hover)]"
             }`}
           >
             {f === "active" ? "Active" : f === "all" ? "All" : f === "ai_suggested" ? "AI" : f === "manual" ? "Manual" : "Used"}
@@ -194,47 +194,47 @@ export default function IdeaBankPage() {
 
       {/* Ideas grid */}
       {loading ? (
-        <div className="text-center py-12 text-gray-400">Loading ideas...</div>
+        <div className="text-center py-12 text-[var(--text-muted)]">Loading ideas...</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
-          <Lightbulb className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">No ideas yet. Add one manually or get AI suggestions from your profile.</p>
+          <Lightbulb className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-3" />
+          <p className="text-[var(--text-sub)] text-sm">No ideas yet. Add one manually or get AI suggestions from your profile.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filtered.map((idea) => (
             <div
               key={idea.id}
-              className={`rounded-xl border p-4 transition-colors ${
-                idea.status === "used" ? "border-gray-100 bg-gray-50 opacity-60" : "border-gray-200 bg-[var(--card)] hover:border-gray-300"
+              className={`card p-4 transition-colors ${
+                idea.status === "used" ? "opacity-50" : "hover:bg-[var(--card-hover)]"
               }`}
             >
               <div className="flex items-start justify-between gap-2">
-                <h3 className="text-sm font-semibold text-gray-900 leading-snug">{idea.title}</h3>
+                <h3 className="text-sm font-semibold text-[var(--foreground)] leading-snug">{idea.title}</h3>
                 <span className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                  idea.source === "ai_suggested" ? "bg-violet-500/20 text-violet-400" : "bg-gray-100 text-gray-600"
+                  idea.source === "ai_suggested" ? "bg-violet-500/20 text-violet-400" : "bg-[var(--border)] text-[var(--text-sub)]"
                 }`}>
                   {idea.source === "ai_suggested" ? "AI" : "Manual"}
                 </span>
               </div>
 
               {idea.description && (
-                <p className="text-xs text-gray-500 mt-1.5 line-clamp-2">{idea.description}</p>
+                <p className="text-xs text-[var(--text-sub)] mt-1.5 line-clamp-2">{idea.description}</p>
               )}
 
               <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
                 {idea.pillar && (
-                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">{idea.pillar}</span>
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400">{idea.pillar}</span>
                 )}
                 {idea.suggestedTone && (
-                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${TONE_COLORS[idea.suggestedTone] || "bg-gray-100 text-gray-600"}`}>
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${TONE_COLORS[idea.suggestedTone] || "bg-[var(--border)] text-[var(--text-sub)]"}`}>
                     {idea.suggestedTone}
                   </span>
                 )}
               </div>
 
               {idea.status === "active" && (
-                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-100">
+                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-[var(--border)]">
                   <button
                     onClick={() => handleUse(idea)}
                     className="flex-1 py-1.5 text-xs font-semibold bg-[var(--primary)] text-white rounded-lg hover:opacity-90 flex items-center justify-center gap-1 transition-colors"
@@ -244,14 +244,14 @@ export default function IdeaBankPage() {
                   </button>
                   <button
                     onClick={() => idea.id && handleArchive(idea.id)}
-                    className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-sub)] rounded-lg hover:bg-[var(--border)]/50 transition-colors"
                     title="Archive"
                   >
                     <Archive className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => idea.id && handleDelete(idea.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-500/10 transition-colors"
+                    className="p-1.5 text-[var(--text-muted)] hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
                     title="Delete"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -260,8 +260,8 @@ export default function IdeaBankPage() {
               )}
 
               {idea.status === "used" && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
-                  <span className="text-[10px] text-gray-400">Used</span>
+                <div className="mt-3 pt-3 border-t border-[var(--border)]">
+                  <span className="text-[10px] text-[var(--text-muted)]">Used</span>
                 </div>
               )}
             </div>
