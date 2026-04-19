@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { ProfileSegment } from "@/lib/db/profiles";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
@@ -58,6 +58,17 @@ export default function CreatePostPage() {
   const [mode, setMode] = useState<"ai" | "manual">("ai");
   const [manualContent, setManualContent] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Pre-fill from Idea Bank URL params
+  useEffect(() => {
+    const ideaTitle = searchParams.get("title");
+    const ideaTone = searchParams.get("tone");
+    const ideaAudience = searchParams.get("audience");
+    if (ideaTitle) setTopic(decodeURIComponent(ideaTitle));
+    if (ideaTone) setTone(ideaTone);
+    if (ideaAudience) setAudience(ideaAudience);
+  }, [searchParams]);
 
   // B1: Restore draft inputs from localStorage on mount
   useEffect(() => {
@@ -80,9 +91,9 @@ export default function CreatePostPage() {
     } catch { /* ignore */ }
   }, [topic, tone, audience, length]);
 
-  const accentColor = isCorporate ? "text-violet-600" : "text-[#0A66C2]";
-  const accentBg    = isCorporate ? "bg-violet-50 border-violet-200" : "bg-blue-50 border-blue-200";
-  const accentBtn   = isCorporate ? "bg-violet-600 hover:bg-violet-700" : "bg-[#0A66C2] hover:bg-[#0854a0]";
+  const accentColor = isCorporate ? "text-violet-400" : "text-[var(--primary)]";
+  const accentBg    = isCorporate ? "bg-violet-500/10 border-violet-800/40" : "bg-blue-500/10 border-blue-800/40";
+  const accentBtn   = isCorporate ? "bg-violet-600 hover:bg-violet-700" : "bg-[var(--primary)] hover:opacity-90";
 
   useEffect(() => {
     if (!user) return;
@@ -288,8 +299,8 @@ export default function CreatePostPage() {
         {/* Page Header */}
         <div className="flex items-center justify-between mb-6 md:mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Create Post</h1>
-            <p className="text-sm text-slate-500 mt-0.5">AI research + generation in one flow</p>
+            <h1 className="text-2xl font-bold text-[var(--foreground)]">Create Post</h1>
+            <p className="text-sm text-[var(--text-muted)] mt-0.5">AI research + generation in one flow</p>
           </div>
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium ${accentBg} ${accentColor}`}>
             {isCorporate ? <Building2 className="w-3 h-3" /> : <User className="w-3 h-3" />}
@@ -298,13 +309,13 @@ export default function CreatePostPage() {
         </div>
 
         {/* Mode toggle */}
-        <div className="flex gap-2 mb-6 p-1 bg-slate-100 rounded-xl w-fit">
+        <div className="flex gap-2 mb-6 p-1 bg-[var(--toggle-bg)] rounded-xl w-fit">
           <button
             onClick={() => setMode("ai")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               mode === "ai"
-                ? `bg-white shadow-sm ${accentColor}`
-                : "text-slate-500 hover:text-slate-700"
+                ? `bg-[var(--card)] shadow-sm ${accentColor}`
+                : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
             }`}
           >
             <Sparkles className="w-4 h-4" />
@@ -314,8 +325,8 @@ export default function CreatePostPage() {
             onClick={() => setMode("manual")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               mode === "manual"
-                ? `bg-white shadow-sm ${accentColor}`
-                : "text-slate-500 hover:text-slate-700"
+                ? `bg-[var(--card)] shadow-sm ${accentColor}`
+                : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
             }`}
           >
             <PenLine className="w-4 h-4" />
@@ -328,7 +339,7 @@ export default function CreatePostPage() {
           <div className="grid grid-cols-12 gap-6">
             <div className="col-span-12 lg:col-span-8 space-y-5">
               <div className="card p-6 space-y-3">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
                   Write your post
                 </label>
                 <textarea
@@ -336,11 +347,11 @@ export default function CreatePostPage() {
                   value={manualContent}
                   onChange={(e) => setManualContent(e.target.value)}
                   placeholder="Write your LinkedIn post here. Cridl will publish it exactly as written — no AI changes."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/30 focus:border-[#0A66C2] transition-all resize-none text-sm leading-relaxed"
+                  className="w-full bg-[var(--card-hover)] border border-[var(--border)] rounded-xl px-4 py-3.5 text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/30 focus:border-[#0A66C2] transition-all resize-none text-sm leading-relaxed"
                 />
                 <div className="flex justify-between items-center">
-                  <p className="text-[11px] text-slate-400">You can add an image, schedule, or post immediately on the next screen.</p>
-                  <span className={`text-[11px] font-medium ${manualContent.length > 2900 ? "text-amber-500" : "text-slate-400"}`}>
+                  <p className="text-[11px] text-[var(--text-muted)]">You can add an image, schedule, or post immediately on the next screen.</p>
+                  <span className={`text-[11px] font-medium ${manualContent.length > 2900 ? "text-amber-500" : "text-[var(--text-muted)]"}`}>
                     {manualContent.length}/3000
                   </span>
                 </div>
@@ -349,7 +360,7 @@ export default function CreatePostPage() {
               {/* Tone + Audience for manual (used for metadata only) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="card p-5 space-y-3">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Voice & Tone</label>
+                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Voice & Tone</label>
                   <div className="space-y-2">
                     {TONES.map((t) => (
                       <button
@@ -358,14 +369,14 @@ export default function CreatePostPage() {
                         className={`w-full p-3 rounded-lg border text-left transition-all text-sm flex items-center justify-between ${
                           tone === t.value
                             ? isCorporate
-                              ? "border-violet-300 bg-violet-50 text-violet-700"
-                              : "border-[#0A66C2]/40 bg-blue-50 text-[#0A66C2]"
-                            : "border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600"
+                              ? "border-violet-800/40 bg-violet-500/10 text-violet-400"
+                              : "border-[#0A66C2]/40 bg-blue-500/10 text-[var(--primary)]"
+                            : "border-[var(--border)] hover:border-slate-300 hover:bg-[var(--card-hover)] text-[var(--text-sub)]"
                         }`}
                       >
                         <span className="font-medium text-sm">{t.label}</span>
                         {tone === t.value && (
-                          <div className={`w-2 h-2 rounded-full shrink-0 ${isCorporate ? "bg-violet-500" : "bg-[#0A66C2]"}`} />
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${isCorporate ? "bg-violet-500/100" : "bg-[var(--primary)]"}`} />
                         )}
                       </button>
                     ))}
@@ -373,7 +384,7 @@ export default function CreatePostPage() {
                 </div>
                 <div className="space-y-5">
                   <div className="card p-5 space-y-3">
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Target Audience</label>
+                    <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Target Audience</label>
                     <div className="flex flex-wrap gap-2">
                       {AUDIENCES.map((a) => (
                         <button
@@ -383,8 +394,8 @@ export default function CreatePostPage() {
                             audience === a.value
                               ? isCorporate
                                 ? "bg-violet-600 text-white border-violet-600"
-                                : "bg-[#0A66C2] text-white border-[#0A66C2]"
-                              : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                                : "bg-[var(--primary)] text-white border-[#0A66C2]"
+                              : "bg-[var(--card)] text-[var(--text-sub)] border-[var(--border)] hover:border-slate-300"
                           }`}
                         >
                           {a.label}
@@ -400,7 +411,7 @@ export default function CreatePostPage() {
                 disabled={!manualContent.trim()}
                 className={`w-full py-4 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-3 ${
                   !manualContent.trim()
-                    ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                    ? "bg-[var(--border)] text-[var(--text-muted)] cursor-not-allowed"
                     : `${accentBtn} text-white shadow-sm active:scale-[0.99]`
                 }`}
               >
@@ -414,10 +425,10 @@ export default function CreatePostPage() {
               <div className={`card p-5 border-l-4 ${isCorporate ? "border-l-violet-500" : "border-l-[#0A66C2]"}`}>
                 <div className="flex items-center gap-2 mb-4">
                   <PenLine className={`w-4 h-4 ${accentColor}`} />
-                  <h4 className="text-sm font-semibold text-slate-800">Manual Mode</h4>
+                  <h4 className="text-sm font-semibold text-[var(--foreground)]">Manual Mode</h4>
                 </div>
-                <div className="space-y-3 text-xs text-slate-500 leading-relaxed">
-                  <p>Your post is published <span className="font-semibold text-slate-700">exactly as written</span> — no AI rewrites.</p>
+                <div className="space-y-3 text-xs text-[var(--text-muted)] leading-relaxed">
+                  <p>Your post is published <span className="font-semibold text-[var(--foreground)]">exactly as written</span> — no AI rewrites.</p>
                   <p>On the next screen you can:</p>
                   <ul className="space-y-1 ml-3 list-disc">
                     <li>Add or generate an image</li>
@@ -426,9 +437,9 @@ export default function CreatePostPage() {
                   </ul>
                 </div>
               </div>
-              <div className="card p-4 bg-slate-50">
-                <p className="text-xs font-semibold text-slate-500 mb-1">💡 Tip</p>
-                <p className="text-xs text-slate-500 leading-relaxed">
+              <div className="card p-4 bg-[var(--card-hover)]">
+                <p className="text-xs font-semibold text-[var(--text-muted)] mb-1">💡 Tip</p>
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
                   Manual posts don't use AI credits. Scheduling and image generation credits still apply.
                 </p>
               </div>
@@ -445,7 +456,7 @@ export default function CreatePostPage() {
 
             {/* Topic */}
             <div className="card p-6 space-y-3">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
                 What do you want to post about?
               </label>
               <textarea
@@ -453,10 +464,10 @@ export default function CreatePostPage() {
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="Describe your topic or idea. The more specific, the better the research will be. E.g. 'How AI is changing legal due diligence in 2025'"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/30 focus:border-[#0A66C2] transition-all resize-none text-sm leading-relaxed"
+                className="w-full bg-[var(--card-hover)] border border-[var(--border)] rounded-xl px-4 py-3.5 text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/30 focus:border-[#0A66C2] transition-all resize-none text-sm leading-relaxed"
               />
               <div className="flex justify-end">
-                <span className={`text-[11px] font-medium ${topic.length > 450 ? "text-amber-500" : "text-slate-400"}`}>
+                <span className={`text-[11px] font-medium ${topic.length > 450 ? "text-amber-500" : "text-[var(--text-muted)]"}`}>
                   {topic.length}/500
                 </span>
               </div>
@@ -466,19 +477,19 @@ export default function CreatePostPage() {
             <div className="card overflow-hidden">
               <button
                 onClick={() => setShowSourcePanel(!showSourcePanel)}
-                className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-[var(--card-hover)] transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all ${showSourcePanel ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-200"}`}>
-                    <Link2 className={`w-3.5 h-3.5 ${showSourcePanel ? "text-[#0A66C2]" : "text-slate-400"}`} />
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all ${showSourcePanel ? "bg-blue-500/10 border-blue-800/40" : "bg-[var(--card-hover)] border-[var(--border)]"}`}>
+                    <Link2 className={`w-3.5 h-3.5 ${showSourcePanel ? "text-[var(--primary)]" : "text-[var(--text-muted)]"}`} />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <p className="text-sm font-medium text-[var(--foreground)] flex items-center gap-2">
                       Source Material
-                      <span className="text-[10px] font-normal text-slate-400 normal-case">optional — URL, article, or image</span>
+                      <span className="text-[10px] font-normal text-[var(--text-muted)] normal-case">optional — URL, article, or image</span>
                       {sourceStatus === "ready" && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
                     </p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
                       {sourceStatus === "ready"
                         ? "✓ Context extracted — Cortex will read it before writing"
                         : sourceUrl || sourceImage
@@ -488,55 +499,55 @@ export default function CreatePostPage() {
                   </div>
                 </div>
                 {showSourcePanel
-                  ? <ChevronUp className="w-4 h-4 text-slate-400" />
-                  : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                  ? <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" />
+                  : <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />}
               </button>
 
               {showSourcePanel && (
-                <div className="px-5 pb-5 border-t border-slate-100 space-y-4 pt-4">
+                <div className="px-5 pb-5 border-t border-[var(--border-sub)] space-y-4 pt-4">
                   {/* URL input */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Article / Page URL</label>
+                    <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Article / Page URL</label>
                     <div className="flex gap-2">
                       <input
                         type="url"
                         value={sourceUrl}
                         onChange={(e) => { setSourceUrl(e.target.value); setSourceContext(null); setSourceStatus("idle"); }}
                         placeholder="https://example.com/article-to-post-about"
-                        className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] transition-all"
+                        className="flex-1 bg-[var(--card-hover)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] transition-all"
                       />
                       {sourceUrl.trim() && (
                         <button
                           onClick={() => { setSourceUrl(""); setSourceContext(null); setSourceStatus("idle"); }}
-                          className="p-2.5 rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 transition-all"
+                          className="p-2.5 rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:text-red-500 hover:border-red-200 transition-all"
                         >
                           <X className="w-4 h-4" />
                         </button>
                       )}
                     </div>
-                    <p className="text-[10px] text-slate-400">Cortex will read the page and extract key facts, data, and angles from it.</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">Cortex will read the page and extract key facts, data, and angles from it.</p>
                   </div>
 
                   {/* Image upload */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Reference Image</label>
+                    <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Reference Image</label>
                     {sourceImage ? (
                       <div className="flex items-start gap-3">
-                        <img src={sourceImage.preview} alt="Source" className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
+                        <img src={sourceImage.preview} alt="Source" className="w-20 h-20 object-cover rounded-lg border border-[var(--border)]" />
                         <div className="flex-1 space-y-1">
-                          <p className="text-xs text-slate-600">Image uploaded — Cortex will analyse it with vision AI</p>
+                          <p className="text-xs text-[var(--text-sub)]">Image uploaded — Cortex will analyse it with vision AI</p>
                           <button
                             onClick={() => { setSourceImage(null); setSourceContext(null); setSourceStatus("idle"); }}
-                            className="text-[11px] text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1"
+                            className="text-[11px] text-[var(--text-muted)] hover:text-red-500 transition-colors flex items-center gap-1"
                           >
                             <X className="w-3 h-3" /> Remove image
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <label className="flex items-center gap-3 px-4 py-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 cursor-pointer hover:border-slate-400 hover:bg-white transition-all">
-                        <ImagePlus className="w-5 h-5 text-slate-400" />
-                        <span className="text-sm text-slate-500">Upload image (JPG, PNG, WebP)</span>
+                      <label className="flex items-center gap-3 px-4 py-3 rounded-lg border border-dashed border-slate-300 bg-[var(--card-hover)] cursor-pointer hover:border-slate-400 hover:bg-[var(--card)] transition-all">
+                        <ImagePlus className="w-5 h-5 text-[var(--text-muted)]" />
+                        <span className="text-sm text-[var(--text-muted)]">Upload image (JPG, PNG, WebP)</span>
                         <input
                           type="file"
                           accept="image/jpeg,image/png,image/webp,image/gif"
@@ -545,7 +556,7 @@ export default function CreatePostPage() {
                         />
                       </label>
                     )}
-                    <p className="text-[10px] text-slate-400">Charts, screenshots, infographics — Cortex will describe what it sees and weave it into the post.</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">Charts, screenshots, infographics — Cortex will describe what it sees and weave it into the post.</p>
                   </div>
 
                   {/* Extract preview button */}
@@ -555,7 +566,7 @@ export default function CreatePostPage() {
                       disabled={sourceStatus === "extracting"}
                       className={`w-full py-2.5 rounded-lg text-sm font-medium border transition-all flex items-center justify-center gap-2 ${
                         sourceStatus === "extracting"
-                          ? "bg-slate-100 text-slate-400 cursor-wait border-slate-200"
+                          ? "bg-[var(--toggle-bg)] text-[var(--text-muted)] cursor-wait border-[var(--border)]"
                           : `${accentBg} ${accentColor} hover:opacity-80`
                       }`}
                     >
@@ -569,13 +580,13 @@ export default function CreatePostPage() {
 
                   {/* Show extracted context preview */}
                   {sourceStatus === "ready" && sourceContext && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
+                    <div className="p-3 bg-emerald-500/10 border border-emerald-800/40 rounded-lg space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-[11px] font-semibold text-green-700 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Context extracted successfully</p>
+                        <p className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Context extracted successfully</p>
                         <span className="text-[10px] text-green-500">{sourceContext.length.toLocaleString()} chars → Cortex</span>
                       </div>
-                      <div className="max-h-56 overflow-y-auto rounded border border-green-100 bg-white p-2">
-                        <p className="text-[11px] text-slate-600 leading-relaxed whitespace-pre-wrap">{sourceContext}</p>
+                      <div className="max-h-56 overflow-y-auto rounded border border-green-100 bg-[var(--card)] p-2">
+                        <p className="text-[11px] text-[var(--text-sub)] leading-relaxed whitespace-pre-wrap">{sourceContext}</p>
                       </div>
                     </div>
                   )}
@@ -592,7 +603,7 @@ export default function CreatePostPage() {
 
               {/* Tone */}
               <div className="card p-5 space-y-3">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Voice & Tone</label>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Voice & Tone</label>
                 <div className="space-y-2">
                   {TONES.map((t) => (
                     <button
@@ -601,20 +612,20 @@ export default function CreatePostPage() {
                       className={`w-full p-3 rounded-lg border text-left transition-all text-sm flex items-center justify-between ${
                         tone === t.value
                           ? isCorporate
-                            ? "border-violet-300 bg-violet-50 text-violet-700"
-                            : "border-[#0A66C2]/40 bg-blue-50 text-[#0A66C2]"
-                          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600"
+                            ? "border-violet-800/40 bg-violet-500/10 text-violet-400"
+                            : "border-[#0A66C2]/40 bg-blue-500/10 text-[var(--primary)]"
+                          : "border-[var(--border)] hover:border-slate-300 hover:bg-[var(--card-hover)] text-[var(--text-sub)]"
                       }`}
                     >
                               <div>
                         <span className="font-medium text-sm">{t.label}</span>
-                        <p className="text-[11px] text-slate-400 mt-0.5">{t.desc}</p>
+                        <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{t.desc}</p>
                         {tone === t.value && (
-                          <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">{t.detail}</p>
+                          <p className="text-[10px] text-[var(--text-muted)] mt-1 leading-relaxed">{t.detail}</p>
                         )}
                       </div>
                       {tone === t.value && (
-                        <div className={`w-2 h-2 rounded-full shrink-0 ${isCorporate ? "bg-violet-500" : "bg-[#0A66C2]"}`} />
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${isCorporate ? "bg-violet-500/100" : "bg-[var(--primary)]"}`} />
                       )}
                     </button>
                   ))}
@@ -625,7 +636,7 @@ export default function CreatePostPage() {
               <div className="space-y-5">
                 <div className="card p-5 space-y-3">
                   <div className="flex items-center gap-1.5">
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Target Audience</label>
+                    <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Target Audience</label>
                     <HelpTooltip
                       text="Cortex filters research insights to what this audience cares about and frames every claim from their perspective."
                       example="Founders → ROI & speed. Engineers → technical depth. Marketers → metrics & growth."
@@ -641,8 +652,8 @@ export default function CreatePostPage() {
                           audience === a.value
                             ? isCorporate
                               ? "bg-violet-600 text-white border-violet-600"
-                              : "bg-[#0A66C2] text-white border-[#0A66C2]"
-                            : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                              : "bg-[var(--primary)] text-white border-[#0A66C2]"
+                            : "bg-[var(--card)] text-[var(--text-sub)] border-[var(--border)] hover:border-slate-300"
                         }`}
                       >
                         {a.label}
@@ -653,7 +664,7 @@ export default function CreatePostPage() {
 
                 <div className="card p-5 space-y-3">
                   <div className="flex items-center gap-1.5">
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Post Length</label>
+                    <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Post Length</label>
                     <HelpTooltip
                       text="Short (100w) = tight hooks and lists, highest scroll-stop rate. Medium (200w) = sweet spot for engagement. Long (400w) = deep-dive thought leadership, best for comments."
                       position="bottom"
@@ -667,7 +678,7 @@ export default function CreatePostPage() {
                         className={`flex-1 py-2.5 rounded-lg text-xs font-medium border transition-all text-center ${
                           length === l.value
                             ? "bg-slate-900 text-white border-slate-900"
-                            : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                            : "bg-[var(--card)] text-[var(--text-muted)] border-[var(--border)] hover:border-slate-300"
                         }`}
                       >
                         <div>{l.label}</div>
@@ -683,35 +694,35 @@ export default function CreatePostPage() {
             <div className="card overflow-hidden">
               <button
                 onClick={() => setShowPromptPanel(!showPromptPanel)}
-                className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-[var(--card-hover)] transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all ${showPromptPanel ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-200"}`}>
-                    <SlidersHorizontal className={`w-3.5 h-3.5 ${showPromptPanel ? "text-[#0A66C2]" : "text-slate-400"}`} />
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center border transition-all ${showPromptPanel ? "bg-blue-500/10 border-blue-800/40" : "bg-[var(--card-hover)] border-[var(--border)]"}`}>
+                    <SlidersHorizontal className={`w-3.5 h-3.5 ${showPromptPanel ? "text-[var(--primary)]" : "text-[var(--text-muted)]"}`} />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-medium text-slate-700">
+                    <p className="text-sm font-medium text-[var(--foreground)]">
                       Custom Instructions
-                      <span className="ml-2 text-[10px] font-normal text-slate-400 normal-case">highest priority — overrides all settings</span>
+                      <span className="ml-2 text-[10px] font-normal text-[var(--text-muted)] normal-case">highest priority — overrides all settings</span>
                     </p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
                       {customInstructions.trim() ? "✓ Active — will be applied to this post" : "Optional: add specific rules just for this one post"}
                     </p>
                   </div>
                 </div>
                 {showPromptPanel
-                  ? <ChevronUp className="w-4 h-4 text-slate-400" />
-                  : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                  ? <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" />
+                  : <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />}
               </button>
 
               {showPromptPanel && (
-                <div className="px-5 pb-5 space-y-3 border-t border-slate-100">
+                <div className="px-5 pb-5 space-y-3 border-t border-[var(--border-sub)]">
                   <div className="pt-3 flex gap-2 flex-wrap">
                     {["Use a question as the hook", "Include a statistic", "Start with a story", "No hashtags", "Under 150 words", "Use bullet points"].map((hint) => (
                       <button
                         key={hint}
                         onClick={() => setCustomInstructions(prev => prev ? `${prev}\n- ${hint}` : `- ${hint}`)}
-                        className="px-2.5 py-1 rounded-md text-[11px] font-medium border border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-all"
+                        className="px-2.5 py-1 rounded-md text-[11px] font-medium border border-[var(--border)] bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-slate-300 transition-all"
                       >
                         + {hint}
                       </button>
@@ -722,10 +733,10 @@ export default function CreatePostPage() {
                     onChange={(e) => setCustomInstructions(e.target.value)}
                     placeholder={"Examples:\n- DO: Start with a shocking stat\n- DO: Mention our product name\n- DON'T: Use the word 'leverage'\n- DON'T: Include competitor names"}
                     rows={5}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] transition-all resize-none text-sm font-mono"
+                    className="w-full bg-[var(--card-hover)] border border-[var(--border)] rounded-lg px-4 py-3 text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] transition-all resize-none text-sm font-mono"
                   />
                   {customInstructions.trim() && (
-                    <button onClick={() => setCustomInstructions("")} className="text-[11px] text-slate-400 hover:text-red-500 transition-colors">
+                    <button onClick={() => setCustomInstructions("")} className="text-[11px] text-[var(--text-muted)] hover:text-red-500 transition-colors">
                       Clear instructions
                     </button>
                   )}
@@ -736,7 +747,7 @@ export default function CreatePostPage() {
             {/* Progress steps — visible while generating */}
             {isGenerating && (
               <div className="card p-4 space-y-3">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Generating your post…</p>
+                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Generating your post…</p>
                 {[
                   ...(sourceUrl.trim() || sourceImage ? [{ step: "source", label: "Reading your URL / image", icon: "🔗" }] : []),
                   { step: "research", label: "Deep-researching your topic",    icon: "🔍" },
@@ -750,12 +761,12 @@ export default function CreatePostPage() {
                   const isActive  = step === generatingStep;
                   return (
                     <div key={step} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
-                      isActive ? (isCorporate ? "bg-violet-50 border border-violet-200" : "bg-blue-50 border border-blue-200")
-                      : isDone  ? "bg-green-50 border border-green-200"
-                      : "bg-slate-50 border border-slate-200 opacity-40"
+                      isActive ? (isCorporate ? "bg-violet-500/10 border border-violet-800/40" : "bg-blue-500/10 border border-blue-800/40")
+                      : isDone  ? "bg-emerald-500/10 border border-emerald-800/40"
+                      : "bg-[var(--card-hover)] border border-[var(--border)] opacity-40"
                     }`}>
                       <span className="text-base">{isDone ? "✅" : icon}</span>
-                      <p className={`text-sm font-medium flex-1 ${isActive ? (isCorporate ? "text-violet-700" : "text-[#0A66C2]") : isDone ? "text-green-700" : "text-slate-400"}`}>
+                      <p className={`text-sm font-medium flex-1 ${isActive ? (isCorporate ? "text-violet-400" : "text-[var(--primary)]") : isDone ? "text-emerald-400" : "text-[var(--text-muted)]"}`}>
                         {label}
                       </p>
                       {isActive && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin opacity-70" />}
@@ -767,15 +778,15 @@ export default function CreatePostPage() {
 
             {/* A4: Generation error with retry */}
             {generateError && !isGenerating && (
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-200">
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-200">
                 <CheckCircle2 className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-red-700 mb-1">Generation failed</p>
-                  <p className="text-xs text-red-600 leading-relaxed">{generateError}</p>
+                  <p className="text-sm font-medium text-red-400 mb-1">Generation failed</p>
+                  <p className="text-xs text-red-400 leading-relaxed">{generateError}</p>
                 </div>
                 <button
                   onClick={() => setGenerateError(null)}
-                  className="text-red-400 hover:text-red-600 shrink-0"
+                  className="text-red-400 hover:text-red-400 shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -788,9 +799,9 @@ export default function CreatePostPage() {
               disabled={!topic.trim() || isGenerating}
               className={`w-full py-4 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-3 ${
                 !topic.trim()
-                  ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                  ? "bg-[var(--border)] text-[var(--text-muted)] cursor-not-allowed"
                   : isGenerating
-                  ? (isCorporate ? "bg-violet-100 cursor-wait text-violet-400" : "bg-blue-100 cursor-wait text-[#0A66C2]/50")
+                  ? (isCorporate ? "bg-violet-500/20 cursor-wait text-violet-400" : "bg-blue-500/20 cursor-wait text-[var(--primary)]/50")
                   : `${accentBtn} text-white shadow-sm active:scale-[0.99]`
               }`}
             >
@@ -810,7 +821,7 @@ export default function CreatePostPage() {
                 </>
               )}
             </button>
-            <p className="text-xs text-slate-400 text-center mt-2">Tip: regenerations count toward your monthly limit.</p>
+            <p className="text-xs text-[var(--text-muted)] text-center mt-2">Tip: regenerations count toward your monthly limit.</p>
           </div>
 
           {/* Sidebar: Context Panel */}
@@ -818,63 +829,63 @@ export default function CreatePostPage() {
             <div className={`card p-5 border-l-4 ${isCorporate ? "border-l-violet-500" : "border-l-[#0A66C2]"}`}>
               <div className="flex items-center gap-2 mb-4">
                 <Sparkles className={`w-4 h-4 ${accentColor}`} />
-                <h4 className="text-sm font-semibold text-slate-800">AI Context</h4>
+                <h4 className="text-sm font-semibold text-[var(--foreground)]">AI Context</h4>
               </div>
               <div className="space-y-4">
                 <div>
-                  <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-1">Mode</p>
-                  <p className="text-sm font-semibold text-slate-800 capitalize">{segment}</p>
+                  <p className="text-[11px] text-[var(--text-muted)] font-medium uppercase tracking-wide mb-1">Mode</p>
+                  <p className="text-sm font-semibold text-[var(--foreground)] capitalize">{segment}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-1">AI Writer</p>
-                  <p className="text-sm font-semibold text-slate-800">
+                  <p className="text-[11px] text-[var(--text-muted)] font-medium uppercase tracking-wide mb-1">AI Writer</p>
+                  <p className="text-sm font-semibold text-[var(--foreground)]">
                     {userProfile?.[segment]?.model?.split('/').pop()?.replace(/-/g, ' ') || "Gemini 2.0 Flash"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-1">Niche</p>
-                  <p className="text-sm font-semibold text-slate-800">
+                  <p className="text-[11px] text-[var(--text-muted)] font-medium uppercase tracking-wide mb-1">Niche</p>
+                  <p className="text-sm font-semibold text-[var(--foreground)]">
                     {userProfile?.[segment]?.niche || "Not set — add in Settings"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-1">Brand Voice</p>
-                  <p className="text-sm font-semibold text-slate-800">
+                  <p className="text-[11px] text-[var(--text-muted)] font-medium uppercase tracking-wide mb-1">Brand Voice</p>
+                  <p className="text-sm font-semibold text-[var(--foreground)]">
                     {userProfile?.[segment]?.personality || "Not set — add in Settings"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-1">Image Style</p>
-                  <p className="text-sm font-semibold text-slate-800 capitalize">
+                  <p className="text-[11px] text-[var(--text-muted)] font-medium uppercase tracking-wide mb-1">Image Style</p>
+                  <p className="text-sm font-semibold text-[var(--foreground)] capitalize">
                     {userProfile?.[segment]?.imageStyle
                       ? { photo: "📷 Photo", illustration: "🎨 Illustration", abstract: "🔷 Abstract", "3d": "🧊 3D Render", lineart: "✏️ Line Art", bw_photo: "⬛ B&W Photo", x_screenshot: "🐦 X Screenshot" }[userProfile[segment].imageStyle!] || userProfile[segment].imageStyle
                       : "Not set — choose in Settings → Image Style"}
                   </p>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100">
+                <div className="pt-3 border-t border-[var(--border-sub)]">
                   <div className="flex items-center gap-2 mb-1">
                     <Brain className={`w-3.5 h-3.5 ${accentColor}`} />
-                    <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide">Memory</p>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium uppercase tracking-wide">Memory</p>
                     <HelpTooltip
                       text="Cortex reads your past 5 most relevant posts before writing. He matches your style, avoids repeating the same angles, and decides whether to deepen a thread or take a new direction."
                       example="The more posts you generate, the smarter and more consistent Cortex becomes."
                       position="left"
                     />
                   </div>
-                  <p className="text-sm font-semibold text-slate-800">
+                  <p className="text-sm font-semibold text-[var(--foreground)]">
                     {memoryCount === null ? "Loading..." : memoryCount === 0 ? "First post — no history yet" : `${memoryCount} posts in memory`}
                   </p>
                   {memoryCount === 0 && (
-                    <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">After you generate, Cortex will remember this post and use it to keep your future posts consistent.</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-relaxed">After you generate, Cortex will remember this post and use it to keep your future posts consistent.</p>
                   )}
                 </div>
 
                 {/* Sample Memory row */}
-                <div className="pt-3 border-t border-slate-100">
+                <div className="pt-3 border-t border-[var(--border-sub)]">
                   <div className="flex items-center gap-2 mb-1">
                     <Sparkles className={`w-3.5 h-3.5 ${accentColor}`} />
-                    <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide">Sample Memory</p>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium uppercase tracking-wide">Sample Memory</p>
                     <HelpTooltip
                       text="Paste real posts you have written before using Cridl. Cortex studies them to calibrate your exact voice, sentence rhythm, and vocabulary — making every post sound unmistakably like you."
                       example="Upload 3–5 of your best past LinkedIn posts for the strongest voice match."
@@ -882,14 +893,14 @@ export default function CreatePostPage() {
                     />
                   </div>
                   {sampleCount === null ? (
-                    <p className="text-sm font-semibold text-slate-800">Loading...</p>
+                    <p className="text-sm font-semibold text-[var(--foreground)]">Loading...</p>
                   ) : sampleCount === 0 ? (
                     <div className="space-y-2">
-                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-200">
                         <span className="text-amber-500 mt-0.5 shrink-0">⚠</span>
                         <div>
                           <p className="text-[11px] font-semibold text-amber-800">No writing samples yet</p>
-                          <p className="text-[10px] text-amber-700 mt-0.5 leading-relaxed">
+                          <p className="text-[10px] text-amber-400 mt-0.5 leading-relaxed">
                             Cortex will write in a generic LinkedIn voice. Add samples so he can match your unique style.
                           </p>
                         </div>
@@ -904,10 +915,10 @@ export default function CreatePostPage() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-slate-800">
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
                         {sampleCount} sample{sampleCount > 1 ? "s" : ""} · voice calibrated
                       </p>
-                      <span className="text-[10px] text-green-600 font-medium bg-green-50 border border-green-200 px-1.5 py-0.5 rounded">
+                      <span className="text-[10px] text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-800/40 px-1.5 py-0.5 rounded">
                         ✓ Active
                       </span>
                     </div>
@@ -917,9 +928,9 @@ export default function CreatePostPage() {
             </div>
 
             {/* Tip */}
-            <div className="card p-4 bg-slate-50">
-              <p className="text-xs font-semibold text-slate-500 mb-1">💡 Pro Tip</p>
-              <p className="text-xs text-slate-500 leading-relaxed">
+            <div className="card p-4 bg-[var(--card-hover)]">
+              <p className="text-xs font-semibold text-[var(--text-muted)] mb-1">💡 Pro Tip</p>
+              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
                 Include a specific question or data point in your topic to trigger deeper market research.
               </p>
             </div>

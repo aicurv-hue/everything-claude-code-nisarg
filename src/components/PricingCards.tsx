@@ -133,7 +133,7 @@ function PricingCardsInner() {
   }, []);
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-20 bg-[var(--card)]">
       <div className="max-w-6xl mx-auto px-6">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">Simple, transparent pricing</h2>
@@ -145,19 +145,19 @@ function PricingCardsInner() {
           <span className={`text-sm font-medium ${!yearly ? "text-gray-900" : "text-gray-400"}`}>Monthly</span>
           <button
             onClick={() => setYearly(v => !v)}
-            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${yearly ? "bg-[#0A66C2]" : "bg-gray-300"}`}
+            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${yearly ? "bg-[var(--primary)]" : "bg-gray-300"}`}
             aria-label="Toggle billing period"
           >
-            <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${yearly ? "translate-x-6" : "translate-x-1"}`} />
+            <span className={`inline-block h-5 w-5 rounded-full bg-[var(--card)] shadow transition-transform ${yearly ? "translate-x-6" : "translate-x-1"}`} />
           </button>
           <span className={`text-sm font-medium ${yearly ? "text-gray-900" : "text-gray-400"}`}>
             Yearly
-            <span className="ml-2 text-xs font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">2 months free</span>
+            <span className="ml-2 text-xs font-semibold bg-green-100 text-emerald-400 px-2 py-0.5 rounded-full">2 months free</span>
           </span>
         </div>
 
         {error && (
-          <div className="mb-6 text-center text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg py-3 px-4">
+          <div className="mb-6 text-center text-sm text-red-400 bg-red-50 border border-red-200 rounded-lg py-3 px-4">
             {error}
           </div>
         )}
@@ -202,7 +202,7 @@ function PricingCardsInner() {
                 }`}
               >
                 {plan.popular && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0A66C2] text-white text-xs font-semibold px-3 py-1 rounded-full">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--primary)] text-white text-xs font-semibold px-3 py-1 rounded-full">
                     Most Popular
                   </span>
                 )}
@@ -223,7 +223,7 @@ function PricingCardsInner() {
                 <ul className="space-y-2 mb-6 flex-1">
                   {plan.features.slice(0, -1).map((f) => (
                     <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
-                      <span className="text-[#0A66C2]">✓</span> {f}
+                      <span className="text-[var(--primary)]">✓</span> {f}
                     </li>
                   ))}
                   <li className="text-xs text-gray-400 italic pt-1">{plan.features[plan.features.length - 1]}</li>
@@ -233,8 +233,8 @@ function PricingCardsInner() {
                   disabled={loading === plan.name}
                   className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors ${
                     plan.popular
-                      ? "bg-[#0A66C2] text-white hover:bg-[#0A66C2]/90"
-                      : "border border-[#0A66C2] text-[#0A66C2] hover:bg-[#0A66C2]/5"
+                      ? "bg-[var(--primary)] text-white hover:bg-[var(--primary)]/90"
+                      : "border border-[#0A66C2] text-[var(--primary)] hover:bg-[var(--primary)]/5"
                   } disabled:opacity-50`}
                 >
                   {loading === plan.name ? "Opening..." : plan.popular ? "Buy Now" : "Get Started"}

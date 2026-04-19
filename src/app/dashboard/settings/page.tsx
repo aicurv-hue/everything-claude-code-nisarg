@@ -52,9 +52,9 @@ const INITIAL_SEGMENT: ProfileSegment = {
   systemPrompt: DEFAULT_SYSTEM_PROMPT
 };
 
-const inputClass = "w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] transition-all text-sm";
+const inputClass = "w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] transition-all text-sm";
 const textareaClass = `${inputClass} resize-none leading-relaxed`;
-const labelClass = "block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5";
+const labelClass = "block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -332,16 +332,16 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Profile</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Define your brand context for Individual and Corporate profiles.</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">Profile</h1>
+          <p className="text-sm text-[var(--text-muted)] mt-0.5">Define your brand context for Individual and Corporate profiles.</p>
         </div>
         <button
           onClick={handleSave}
           disabled={!hasChanges}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             hasChanges
-              ? "bg-[#0A66C2] text-white hover:bg-[#0854a0] shadow-sm"
-              : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
+              ? "bg-[var(--primary)] text-white hover:opacity-90 shadow-sm"
+              : "bg-[var(--toggle-bg)] text-[var(--text-muted)] border border-[var(--border)] cursor-not-allowed"
           }`}
         >
           {isSaved ? "✓ Saved" : <><Save className="w-4 h-4" /> Save Changes</>}
@@ -350,50 +350,50 @@ export default function SettingsPage() {
 
       {/* LinkedIn OAuth error banner */}
       {liError && (
-        <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-200">
+        <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-800/40">
           <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-red-700">LinkedIn connection failed</p>
-            <p className="text-xs text-red-600 mt-0.5">{liError}</p>
+            <p className="text-sm font-semibold text-red-400">LinkedIn connection failed</p>
+            <p className="text-xs text-red-400 mt-0.5">{liError}</p>
           </div>
-          <button onClick={() => setLiError(null)} className="text-red-400 hover:text-red-600 text-xs font-medium">Dismiss</button>
+          <button onClick={() => setLiError(null)} className="text-red-400 hover:text-red-400 text-xs font-medium">Dismiss</button>
         </div>
       )}
 
       {/* Disconnected banner */}
       {liJustDisconnected && (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-800/40">
           <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-          <p className="text-sm text-amber-700">LinkedIn disconnected. Click <strong>Connect LinkedIn</strong> to reconnect.</p>
+          <p className="text-sm text-amber-400">LinkedIn disconnected. Click <strong>Connect LinkedIn</strong> to reconnect.</p>
         </div>
       )}
 
       {/* LinkedIn Connection Card */}
       <div className="card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-[#0A66C2] flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[var(--primary)] flex items-center justify-center shrink-0">
             <Linkedin className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-slate-800">LinkedIn Account</p>
+              <p className="text-sm font-semibold text-[var(--foreground)]">LinkedIn Account</p>
               {liConnected ? (
-                <span className="flex items-center gap-1 text-[11px] font-medium text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full whitespace-nowrap">
+                <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-800/40 px-2 py-0.5 rounded-full whitespace-nowrap">
                   <CheckCircle2 className="w-3 h-3" /> Connected
                 </span>
               ) : (
-                <span className="text-[11px] font-medium text-red-500 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full whitespace-nowrap">
+                <span className="text-[11px] font-medium text-red-500 bg-red-500/10 border border-red-800/40 px-2 py-0.5 rounded-full whitespace-nowrap">
                   Not connected
                 </span>
               )}
             </div>
             {liConnected ? (
-              <p className="text-xs text-slate-400 mt-0.5 truncate">
+              <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
                 {liName}{liEmail ? ` · ${liEmail}` : ""}
                 {liExpiry ? ` · Token valid ${Math.max(0, Math.round((liExpiry - Date.now()) / 86400000))}d` : ""}
               </p>
             ) : (
-              <p className="text-xs text-slate-400 mt-0.5">Connect LinkedIn to enable publishing.</p>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">Connect LinkedIn to enable publishing.</p>
             )}
           </div>
         </div>
@@ -402,7 +402,7 @@ export default function SettingsPage() {
             <button
               onClick={handleDisconnect}
               disabled={liDisconnecting}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 text-xs font-semibold transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-800/40 text-red-400 text-xs font-semibold transition-all disabled:opacity-50"
             >
               <LogOut className="w-3.5 h-3.5" />
               {liDisconnecting ? "Disconnecting..." : "Disconnect"}
@@ -410,7 +410,7 @@ export default function SettingsPage() {
           )}
           <button
             onClick={handleReconnect}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0A66C2] hover:bg-[#0854a0] text-white text-xs font-semibold transition-all shrink-0"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--primary)] hover:opacity-90 text-white text-xs font-semibold transition-all shrink-0"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             {liConnected ? "Reconnect" : "Connect LinkedIn"}
@@ -419,15 +419,15 @@ export default function SettingsPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 p-1 bg-slate-100 border border-slate-200 rounded-xl overflow-x-auto">
+      <div className="flex gap-1 p-1 bg-[var(--toggle-bg)] border border-[var(--border)] rounded-xl overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
               activeTab === tab.id
-                ? "bg-white text-slate-900 shadow-sm border border-slate-200"
-                : "text-slate-500 hover:text-slate-700"
+                ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm border border-[var(--border)]"
+                : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
             }`}
           >
             <tab.icon className="w-3.5 h-3.5" />
@@ -440,21 +440,21 @@ export default function SettingsPage() {
       <div className="card p-8">
 
         {/* Profile Switcher */}
-        <div className="mb-7 flex items-center justify-between pb-6 border-b border-slate-100">
+        <div className="mb-7 flex items-center justify-between pb-6 border-b border-[var(--border-sub)]">
           <div>
-            <h3 className="text-sm font-semibold text-slate-800">Editing Profile</h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Individual = posts written as <span className="font-medium text-slate-600">you personally</span>.
-              Corporate = posts written as <span className="font-medium text-slate-600">your company</span>. Each profile is completely separate.
+            <h3 className="text-sm font-semibold text-[var(--foreground)]">Editing Profile</h3>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              Individual = posts written as <span className="font-medium text-[var(--text-sub)]">you personally</span>.
+              Corporate = posts written as <span className="font-medium text-[var(--text-sub)]">your company</span>. Each profile is completely separate.
             </p>
           </div>
-          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg border border-slate-200">
+          <div className="flex items-center gap-1 p-1 bg-[var(--toggle-bg)] rounded-lg border border-[var(--border)]">
             <button
               onClick={() => setProfileType("individual")}
               className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${
                 profileType === "individual"
-                  ? "bg-[#0A66C2] text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
+                  ? "bg-[var(--primary)] text-white shadow-sm"
+                  : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
               }`}
             >
               Individual
@@ -463,8 +463,8 @@ export default function SettingsPage() {
               onClick={() => setProfileType("corporate")}
               className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${
                 profileType === "corporate"
-                  ? "bg-[#0A66C2] text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
+                  ? "bg-[var(--primary)] text-white shadow-sm"
+                  : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
               }`}
             >
               Corporate
@@ -475,18 +475,18 @@ export default function SettingsPage() {
         {/* Tab 1: Identity */}
         {activeTab === "identity" && (
           <div className="space-y-5">
-            <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700 leading-relaxed">
+            <div className="p-3 bg-blue-500/10 border border-blue-100 rounded-lg text-[12px] text-blue-400 leading-relaxed">
               <strong>This tab tells Cortex who you are.</strong> Every post will be written from this identity. The more specific you are here, the more authoritative and grounded your posts will sound.
             </div>
 
             {/* Profile Photo — Individual only */}
             {profileType === "individual" && (
-              <div className="p-4 border border-slate-200 rounded-xl bg-slate-50 space-y-3">
+              <div className="p-4 border border-[var(--border)] rounded-xl bg-[var(--card-hover)] space-y-3">
                 <div className="flex items-center gap-2">
-                  <Camera className="w-4 h-4 text-[#0A66C2]" />
-                  <p className="text-sm font-semibold text-slate-700">Profile Photo for AI Face Images</p>
+                  <Camera className="w-4 h-4 text-[var(--primary)]" />
+                  <p className="text-sm font-semibold text-[var(--foreground)]">Profile Photo for AI Face Images</p>
                 </div>
-                <p className="text-xs text-slate-500 leading-relaxed">
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
                   Upload a clear headshot to enable &quot;Use My Face&quot; image generation on posts.{" "}
                   <strong>Requirements:</strong> Face forward, good lighting, no sunglasses, plain or simple background. A professional headshot works best.
                 </p>
@@ -497,19 +497,19 @@ export default function SettingsPage() {
                     <div className="flex-1">
                       {photoValidation && (
                         <div className={`text-xs px-3 py-1.5 rounded-lg mb-2 ${
-                          photoHasFace ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+                          photoHasFace ? "bg-emerald-500/10 text-emerald-400 border border-emerald-800/40" : "bg-amber-500/10 text-amber-400 border border-amber-800/40"
                         }`}>
                           {photoHasFace ? "✓ " : "⚠ "}{photoValidation.message}
                         </div>
                       )}
                       {!photoValidation && photoHasFace !== null && (
                         <div className={`text-xs px-3 py-1.5 rounded-lg mb-2 ${
-                          photoHasFace ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+                          photoHasFace ? "bg-emerald-500/10 text-emerald-400 border border-emerald-800/40" : "bg-amber-500/10 text-amber-400 border border-amber-800/40"
                         }`}>
                           {photoHasFace ? "✓ Face verified" : "⚠ No clear face detected"}
                         </div>
                       )}
-                      <button onClick={() => photoInputRef.current?.click()} className="text-xs text-[#0A66C2] hover:underline font-medium">
+                      <button onClick={() => photoInputRef.current?.click()} className="text-xs text-[var(--primary)] hover:underline font-medium">
                         Change photo
                       </button>
                     </div>
@@ -518,7 +518,7 @@ export default function SettingsPage() {
                   <button
                     onClick={() => photoInputRef.current?.click()}
                     disabled={photoUploading}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 border-dashed border-slate-300 hover:border-[#0A66C2] bg-white text-sm text-slate-500 hover:text-[#0A66C2] transition-all w-full justify-center disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 border-dashed border-slate-300 hover:border-[#0A66C2] bg-[var(--card)] text-sm text-[var(--text-muted)] hover:text-[var(--primary)] transition-all w-full justify-center disabled:opacity-50"
                   >
                     {photoUploading ? (
                       <><div className="w-4 h-4 border-2 border-[#0A66C2]/30 border-t-[#0A66C2] rounded-full animate-spin" /> Uploading...</>
@@ -562,11 +562,11 @@ export default function SettingsPage() {
                 <div className="col-span-2">
                   <label className={labelClass}>LinkedIn Organization ID</label>
                   {userPlan === "free" || userPlan === "starter" ? (
-                    <div className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-400 flex items-center gap-2">
+                    <div className="w-full bg-[var(--card-hover)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-muted)] flex items-center gap-2">
                       <span>🔒</span>
                       <span>
                         Pro plan required to connect a company page.{" "}
-                        <a href="/#pricing" className="text-[#0A66C2] hover:underline font-medium">Upgrade</a>
+                        <a href="/#pricing" className="text-[var(--primary)] hover:underline font-medium">Upgrade</a>
                       </span>
                     </div>
                   ) : (
@@ -596,7 +596,7 @@ export default function SettingsPage() {
         {/* Tab 2: Audience */}
         {activeTab === "audience" && (
           <div className="space-y-5">
-            <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700 leading-relaxed">
+            <div className="p-3 bg-blue-500/10 border border-blue-100 rounded-lg text-[12px] text-blue-400 leading-relaxed">
               <strong>This tab tells Cortex who is reading the post.</strong> Research sub-questions and every insight will be filtered to be relevant to these exact people — not a generic audience.
             </div>
             <div>
@@ -607,7 +607,7 @@ export default function SettingsPage() {
                   example="e.g. Operations managers at mid-size Indian manufacturers (50–500 employees) who overpay for energy and have never done an audit."
                   width="w-80"
                 />
-                <Target className="w-3 h-3 text-[#0A66C2]" />
+                <Target className="w-3 h-3 text-[var(--primary)]" />
               </label>
               <textarea value={currentProfile.icp} onChange={e => handleFieldChange("icp", e.target.value)}
                 placeholder="e.g. Founders of B2B SaaS companies at seed to Series A, 10–50 employees, struggling to generate inbound leads from LinkedIn."
@@ -644,7 +644,7 @@ export default function SettingsPage() {
         {/* Tab 3: Branding */}
         {activeTab === "branding" && (
           <div className="space-y-5">
-            <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700 leading-relaxed">
+            <div className="p-3 bg-blue-500/10 border border-blue-100 rounded-lg text-[12px] text-blue-400 leading-relaxed">
               <strong>This tab defines your brand lane.</strong> Cortex will only write about your content pillars and will weave your USP and personality into every post naturally.
             </div>
             <div>
@@ -692,7 +692,7 @@ export default function SettingsPage() {
         {/* Tab 4: Customer Voice */}
         {activeTab === "voice" && (
           <div className="space-y-5">
-            <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700 leading-relaxed">
+            <div className="p-3 bg-blue-500/10 border border-blue-100 rounded-lg text-[12px] text-blue-400 leading-relaxed">
               <strong>This is the highest-impact tab for hook quality.</strong> Cortex uses your customer's exact language to write hooks that make readers think "this post is written for me."
             </div>
             <div>
@@ -746,7 +746,7 @@ export default function SettingsPage() {
         {/* Tab 5: AI Config */}
         {activeTab === "ai" && (
           <div className="space-y-6">
-            <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg text-[12px] text-amber-700 leading-relaxed">
+            <div className="p-3 bg-amber-500/10 border border-amber-100 rounded-lg text-[12px] text-amber-400 leading-relaxed">
               <strong>Advanced settings.</strong> The defaults work well for most users. Only change the model or system prompt if you have a specific reason — incorrect changes here will affect every future post.
             </div>
             <div>
@@ -759,7 +759,7 @@ export default function SettingsPage() {
                     width="w-72"
                   />
                 </label>
-                <span className="text-[11px] px-2 py-0.5 rounded-md bg-blue-50 text-[#0A66C2] border border-blue-200 font-medium">Per-profile setting</span>
+                <span className="text-[11px] px-2 py-0.5 rounded-md bg-blue-500/10 text-[var(--primary)] border border-blue-800/40 font-medium">Per-profile setting</span>
               </div>
               <select
                 value={currentProfile.model}
@@ -787,7 +787,7 @@ export default function SettingsPage() {
                 </label>
                 <button
                   onClick={() => handleFieldChange("systemPrompt", DEFAULT_SYSTEM_PROMPT)}
-                  className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-700 transition-colors"
+                  className="flex items-center gap-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
                 >
                   <RotateCcw className="w-3 h-3" /> Reset to default
                 </button>
@@ -801,9 +801,9 @@ export default function SettingsPage() {
                   className={`${textareaClass} font-mono`}
                 />
                 {currentProfile.systemPrompt !== DEFAULT_SYSTEM_PROMPT && (
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md">
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-amber-500/10 border border-amber-800/40 px-2.5 py-1 rounded-md">
                     <AlertTriangle className="w-3 h-3 text-amber-500" />
-                    <span className="text-[11px] font-medium text-amber-600">Custom prompt active</span>
+                    <span className="text-[11px] font-medium text-amber-400">Custom prompt active</span>
                   </div>
                 )}
               </div>
@@ -814,7 +814,7 @@ export default function SettingsPage() {
         {/* Tab 6: Image Style */}
         {activeTab === "image" && (
           <div className="space-y-5">
-            <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700 leading-relaxed">
+            <div className="p-3 bg-blue-500/10 border border-blue-100 rounded-lg text-[12px] text-blue-400 leading-relaxed">
               <strong>Image Art Style</strong> — choose the visual language for all AI-generated post images. This style is saved per profile (Individual / Corporate) and auto-applied to every new post. You can always change it per-post on the preview page.
             </div>
 
@@ -825,19 +825,19 @@ export default function SettingsPage() {
                   onClick={() => handleFieldChange("imageStyle", style.id)}
                   className={`flex flex-col items-start gap-2 p-4 rounded-xl border-2 text-left transition-all ${
                     currentProfile.imageStyle === style.id
-                      ? "border-[#0A66C2] bg-blue-50"
-                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                      ? "border-[#0A66C2] bg-blue-500/10"
+                      : "border-[var(--border)] bg-[var(--card)] hover:border-slate-300 hover:bg-[var(--card-hover)]"
                   }`}
                 >
                   <span className="text-2xl">{style.emoji}</span>
                   <div className="flex-1">
-                    <p className={`text-xs font-semibold ${currentProfile.imageStyle === style.id ? "text-[#0A66C2]" : "text-slate-700"}`}>
+                    <p className={`text-xs font-semibold ${currentProfile.imageStyle === style.id ? "text-[var(--primary)]" : "text-[var(--foreground)]"}`}>
                       {style.label}
                     </p>
-                    <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">{style.description}</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-tight">{style.description}</p>
                   </div>
                   {currentProfile.imageStyle === style.id && (
-                    <span className="text-[10px] font-semibold text-[#0A66C2] bg-blue-100 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-semibold text-[var(--primary)] bg-blue-500/20 px-2 py-0.5 rounded-full">
                       ✓ Active
                     </span>
                   )}
@@ -846,17 +846,17 @@ export default function SettingsPage() {
             </div>
 
             {!currentProfile.imageStyle && (
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-[var(--text-muted)]">
                 No style selected — Cortex will generate images without a style constraint. Select one above and save to lock your visual brand.
               </p>
             )}
 
             {currentProfile.imageStyle && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-100">
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-green-100">
                 <span className="text-sm">
                   {IMAGE_STYLES.find(s => s.id === currentProfile.imageStyle)?.emoji}
                 </span>
-                <p className="text-[12px] text-green-700">
+                <p className="text-[12px] text-emerald-400">
                   <strong>{IMAGE_STYLES.find(s => s.id === currentProfile.imageStyle)?.label}</strong> style will be applied to all future AI-generated images for your {profileType} profile.
                 </p>
               </div>

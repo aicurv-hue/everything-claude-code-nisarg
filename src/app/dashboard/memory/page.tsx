@@ -37,16 +37,16 @@ function timeAgo(seconds: number): string {
 }
 
 const TONE_BADGE: Record<string, string> = {
-  professional: "bg-blue-50 text-blue-700 border-blue-200",
-  storytelling: "bg-violet-50 text-violet-700 border-violet-200",
-  educational:  "bg-green-50 text-green-700 border-green-200",
+  professional: "bg-blue-500/10 text-blue-400 border-blue-800/40",
+  storytelling: "bg-violet-500/10 text-violet-400 border-violet-800/40",
+  educational:  "bg-emerald-500/10 text-emerald-400 border-emerald-800/40",
   contrarian:   "bg-orange-50 text-orange-700 border-orange-200",
 };
 
 const TONE_BAR: Record<string, string> = {
-  professional: "bg-blue-500",
-  storytelling: "bg-violet-500",
-  educational:  "bg-green-500",
+  professional: "bg-blue-500/100",
+  storytelling: "bg-violet-500/100",
+  educational:  "bg-emerald-500/100",
   contrarian:   "bg-orange-500",
 };
 
@@ -74,10 +74,10 @@ export default function MemoryPage() {
   const [uploadMsg,    setUploadMsg]    = useState<{ type: "success" | "error" | "warn"; text: string } | null>(null);
 
   // ── Accent colours ────────────────────────────────────────────────────────
-  const accentColor  = isCorporate ? "text-violet-600"  : "text-[#0A66C2]";
-  const accentBg     = isCorporate ? "bg-violet-50 border-violet-200"  : "bg-blue-50 border-blue-200";
-  const accentBar    = isCorporate ? "bg-violet-500"  : "bg-[#0A66C2]";
-  const accentBadge  = isCorporate ? "bg-violet-50 text-violet-700 border-violet-200" : "bg-blue-50 text-blue-700 border-blue-200";
+  const accentColor  = isCorporate ? "text-violet-400"  : "text-[var(--primary)]";
+  const accentBg     = isCorporate ? "bg-violet-500/10 border-violet-800/40"  : "bg-blue-500/10 border-blue-800/40";
+  const accentBar    = isCorporate ? "bg-violet-500/100"  : "bg-[var(--primary)]";
+  const accentBadge  = isCorporate ? "bg-violet-500/10 text-violet-400 border-violet-800/40" : "bg-blue-500/10 text-blue-400 border-blue-800/40";
   const accentBorder = isCorporate ? "border-l-violet-500" : "border-l-[#0A66C2]";
 
   // ── Load ──────────────────────────────────────────────────────────────────
@@ -215,7 +215,7 @@ export default function MemoryPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="flex flex-col items-center gap-3 text-slate-400">
+        <div className="flex flex-col items-center gap-3 text-[var(--text-muted)]">
           <Brain className="w-8 h-8 animate-pulse" />
           <p className="text-sm">Loading memory...</p>
         </div>
@@ -232,7 +232,7 @@ export default function MemoryPage() {
           <span>Removed {pendingDelete.label}</span>
           <button
             onClick={handleUndoDelete}
-            className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all"
+            className="px-3 py-1 rounded-lg bg-[var(--card)]/10 hover:bg-[var(--card)]/20 text-white text-xs font-semibold transition-all"
           >
             Undo
           </button>
@@ -242,8 +242,8 @@ export default function MemoryPage() {
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Memory Bank</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">Memory Bank</h1>
+          <p className="text-sm text-[var(--text-muted)] mt-0.5">
             {isIndividual ? "Personal" : "Corporate"} · What Cortex knows about your writing voice and past content
           </p>
         </div>
@@ -251,13 +251,13 @@ export default function MemoryPage() {
           <button
             onClick={() => load(true)}
             disabled={refreshing}
-            className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-all disabled:opacity-40"
+            className="w-8 h-8 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-center hover:bg-[var(--card-hover)] transition-all disabled:opacity-40"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${refreshing ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-[var(--text-muted)] ${refreshing ? "animate-spin" : ""}`} />
           </button>
           <Link
             href="/dashboard/create"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0A66C2] hover:bg-[#0854a0] text-white text-sm font-medium transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--primary)] hover:opacity-90 text-white text-sm font-medium transition-all"
           >
             <Sparkles className="w-3.5 h-3.5" />
             Generate Post
@@ -271,14 +271,14 @@ export default function MemoryPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-base font-bold text-[var(--foreground)] flex items-center gap-2">
               <Sparkles className={`w-4 h-4 ${accentColor}`} />
               Writing Samples
-              <span className="text-xs font-normal text-slate-400 ml-1">
+              <span className="text-xs font-normal text-[var(--text-muted)] ml-1">
                 ({samples.length} / {MAX_SAMPLES})
               </span>
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">
               Paste real posts you wrote before using Cridl. Cortex uses these as your voice bible — making every post sound unmistakably like you.
             </p>
           </div>
@@ -293,7 +293,7 @@ export default function MemoryPage() {
             title={samples.length >= MAX_SAMPLES ? `Delete a sample to add more (max ${MAX_SAMPLES})` : "Add a writing sample"}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all
               ${samples.length >= MAX_SAMPLES
-                ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                ? "bg-[var(--toggle-bg)] text-[var(--text-muted)] border-[var(--border)] cursor-not-allowed"
                 : `${accentBg} ${accentColor} hover:opacity-80`
               }`}
           >
@@ -304,7 +304,7 @@ export default function MemoryPage() {
 
         {/* Cap warning */}
         {samples.length >= MAX_SAMPLES && (
-          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-50 border border-amber-200">
+          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-500/10 border border-amber-200">
             <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-800">
               You have reached the maximum of {MAX_SAMPLES} writing samples. Delete one to add a new post.
@@ -313,10 +313,10 @@ export default function MemoryPage() {
         )}
 
         {samples.length === 0 ? (
-          <div className={`card p-8 text-center border-2 border-dashed ${isCorporate ? "border-violet-200" : "border-blue-200"}`}>
+          <div className={`card p-8 text-center border-2 border-dashed ${isCorporate ? "border-violet-800/40" : "border-blue-800/40"}`}>
             <Sparkles className={`w-8 h-8 mx-auto mb-3 ${isCorporate ? "text-violet-300" : "text-blue-300"}`} />
-            <p className="text-sm font-semibold text-slate-700 mb-1">No writing samples yet</p>
-            <p className="text-xs text-slate-500 mb-4 max-w-sm mx-auto leading-relaxed">
+            <p className="text-sm font-semibold text-[var(--foreground)] mb-1">No writing samples yet</p>
+            <p className="text-xs text-[var(--text-muted)] mb-4 max-w-sm mx-auto leading-relaxed">
               Paste 3–5 of your best past LinkedIn posts. Cortex will analyse your sentence rhythm, vocabulary, and style to write posts that sound exactly like you.
             </p>
             <button
@@ -336,17 +336,17 @@ export default function MemoryPage() {
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${accentBg} ${accentColor}`}>
                       {idx + 1}
                     </div>
-                    <span className="text-xs font-semibold text-slate-600">Writing Sample</span>
+                    <span className="text-xs font-semibold text-[var(--text-sub)]">Writing Sample</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-[var(--text-muted)]">
                       {s.created_at?.seconds ? timeAgo(s.created_at.seconds) : "—"}
                     </span>
                     {s.id && (
                       <button
                         onClick={() => handleDelete(s.id!, s.source === "user_url" ? "user_url" : "user_upload")}
                         disabled={deletingId === s.id}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded-md hover:bg-red-50 flex items-center justify-center disabled:opacity-40"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded-md hover:bg-red-500/10 flex items-center justify-center disabled:opacity-40"
                         title="Remove this writing sample"
                       >
                         <Trash2 className="w-3.5 h-3.5 text-red-400" />
@@ -357,19 +357,19 @@ export default function MemoryPage() {
 
                 {/* Raw content preview */}
                 {s.raw_content && (
-                  <p className="text-xs text-slate-600 leading-relaxed mb-3 line-clamp-3 italic">
+                  <p className="text-xs text-[var(--text-sub)] leading-relaxed mb-3 line-clamp-3 italic">
                     "{s.raw_content.slice(0, 180)}{s.raw_content.length > 180 ? "…" : ""}"
                   </p>
                 )}
 
                 {/* Extracted data */}
                 <div className="space-y-2">
-                  <p className="text-[11px] text-slate-500 leading-relaxed">
-                    <span className="font-medium text-slate-700">Summary: </span>{s.summary}
+                  <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                    <span className="font-medium text-[var(--foreground)]">Summary: </span>{s.summary}
                   </p>
                   {s.style_notes && (
-                    <p className="text-[11px] text-slate-400 italic">
-                      <span className="font-medium not-italic text-slate-500">Voice: </span>{s.style_notes}
+                    <p className="text-[11px] text-[var(--text-muted)] italic">
+                      <span className="font-medium not-italic text-[var(--text-muted)]">Voice: </span>{s.style_notes}
                     </p>
                   )}
                   <div className="flex flex-wrap gap-1 pt-1">
@@ -391,21 +391,21 @@ export default function MemoryPage() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       <div className="space-y-4">
         <div>
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-base font-bold text-[var(--foreground)] flex items-center gap-2">
             <Brain className={`w-4 h-4 ${accentColor}`} />
             Auto-saved from Published Posts
-            <span className="text-xs font-normal text-slate-400 ml-1">({memories.length})</span>
+            <span className="text-xs font-normal text-[var(--text-muted)] ml-1">({memories.length})</span>
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-[var(--text-muted)] mt-0.5">
             Automatically built from every post that went live via Cridl. Cortex reads these to avoid repeating the same angles.
           </p>
         </div>
 
         {memories.length === 0 ? (
-          <div className="card p-10 text-center border-2 border-dashed border-slate-200">
-            <Brain className="w-8 h-8 mx-auto mb-3 text-slate-300" />
-            <p className="text-sm font-semibold text-slate-700 mb-2">No published posts yet</p>
-            <p className="text-xs text-slate-500 mb-5 max-w-sm mx-auto">
+          <div className="card p-10 text-center border-2 border-dashed border-[var(--border)]">
+            <Brain className="w-8 h-8 mx-auto mb-3 text-[var(--text-muted)]" />
+            <p className="text-sm font-semibold text-[var(--foreground)] mb-2">No published posts yet</p>
+            <p className="text-xs text-[var(--text-muted)] mb-5 max-w-sm mx-auto">
               Publish your first post and Cortex will automatically save the topic, angle, and style fingerprint here.
             </p>
             <Link
@@ -421,17 +421,17 @@ export default function MemoryPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 { label: "Posts in Memory", value: stats?.totalMemories ?? 0,         icon: Brain,    color: accentColor,      bg: accentBg.split(" ")[0] },
-                { label: "Unique Topics",   value: stats?.uniqueTopics ?? 0,           icon: FileText, color: "text-blue-600",  bg: "bg-blue-50" },
-                { label: "Top Keywords",    value: stats?.topKeywords.length ?? 0,     icon: Tag,      color: "text-green-600", bg: "bg-green-50" },
-                { label: "Memory Since",    value: safeDate(stats?.oldest ?? null),    icon: Clock,    color: "text-slate-500", bg: "bg-slate-100", isDate: true },
+                { label: "Unique Topics",   value: stats?.uniqueTopics ?? 0,           icon: FileText, color: "text-blue-400",  bg: "bg-blue-500/10" },
+                { label: "Top Keywords",    value: stats?.topKeywords.length ?? 0,     icon: Tag,      color: "text-emerald-400", bg: "bg-emerald-500/10" },
+                { label: "Memory Since",    value: safeDate(stats?.oldest ?? null),    icon: Clock,    color: "text-[var(--text-muted)]", bg: "bg-[var(--toggle-bg)]", isDate: true },
               ].map((card) => (
                 <div key={card.label} className="card p-4 flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-xl ${card.bg} flex items-center justify-center shrink-0`}>
                     <card.icon className={`w-4 h-4 ${card.color}`} />
                   </div>
                   <div>
-                    <p className="text-[11px] text-slate-400 font-medium">{card.label}</p>
-                    <p className={`font-bold mt-0.5 ${card.isDate ? "text-sm text-slate-700" : "text-xl text-slate-900"}`}>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium">{card.label}</p>
+                    <p className={`font-bold mt-0.5 ${card.isDate ? "text-sm text-[var(--foreground)]" : "text-xl text-[var(--foreground)]"}`}>
                       {card.value}
                     </p>
                   </div>
@@ -444,19 +444,19 @@ export default function MemoryPage() {
               {/* Keyword frequency */}
               <div className="card p-5 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
                     <Tag className={`w-3.5 h-3.5 ${accentColor}`} /> Top Keywords
                   </h3>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wide font-medium">by frequency</span>
+                  <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide font-medium">by frequency</span>
                 </div>
                 <div className="space-y-3">
                   {stats?.topKeywords.map(({ kw, count }, i) => (
                     <div key={kw}>
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-slate-700 font-medium capitalize">{kw}</span>
-                        <span className="text-slate-400">{count}×</span>
+                        <span className="text-[var(--foreground)] font-medium capitalize">{kw}</span>
+                        <span className="text-[var(--text-muted)]">{count}×</span>
                       </div>
-                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-1.5 w-full bg-[var(--toggle-bg)] rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full ${accentBar}`}
                           style={{ width: `${Math.round((count / (stats.topKeywords[0]?.count || 1)) * 100)}%`, opacity: 1 - i * 0.06 }}
@@ -469,7 +469,7 @@ export default function MemoryPage() {
 
               {/* Tone breakdown */}
               <div className="card p-5 space-y-4">
-                <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
                   <TrendingUp className={`w-3.5 h-3.5 ${accentColor}`} /> Tone Distribution
                 </h3>
                 <div className="space-y-3">
@@ -480,12 +480,12 @@ export default function MemoryPage() {
                       return (
                         <div key={tone}>
                           <div className="flex justify-between items-center mb-1">
-                            <span className={`text-[11px] font-medium px-2 py-0.5 rounded border capitalize ${TONE_BADGE[tone] || "bg-slate-50 text-slate-600 border-slate-200"}`}>
+                            <span className={`text-[11px] font-medium px-2 py-0.5 rounded border capitalize ${TONE_BADGE[tone] || "bg-[var(--card-hover)] text-[var(--text-sub)] border-[var(--border)]"}`}>
                               {tone}
                             </span>
-                            <span className="text-xs text-slate-400">{count} · {pct}%</span>
+                            <span className="text-xs text-[var(--text-muted)]">{count} · {pct}%</span>
                           </div>
-                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-1.5 w-full bg-[var(--toggle-bg)] rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full ${TONE_BAR[tone] || "bg-slate-400"}`}
                               style={{ width: `${pct}%` }}
@@ -514,7 +514,7 @@ export default function MemoryPage() {
                       <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${accentBg}`}>
                         <span className={`text-[9px] font-bold ${accentColor}`}>{i + 1}</span>
                       </div>
-                      <p className="text-xs text-slate-600 leading-relaxed">{text}</p>
+                      <p className="text-xs text-[var(--text-sub)] leading-relaxed">{text}</p>
                     </div>
                   ))}
                 </div>
@@ -523,27 +523,27 @@ export default function MemoryPage() {
 
             {/* Memory entries table */}
             <div className="card overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                <h3 className="text-sm font-semibold text-slate-800">Auto-saved Entries</h3>
-                <span className="text-[11px] text-slate-400 font-medium">{memories.length} total · newest first</span>
+              <div className="px-5 py-4 border-b border-[var(--border-sub)] flex items-center justify-between bg-[var(--card-hover)]">
+                <h3 className="text-sm font-semibold text-[var(--foreground)]">Auto-saved Entries</h3>
+                <span className="text-[11px] text-[var(--text-muted)] font-medium">{memories.length} total · newest first</span>
               </div>
-              <div className="divide-y divide-slate-50">
+              <div className="divide-y divide-[var(--border-sub)]">
                 {memories.map((m) => (
-                  <div key={m.id} className="px-5 py-4 hover:bg-slate-50 transition-colors group">
+                  <div key={m.id} className="px-5 py-4 hover:bg-[var(--card-hover)] transition-colors group">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                          <span className="text-sm font-medium text-slate-800 truncate max-w-sm">{m.topic}</span>
-                          <span className={`text-[11px] font-medium px-2 py-0.5 rounded border capitalize ${TONE_BADGE[m.tone] || "bg-slate-50 text-slate-500 border-slate-200"}`}>
+                          <span className="text-sm font-medium text-[var(--foreground)] truncate max-w-sm">{m.topic}</span>
+                          <span className={`text-[11px] font-medium px-2 py-0.5 rounded border capitalize ${TONE_BADGE[m.tone] || "bg-[var(--card-hover)] text-[var(--text-muted)] border-[var(--border)]"}`}>
                             {m.tone}
                           </span>
-                          <span className="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+                          <span className="text-[11px] text-[var(--text-muted)] bg-[var(--toggle-bg)] px-2 py-0.5 rounded">
                             {m.audience}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-600 leading-relaxed mb-1.5">{m.summary}</p>
+                        <p className="text-xs text-[var(--text-sub)] leading-relaxed mb-1.5">{m.summary}</p>
                         {m.style_notes && (
-                          <p className="text-[11px] text-slate-400 italic leading-relaxed mb-2">
+                          <p className="text-[11px] text-[var(--text-muted)] italic leading-relaxed mb-2">
                             Style: {m.style_notes}
                           </p>
                         )}
@@ -556,14 +556,14 @@ export default function MemoryPage() {
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-2 shrink-0">
-                        <p className="text-[11px] text-slate-400">
+                        <p className="text-[11px] text-[var(--text-muted)]">
                           {m.created_at?.seconds ? timeAgo(m.created_at.seconds) : "—"}
                         </p>
                         {m.id && (
                           <button
                             onClick={() => handleDelete(m.id!, "auto")}
                             disabled={deletingId === m.id}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded-md hover:bg-red-50 flex items-center justify-center disabled:opacity-40"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded-md hover:bg-red-500/10 flex items-center justify-center disabled:opacity-40"
                             title="Remove this memory entry"
                           >
                             <Trash2 className="w-3.5 h-3.5 text-red-400" />
@@ -582,21 +582,21 @@ export default function MemoryPage() {
       {/* ── Upload Modal ──────────────────────────────────────────────────── */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4">
+          <div className="bg-[var(--card)] rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4">
 
             {/* Modal header */}
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Add Writing Sample</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <h3 className="text-base font-bold text-[var(--foreground)]">Add Writing Sample</h3>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
                   Paste a real LinkedIn post you wrote. Cortex will learn your voice, rhythm, and style.
                 </p>
               </div>
               <button
                 onClick={() => { setShowModal(false); setUploadMsg(null); }}
-                className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center transition-colors"
+                className="w-7 h-7 rounded-lg hover:bg-[var(--toggle-bg)] flex items-center justify-center transition-colors"
               >
-                <X className="w-4 h-4 text-slate-500" />
+                <X className="w-4 h-4 text-[var(--text-muted)]" />
               </button>
             </div>
 
@@ -605,30 +605,30 @@ export default function MemoryPage() {
               {Array.from({ length: MAX_SAMPLES }).map((_, i) => (
                 <div
                   key={i}
-                  className={`h-1.5 flex-1 rounded-full transition-all ${i < samples.length ? accentBar : "bg-slate-200"}`}
+                  className={`h-1.5 flex-1 rounded-full transition-all ${i < samples.length ? accentBar : "bg-[var(--border)]"}`}
                 />
               ))}
-              <span className="text-[10px] text-slate-400 shrink-0 ml-1">{samples.length}/{MAX_SAMPLES}</span>
+              <span className="text-[10px] text-[var(--text-muted)] shrink-0 ml-1">{samples.length}/{MAX_SAMPLES}</span>
             </div>
 
             {/* How to get your post text */}
-            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[var(--card-hover)] border border-[var(--border)] text-xs text-[var(--text-sub)] leading-relaxed">
               <span className="text-base leading-none mt-0.5">💡</span>
               <div className="space-y-1">
-                <p className="font-semibold text-slate-700">How to copy a LinkedIn post</p>
-                <ol className="list-decimal list-inside space-y-0.5 text-slate-500">
+                <p className="font-semibold text-[var(--foreground)]">How to copy a LinkedIn post</p>
+                <ol className="list-decimal list-inside space-y-0.5 text-[var(--text-muted)]">
                   <li>Open LinkedIn and find a post you wrote</li>
                   <li>Click <strong>…more</strong> to expand the full text</li>
                   <li>Select all the text and copy it (Ctrl+A / Cmd+A won&apos;t work — select manually)</li>
                   <li>Paste it in the box below</li>
                 </ol>
-                <p className="text-slate-400 pt-0.5">Tip: add 3–5 of your top-performing posts for best results.</p>
+                <p className="text-[var(--text-muted)] pt-0.5">Tip: add 3–5 of your top-performing posts for best results.</p>
               </div>
             </div>
 
             {/* Paste area */}
             <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-2">
+              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide block mb-2">
                 Paste your post
               </label>
               <textarea
@@ -636,22 +636,22 @@ export default function MemoryPage() {
                 onChange={(e) => setPastedText(e.target.value)}
                 placeholder="Paste a LinkedIn post you wrote here. The more authentic the better — this teaches Cortex exactly how you write..."
                 rows={8}
-                className="w-full text-sm border border-slate-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 text-slate-700 leading-relaxed placeholder:text-slate-300"
+                className="w-full text-sm border border-[var(--border)] rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-800/40 text-[var(--foreground)] leading-relaxed placeholder:text-[var(--text-muted)]"
               />
               <div className="flex justify-between mt-1">
-                <span className={`text-[10px] ${pastedText.trim().length < MIN_CHARS ? "text-amber-500" : "text-slate-400"}`}>
+                <span className={`text-[10px] ${pastedText.trim().length < MIN_CHARS ? "text-amber-500" : "text-[var(--text-muted)]"}`}>
                   {pastedText.trim().length} characters {pastedText.trim().length < MIN_CHARS ? `(min ${MIN_CHARS})` : "✓"}
                 </span>
-                <span className="text-[10px] text-slate-400">Min {MIN_CHARS} characters required</span>
+                <span className="text-[10px] text-[var(--text-muted)]">Min {MIN_CHARS} characters required</span>
               </div>
             </div>
 
             {/* Status message */}
             {uploadMsg && (
               <div className={`flex items-start gap-2 p-3 rounded-lg text-xs ${
-                uploadMsg.type === "success" ? "bg-green-50 border border-green-200 text-green-800" :
-                uploadMsg.type === "warn"    ? "bg-amber-50 border border-amber-200 text-amber-800" :
-                                              "bg-red-50 border border-red-200 text-red-800"
+                uploadMsg.type === "success" ? "bg-emerald-500/10 border border-emerald-800/40 text-green-800" :
+                uploadMsg.type === "warn"    ? "bg-amber-500/10 border border-amber-200 text-amber-800" :
+                                              "bg-red-500/10 border border-red-200 text-red-800"
               }`}>
                 {uploadMsg.type === "success"
                   ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
@@ -664,7 +664,7 @@ export default function MemoryPage() {
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => { setShowModal(false); setUploadMsg(null); }}
-                className="flex-1 py-2.5 rounded-xl text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all"
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium border border-[var(--border)] text-[var(--text-sub)] hover:bg-[var(--card-hover)] transition-all"
               >
                 Cancel
               </button>
@@ -672,7 +672,7 @@ export default function MemoryPage() {
                 onClick={handleUpload}
                 disabled={uploading || pastedText.trim().length < MIN_CHARS}
                 className={`flex-1 py-2.5 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed
-                  ${isCorporate ? "bg-violet-600 hover:bg-violet-700" : "bg-[#0A66C2] hover:bg-[#0854a0]"}`}
+                  ${isCorporate ? "bg-violet-600 hover:bg-violet-700" : "bg-[var(--primary)] hover:opacity-90"}`}
               >
                 {uploading ? (
                   <>

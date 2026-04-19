@@ -55,7 +55,7 @@ export function ProfileAIAssist({ field, value, context, profileType, onApply, b
         <button
           onClick={handleEnhance}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-[#0A66C2] hover:text-[#0854a0] bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--primary)] hover:text-[#0854a0] bg-blue-500/10 hover:bg-blue-100 border border-blue-800/40 px-3 py-1.5 rounded-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <Sparkles className={`w-3.5 h-3.5 ${loading ? "animate-pulse" : ""}`} />
           {loading ? "Enhancing with AI…" : (buttonLabel ?? "Rewrite with AI for best results")}
@@ -72,31 +72,31 @@ export function ProfileAIAssist({ field, value, context, profileType, onApply, b
 
       {/* Suggestion box */}
       {suggestion && (
-        <div className="mt-2 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 animate-fade-in">
+        <div className="mt-2 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-800/40 rounded-xl p-4 animate-fade-in">
           <div className="flex items-center gap-1.5 mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-[#0A66C2]" />
-            <p className="text-[10px] font-bold text-[#0A66C2] uppercase tracking-wider">AI Suggestion</p>
+            <Sparkles className="w-3.5 h-3.5 text-[var(--primary)]" />
+            <p className="text-[10px] font-bold text-[var(--primary)] uppercase tracking-wider">AI Suggestion</p>
           </div>
 
-          <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">{suggestion}</p>
+          <p className="text-sm text-[var(--foreground)] leading-relaxed whitespace-pre-wrap">{suggestion}</p>
 
-          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-blue-200/60">
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-blue-800/40/60">
             <button
               onClick={handleApply}
-              className="flex items-center gap-1.5 text-xs font-semibold text-white bg-[#0A66C2] hover:bg-[#0854a0] px-3 py-1.5 rounded-lg transition-all"
+              className="flex items-center gap-1.5 text-xs font-semibold text-white bg-[var(--primary)] hover:opacity-90 px-3 py-1.5 rounded-lg transition-all"
             >
               <Check className="w-3.5 h-3.5" /> Use this
             </button>
             <button
               onClick={() => setSuggestion(null)}
-              className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg transition-all"
+              className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--border)] px-3 py-1.5 rounded-lg transition-all"
             >
               <X className="w-3 h-3" /> Dismiss
             </button>
             <button
               onClick={handleEnhance}
               disabled={loading}
-              className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-[#0A66C2] ml-auto transition-all disabled:opacity-40"
+              className="flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--primary)] ml-auto transition-all disabled:opacity-40"
             >
               <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
               Try again

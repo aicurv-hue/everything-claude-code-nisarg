@@ -19,15 +19,15 @@ interface Props {
   loading?: boolean;
 }
 
-const inputClass = "w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] transition-all text-sm";
-const labelClass = "block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5";
+const inputClass = "w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] transition-all text-sm";
+const labelClass = "block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5";
 
 export default function CampaignParamsForm({ value, onChange, onSubmit, loading }: Props) {
   const set = (k: keyof CampaignParams, v: any) => onChange({ ...value, [k]: v });
 
   return (
     <div className="space-y-5">
-      <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700 leading-relaxed">
+      <div className="p-3 bg-blue-500/10 border border-blue-100 rounded-lg text-[12px] text-blue-400 leading-relaxed">
         <strong>Define your campaign.</strong> Cortex will generate all posts in sequence, each taking a fresh angle on your topic. You can review and edit every post before scheduling.
       </div>
 
@@ -68,19 +68,19 @@ export default function CampaignParamsForm({ value, onChange, onSubmit, loading 
         <div>
           <label className={labelClass}>Number of Posts</label>
           <input type="number" min={2} max={10} value={value.post_count} onChange={e => set("post_count", Number(e.target.value))} className={inputClass} />
-          <p className="text-[10px] text-slate-400 mt-1">2–10 posts per campaign</p>
+          <p className="text-[10px] text-[var(--text-muted)] mt-1">2–10 posts per campaign</p>
         </div>
         <div>
           <label className={labelClass}>Posting Frequency</label>
           <div className="flex items-center gap-2">
             <input type="number" min={1} max={30} value={value.frequency_days} onChange={e => set("frequency_days", Number(e.target.value))} className={`${inputClass} flex-1`} />
-            <span className="text-sm text-slate-500 shrink-0">days apart</span>
+            <span className="text-sm text-[var(--text-muted)] shrink-0">days apart</span>
           </div>
         </div>
       </div>
 
       <div>
-        <label className={labelClass}>Custom Instructions <span className="normal-case font-normal text-slate-400">(optional)</span></label>
+        <label className={labelClass}>Custom Instructions <span className="normal-case font-normal text-[var(--text-muted)]">(optional)</span></label>
         <textarea value={value.custom_instructions} onChange={e => set("custom_instructions", e.target.value)} rows={2} className={`${inputClass} resize-none`}
           placeholder="Any specific angles, formats, or things to avoid across all posts..." />
       </div>
@@ -88,7 +88,7 @@ export default function CampaignParamsForm({ value, onChange, onSubmit, loading 
       <button
         onClick={onSubmit}
         disabled={loading || !value.name || !value.topic}
-        className="w-full py-3 rounded-xl bg-[#0A66C2] hover:bg-[#0854a0] text-white text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full py-3 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {loading ? (
           <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Generating {value.post_count} posts...</>

@@ -123,8 +123,8 @@ export default function CampaignDetailPage() {
   if (!campaign) {
     return (
       <div className="p-8 max-w-3xl mx-auto text-center">
-        <p className="text-slate-500">Campaign not found.</p>
-        <button onClick={() => router.push("/dashboard/campaigns")} className="mt-4 text-sm text-[#0A66C2] hover:underline">&larr; Back to Campaigns</button>
+        <p className="text-[var(--text-muted)]">Campaign not found.</p>
+        <button onClick={() => router.push("/dashboard/campaigns")} className="mt-4 text-sm text-[var(--primary)] hover:underline">&larr; Back to Campaigns</button>
       </div>
     );
   }
@@ -136,19 +136,19 @@ export default function CampaignDetailPage() {
     <div className="p-4 md:p-8 max-w-3xl mx-auto animate-fade-in space-y-6">
       {/* Header */}
       <div className="flex items-start gap-3">
-        <button onClick={() => router.push("/dashboard/campaigns")} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors mt-0.5">
+        <button onClick={() => router.push("/dashboard/campaigns")} className="p-2 rounded-lg hover:bg-[var(--toggle-bg)] text-[var(--text-muted)] transition-colors mt-0.5">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex-1">
-          <h1 className="text-xl font-bold text-slate-900">{campaign.name}</h1>
-          <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{campaign.topic}</p>
+          <h1 className="text-xl font-bold text-[var(--foreground)]">{campaign.name}</h1>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5 line-clamp-1">{campaign.topic}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {campaign.status === "draft" && (
             <button
               onClick={() => setShowActivateModal(true)}
               disabled={actionLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-green-300 bg-green-50 text-xs font-medium text-green-700 hover:bg-green-100 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-800/40 bg-emerald-500/10 text-xs font-medium text-emerald-400 hover:bg-green-500/20 transition-all"
             >
               <Zap className="w-3.5 h-3.5" /> Activate Campaign
             </button>
@@ -157,7 +157,7 @@ export default function CampaignDetailPage() {
             <button
               onClick={handlePauseResume}
               disabled={actionLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] text-xs font-medium text-[var(--text-sub)] hover:bg-[var(--card-hover)] transition-all"
             >
               {campaign.status === "active" ? <><Pause className="w-3.5 h-3.5" /> Pause</> : <><Play className="w-3.5 h-3.5" /> Resume</>}
             </button>
@@ -165,7 +165,7 @@ export default function CampaignDetailPage() {
           <button
             onClick={handleDelete}
             disabled={actionLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-xs font-medium text-red-600 hover:bg-red-100 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 bg-red-500/10 text-xs font-medium text-red-400 hover:bg-red-500/20 transition-all"
           >
             <Trash2 className="w-3.5 h-3.5" /> Delete
           </button>
@@ -180,8 +180,8 @@ export default function CampaignDetailPage() {
           { label: "Scheduled", value: scheduled },
         ].map(s => (
           <div key={s.label} className="card p-4 text-center">
-            <p className="text-2xl font-bold text-slate-900">{s.value}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
+            <p className="text-2xl font-bold text-[var(--foreground)]">{s.value}</p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
@@ -189,26 +189,26 @@ export default function CampaignDetailPage() {
       {/* Campaign info */}
       <div className="card p-5 space-y-2 text-sm">
         <div className="flex justify-between">
-          <span className="text-slate-500">Frequency</span>
-          <span className="font-medium text-slate-800">Every {campaign.frequency_days} day(s)</span>
+          <span className="text-[var(--text-muted)]">Frequency</span>
+          <span className="font-medium text-[var(--foreground)]">Every {campaign.frequency_days} day(s)</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">Tone</span>
-          <span className="font-medium text-slate-800 capitalize">{campaign.tone}</span>
+          <span className="text-[var(--text-muted)]">Tone</span>
+          <span className="font-medium text-[var(--foreground)] capitalize">{campaign.tone}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">Segment</span>
-          <span className="font-medium text-slate-800 capitalize">{campaign.segment}</span>
+          <span className="text-[var(--text-muted)]">Segment</span>
+          <span className="font-medium text-[var(--foreground)] capitalize">{campaign.segment}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">Status</span>
-          <span className="font-medium text-slate-800 capitalize">{campaign.status}</span>
+          <span className="text-[var(--text-muted)]">Status</span>
+          <span className="font-medium text-[var(--foreground)] capitalize">{campaign.status}</span>
         </div>
       </div>
 
       {/* Timeline */}
       <div className="card p-6">
-        <h2 className="text-sm font-semibold text-slate-800 mb-5">Post Sequence — click a post to edit</h2>
+        <h2 className="text-sm font-semibold text-[var(--foreground)] mb-5">Post Sequence — click a post to edit</h2>
         <CampaignTimeline
           posts={posts.map(p => ({
             id: p.id,
@@ -238,27 +238,27 @@ export default function CampaignDetailPage() {
       {/* Activate Campaign Modal */}
       {showActivateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-sm mx-4 p-6 space-y-4">
+          <div className="bg-[var(--card)] rounded-2xl shadow-xl border border-[var(--border)] w-full max-w-sm mx-4 p-6 space-y-4">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Activate Campaign</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Set the date and time for your first post.</p>
+              <h2 className="text-base font-bold text-[var(--foreground)]">Activate Campaign</h2>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">Set the date and time for your first post.</p>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+              <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">
                 First Post Date &amp; Time
               </label>
               <input
                 type="datetime-local"
                 value={activateDate}
                 onChange={e => setActivateDate(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] transition-all text-sm"
+                className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] transition-all text-sm"
               />
-              <p className="text-[11px] text-slate-400 mt-1">Timezone: {timezone}</p>
+              <p className="text-[11px] text-[var(--text-muted)] mt-1">Timezone: {timezone}</p>
             </div>
 
             {activateError && (
-              <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-600">
+              <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-200 text-sm text-red-400">
                 {activateError}
               </div>
             )}
@@ -267,7 +267,7 @@ export default function CampaignDetailPage() {
               <button
                 onClick={() => { setShowActivateModal(false); setActivateError(null); }}
                 disabled={activating}
-                className="flex-1 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-all"
+                className="flex-1 py-2.5 rounded-lg border border-[var(--border)] bg-[var(--card-hover)] text-sm font-medium text-[var(--text-sub)] hover:bg-[var(--toggle-bg)] transition-all"
               >
                 Cancel
               </button>

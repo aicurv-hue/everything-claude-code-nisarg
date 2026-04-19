@@ -710,20 +710,20 @@ export default function PostPreviewPage() {
   const accentColor = isCorp ? "#7C3AED" : "#0A66C2";
 
   return (
-    <div className="flex h-full bg-slate-50">
+    <div className="flex h-full bg-[var(--card-hover)]">
 
       {/* ── Main area ── */}
-      <div className="flex-1 p-8 overflow-auto border-r border-slate-200">
+      <div className="flex-1 p-8 overflow-auto border-r border-[var(--border)]">
         <div className="max-w-3xl mx-auto space-y-6">
 
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-slate-900">Post Preview</h1>
+            <h1 className="text-2xl font-bold text-[var(--foreground)]">Post Preview</h1>
             <div className="flex gap-3">
               <button
                 onClick={handleSaveDraft}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white hover:bg-slate-50 text-sm font-medium border border-slate-200 text-slate-700 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--card)] hover:bg-[var(--card-hover)] text-sm font-medium border border-[var(--border)] text-[var(--foreground)] transition-all disabled:opacity-50"
               >
                 <FileText className="w-4 h-4" />
                 {isSaving ? "Saving..." : "Save Draft"}
@@ -741,7 +741,7 @@ export default function PostPreviewPage() {
                 }}
                 disabled={scheduleStatus === "success" || linkedInConnected === false}
                 title={linkedInConnected === false ? "Connect LinkedIn first to schedule posts" : undefined}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/100 hover:bg-amber-600 text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <CalendarDays className="w-4 h-4" />
                 {scheduleStatus === "success" ? "Scheduled ✓" : "Schedule"}
@@ -750,7 +750,7 @@ export default function PostPreviewPage() {
               {linkedInConnected === false ? (
                 <a
                   href={`/api/auth/linkedin?returnTo=/dashboard/create/preview&uid=${encodeURIComponent(user?.uid || "")}`}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0A66C2] hover:bg-[#0958A8] text-sm font-semibold text-white transition-all"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--primary)] hover:bg-[#0958A8] text-sm font-semibold text-white transition-all"
                 >
                   <Linkedin className="w-4 h-4" />
                   Connect LinkedIn
@@ -759,7 +759,7 @@ export default function PostPreviewPage() {
                 <button
                   onClick={handlePublish}
                   disabled={isPublishing || publishStatus === "success"}
-                  className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[#0A66C2] hover:bg-[#0958A8] text-sm font-semibold text-white transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[var(--primary)] hover:bg-[#0958A8] text-sm font-semibold text-white transition-all disabled:opacity-50"
                 >
                   <Send className="w-4 h-4" />
                   {isPublishing ? "Publishing..." : publishStatus === "success" ? "Published ✓" : "Publish to LinkedIn"}
@@ -770,19 +770,19 @@ export default function PostPreviewPage() {
 
           {/* ── Setup required warning ── */}
           {(profileName === null || !linkedInConnected) && linkedInConnected !== null && (
-            <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+            <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-200">
               <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-amber-800">Complete setup before publishing</p>
                 <div className="mt-1.5 space-y-1">
                   {!linkedInConnected && (
-                    <p className="text-[11px] text-amber-700">
+                    <p className="text-[11px] text-amber-400">
                       • <strong>LinkedIn not connected</strong> — required to publish or schedule.{" "}
                       <a href={`/api/auth/linkedin?returnTo=/dashboard/create/preview&uid=${encodeURIComponent(user?.uid || "")}`} className="underline font-semibold">Connect now →</a>
                     </p>
                   )}
                   {profileName === null && (
-                    <p className="text-[11px] text-amber-700">
+                    <p className="text-[11px] text-amber-400">
                       • <strong>Profile name missing</strong> — the AI needs your name to write in your voice.{" "}
                       <a href="/dashboard/settings" className="underline font-semibold">Add in Settings →</a>
                     </p>
@@ -795,11 +795,11 @@ export default function PostPreviewPage() {
           {/* LinkedIn account banner */}
           {linkedInConnected === true && linkedInUser?.name && (
             <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
-              isCorp ? "bg-violet-50 border-violet-200" : "bg-blue-50 border-blue-200"
+              isCorp ? "bg-violet-500/10 border-violet-800/40" : "bg-blue-500/10 border-blue-800/40"
             }`}>
               {isCorp ? (
-                <div className="w-8 h-8 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center shrink-0">
-                  <Linkedin className="w-4 h-4 text-violet-600" />
+                <div className="w-8 h-8 rounded-full bg-violet-500/20 border border-violet-800/40 flex items-center justify-center shrink-0">
+                  <Linkedin className="w-4 h-4 text-violet-400" />
                 </div>
               ) : (
                 linkedInUser.picture && (
@@ -809,19 +809,19 @@ export default function PostPreviewPage() {
               <div>
                 {isCorp ? (
                   <>
-                    <p className="text-xs font-medium text-slate-700">Posting as <span className="text-violet-600 font-semibold">Company Page</span></p>
-                    <p className="text-[11px] text-slate-400">Authorised by {linkedInUser.name}</p>
+                    <p className="text-xs font-medium text-[var(--foreground)]">Posting as <span className="text-violet-400 font-semibold">Company Page</span></p>
+                    <p className="text-[11px] text-[var(--text-muted)]">Authorised by {linkedInUser.name}</p>
                   </>
                 ) : (
                   <>
-                    <p className="text-xs font-medium text-slate-700">Posting as <span className="text-[#0A66C2] font-semibold">{linkedInUser.name}</span></p>
-                    <p className="text-[11px] text-slate-400">{linkedInUser.email}</p>
+                    <p className="text-xs font-medium text-[var(--foreground)]">Posting as <span className="text-[var(--primary)] font-semibold">{linkedInUser.name}</span></p>
+                    <p className="text-[11px] text-[var(--text-muted)]">{linkedInUser.email}</p>
                   </>
                 )}
               </div>
               <div className="ml-auto flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isCorp ? "bg-violet-500" : "bg-green-500"}`} />
-                <span className={`text-[11px] font-medium ${isCorp ? "text-violet-600" : "text-green-600"}`}>
+                <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isCorp ? "bg-violet-500/100" : "bg-emerald-500/100"}`} />
+                <span className={`text-[11px] font-medium ${isCorp ? "text-violet-400" : "text-emerald-400"}`}>
                   {isCorp ? "Corporate" : "Personal"}
                 </span>
               </div>
@@ -830,12 +830,12 @@ export default function PostPreviewPage() {
 
           {/* Corporate publishing restriction notice */}
           {isCorp && (
-            <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+            <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-200">
               <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs font-semibold text-amber-800">Company page publishing requires LinkedIn Partner approval</p>
-                <p className="text-[11px] text-amber-700 mt-0.5">
-                  LinkedIn restricts the <code className="bg-amber-100 px-1 rounded">w_organization_social</code> scope to approved Marketing Developer Platform partners. Until approved, use <strong>Schedule</strong> — once the token is approved, scheduled posts will publish automatically. Scheduling works today.
+                <p className="text-[11px] text-amber-400 mt-0.5">
+                  LinkedIn restricts the <code className="bg-amber-500/20 px-1 rounded">w_organization_social</code> scope to approved Marketing Developer Platform partners. Until approved, use <strong>Schedule</strong> — once the token is approved, scheduled posts will publish automatically. Scheduling works today.
                 </p>
               </div>
             </div>
@@ -843,33 +843,33 @@ export default function PostPreviewPage() {
 
           {/* Status banners */}
           {publishStatus === "success" && (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-green-50 border border-green-200">
-              <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
-              <p className="text-sm text-green-700 font-medium">{publishMessage}</p>
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-800/40">
+              <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+              <p className="text-sm text-emerald-400 font-medium">{publishMessage}</p>
             </div>
           )}
           {publishStatus === "error" && (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-200">
               <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-              <p className="text-sm text-red-600 font-medium">{publishMessage}</p>
+              <p className="text-sm text-red-400 font-medium">{publishMessage}</p>
             </div>
           )}
           {scheduleStatus === "success" && (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
-              <CalendarDays className="w-5 h-5 text-amber-600 shrink-0" />
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-200">
+              <CalendarDays className="w-5 h-5 text-amber-400 shrink-0" />
               <div>
                 <p className="text-sm text-amber-800 font-semibold">Post Scheduled!</p>
-                <p className="text-xs text-amber-600 mt-0.5">{scheduleMessage}</p>
+                <p className="text-xs text-amber-400 mt-0.5">{scheduleMessage}</p>
               </div>
-              <a href="/dashboard/schedule" className="ml-auto text-xs font-medium text-amber-700 hover:underline">
+              <a href="/dashboard/schedule" className="ml-auto text-xs font-medium text-amber-400 hover:underline">
                 View Calendar →
               </a>
             </div>
           )}
           {scheduleStatus === "error" && (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-200">
               <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-              <p className="text-sm text-red-600 font-medium">{scheduleMessage}</p>
+              <p className="text-sm text-red-400 font-medium">{scheduleMessage}</p>
             </div>
           )}
 
@@ -880,13 +880,13 @@ export default function PostPreviewPage() {
           {/* ── Post Editor ── */}
           <div className="card overflow-hidden">
             {/* Card header with Regenerate controls */}
-            <div className="px-5 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-500">LinkedIn Post · Edit before publishing</span>
+            <div className="px-5 py-3 border-b border-[var(--border-sub)] bg-[var(--card-hover)] flex items-center justify-between">
+              <span className="text-xs font-medium text-[var(--text-muted)]">LinkedIn Post · Edit before publishing</span>
               <div className="flex items-center gap-2">
                 {previousContent && (
                   <button
                     onClick={handleUndoPost}
-                    className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-700 transition-colors"
+                    className="flex items-center gap-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
                     title="Undo last regeneration"
                   >
                     <RotateCcw className="w-3 h-3" /> Undo
@@ -898,7 +898,7 @@ export default function PostPreviewPage() {
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
                     showRegenHint
                       ? "bg-slate-800 text-white border-slate-800"
-                      : "bg-white hover:bg-slate-50 text-slate-600 border-slate-200"
+                      : "bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-sub)] border-[var(--border)]"
                   }`}
                 >
                   <RefreshCw className={`w-3 h-3 ${isRegeneratingPost ? "animate-spin" : ""}`} />
@@ -909,8 +909,8 @@ export default function PostPreviewPage() {
 
             {/* Hint panel — expands when Regenerate is clicked */}
             {showRegenHint && !isRegeneratingPost && (
-              <div className="px-5 py-3 border-b border-slate-100 bg-slate-50 space-y-2">
-                <p className="text-[11px] text-slate-500">
+              <div className="px-5 py-3 border-b border-[var(--border-sub)] bg-[var(--card-hover)] space-y-2">
+                <p className="text-[11px] text-[var(--text-muted)]">
                   Give Cortex a direction hint (optional) — e.g. <span className="italic">"make it shorter"</span>, <span className="italic">"more storytelling"</span>, <span className="italic">"less salesy"</span>
                 </p>
                 <div className="flex gap-2">
@@ -920,7 +920,7 @@ export default function PostPreviewPage() {
                     onChange={(e) => setRegenHint(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") handleRegeneratePost(); }}
                     placeholder="Direction hint (optional)..."
-                    className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-slate-400 text-slate-700 placeholder-slate-400"
+                    className="flex-1 px-3 py-2 text-xs rounded-lg border border-[var(--border)] bg-[var(--card)] focus:outline-none focus:ring-1 focus:ring-slate-400 text-[var(--foreground)] placeholder-slate-400"
                     autoFocus
                   />
                   <button
@@ -932,7 +932,7 @@ export default function PostPreviewPage() {
                   </button>
                   <button
                     onClick={() => { setShowRegenHint(false); setRegenHint(""); }}
-                    className="px-3 py-2 rounded-lg text-xs text-slate-500 hover:text-slate-700 border border-slate-200 bg-white"
+                    className="px-3 py-2 rounded-lg text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] border border-[var(--border)] bg-[var(--card)]"
                   >
                     Cancel
                   </button>
@@ -948,10 +948,10 @@ export default function PostPreviewPage() {
             {/* Rich text editor with loading overlay */}
             <div className="relative p-4">
               {isRegeneratingPost && (
-                <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-10 gap-3 rounded-xl">
+                <div className="absolute inset-0 bg-[var(--card)]/80 flex flex-col items-center justify-center z-10 gap-3 rounded-xl">
                   <div className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: `${accentColor}40`, borderTopColor: accentColor }} />
-                  <p className="text-sm text-slate-500 font-medium">Writing a new version...</p>
-                  {regenHint && <p className="text-xs text-slate-400 italic">"{regenHint}"</p>}
+                  <p className="text-sm text-[var(--text-muted)] font-medium">Writing a new version...</p>
+                  {regenHint && <p className="text-xs text-[var(--text-muted)] italic">"{regenHint}"</p>}
                 </div>
               )}
               <RichTextEditor
@@ -983,12 +983,12 @@ export default function PostPreviewPage() {
 
           {/* ── Image Section — full width ── */}
           <div className="card overflow-hidden">
-            <div className="px-5 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+            <div className="px-5 py-3 border-b border-[var(--border-sub)] bg-[var(--card-hover)] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-[#0A66C2]" />
-                <span className="text-xs font-medium text-slate-600">Post Image</span>
+                <ImageIcon className="w-4 h-4 text-[var(--primary)]" />
+                <span className="text-xs font-medium text-[var(--text-sub)]">Post Image</span>
                 {finalImageUrl && (
-                  <span className="text-[10px] px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full font-medium">
+                  <span className="text-[10px] px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-800/40 rounded-full font-medium">
                     Attached
                   </span>
                 )}
@@ -998,7 +998,7 @@ export default function PostPreviewPage() {
                 {previousImagePrompt && (
                   <button
                     onClick={handleUndoImagePrompt}
-                    className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-700 transition-colors"
+                    className="flex items-center gap-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
                     title="Undo last prompt regeneration"
                   >
                     <RotateCcw className="w-3 h-3" /> Undo
@@ -1009,7 +1009,7 @@ export default function PostPreviewPage() {
                   <button
                     onClick={handleRegenerateImagePrompt}
                     disabled={isRegeneratingImage}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-xs text-slate-600 transition-all border border-slate-200 disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card)] hover:bg-[var(--card-hover)] text-xs text-[var(--text-sub)] transition-all border border-[var(--border)] disabled:opacity-50"
                     title="Generate a new image prompt based on the current post content"
                   >
                     <Wand2 className={`w-3 h-3 ${isRegeneratingImage ? "animate-spin" : ""}`} />
@@ -1021,13 +1021,13 @@ export default function PostPreviewPage() {
                   <>
                     <button
                       onClick={handleDownloadImage}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-xs text-slate-600 transition-all border border-slate-200"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card)] hover:bg-[var(--card-hover)] text-xs text-[var(--text-sub)] transition-all border border-[var(--border)]"
                     >
                       <Download className="w-3 h-3" /> Download
                     </button>
                     <button
                       onClick={() => generateImage(imagePrompt)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-xs text-slate-600 transition-all border border-slate-200"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card)] hover:bg-[var(--card-hover)] text-xs text-[var(--text-sub)] transition-all border border-[var(--border)]"
                     >
                       <RefreshCw className="w-3 h-3" /> Regenerate
                     </button>
@@ -1038,22 +1038,22 @@ export default function PostPreviewPage() {
 
             {/* Image prompt preview + error */}
             {imageMode === "ai" && imagePrompt && (
-              <div className="px-5 py-2.5 border-b border-slate-100 bg-slate-50/50 flex items-start gap-2">
-                <Sparkles className="w-3 h-3 text-slate-400 mt-0.5 shrink-0" />
-                <p className="text-[11px] text-slate-400 italic leading-relaxed flex-1 line-clamp-2">{imagePrompt}</p>
+              <div className="px-5 py-2.5 border-b border-[var(--border-sub)] bg-[var(--card-hover)]/50 flex items-start gap-2">
+                <Sparkles className="w-3 h-3 text-[var(--text-muted)] mt-0.5 shrink-0" />
+                <p className="text-[11px] text-[var(--text-muted)] italic leading-relaxed flex-1 line-clamp-2">{imagePrompt}</p>
               </div>
             )}
             {regenImageError && imageMode === "ai" && (
-              <div className="px-5 py-2 border-b border-red-100 bg-red-50 flex items-center gap-2">
+              <div className="px-5 py-2 border-b border-red-100 bg-red-500/10 flex items-center gap-2">
                 <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />
                 <p className="text-[11px] text-red-500">{regenImageError}</p>
               </div>
             )}
 
             {/* Mode picker */}
-            <div className="px-5 py-4 border-b border-slate-100">
+            <div className="px-5 py-4 border-b border-[var(--border-sub)]">
               <div className="flex items-center gap-1.5 mb-3">
-                <p className="text-xs text-slate-500 font-medium">Add an image to your post</p>
+                <p className="text-xs text-[var(--text-muted)] font-medium">Add an image to your post</p>
                 <HelpTooltip
                   text="LinkedIn posts with images get significantly higher reach. AI Generate creates a professional editorial photo based on your post content. Upload lets you use your own branded image. No Image keeps the post text-only."
                   example="Recommended: AI Generate for thought leadership posts, Upload for personal photos or branded graphics."
@@ -1067,15 +1067,15 @@ export default function PostPreviewPage() {
                   <button
                     onClick={() => handleModeChange("reference")}
                     className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
-                      imageMode === "reference" ? "border-green-500 bg-green-50" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                      imageMode === "reference" ? "border-green-500 bg-emerald-500/10" : "border-[var(--border)] bg-[var(--card)] hover:border-slate-300 hover:bg-[var(--card-hover)]"
                     }`}
                   >
-                    <div className="w-9 h-9 rounded-xl overflow-hidden border border-slate-200 shrink-0">
+                    <div className="w-9 h-9 rounded-xl overflow-hidden border border-[var(--border)] shrink-0">
                       <img src={referenceImagePreview} alt="Your photo" className="w-full h-full object-cover" />
                     </div>
                     <div>
-                      <p className={`text-xs font-semibold ${imageMode === "reference" ? "text-green-700" : "text-slate-700"}`}>Your Photo</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">The image you uploaded</p>
+                      <p className={`text-xs font-semibold ${imageMode === "reference" ? "text-emerald-400" : "text-[var(--foreground)]"}`}>Your Photo</p>
+                      <p className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-tight">The image you uploaded</p>
                     </div>
                   </button>
                 )}
@@ -1083,60 +1083,60 @@ export default function PostPreviewPage() {
                 <button
                   onClick={() => handleModeChange("ai")}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
-                    imageMode === "ai" ? "border-[#0A66C2] bg-blue-50" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    imageMode === "ai" ? "border-[#0A66C2] bg-blue-500/10" : "border-[var(--border)] bg-[var(--card)] hover:border-slate-300 hover:bg-[var(--card-hover)]"
                   }`}
                 >
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "ai" ? "bg-[#0A66C2]" : "bg-slate-100"}`}>
-                    <Sparkles className={`w-4.5 h-4.5 ${imageMode === "ai" ? "text-white" : "text-slate-500"}`} />
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "ai" ? "bg-[var(--primary)]" : "bg-[var(--toggle-bg)]"}`}>
+                    <Sparkles className={`w-4.5 h-4.5 ${imageMode === "ai" ? "text-white" : "text-[var(--text-muted)]"}`} />
                   </div>
                   <div>
-                    <p className={`text-xs font-semibold ${imageMode === "ai" ? "text-[#0A66C2]" : "text-slate-700"}`}>AI Generate</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">Let Cortex create a matching image</p>
+                    <p className={`text-xs font-semibold ${imageMode === "ai" ? "text-[var(--primary)]" : "text-[var(--foreground)]"}`}>AI Generate</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-tight">Let Cortex create a matching image</p>
                   </div>
                 </button>
 
                 <button
                   onClick={() => handleModeChange("x_screenshot")}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
-                    imageMode === "x_screenshot" ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    imageMode === "x_screenshot" ? "border-slate-700 bg-slate-900" : "border-[var(--border)] bg-[var(--card)] hover:border-slate-300 hover:bg-[var(--card-hover)]"
                   }`}
                 >
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "x_screenshot" ? "bg-black" : "bg-slate-100"}`}>
-                    <span className={`text-lg font-black leading-none ${imageMode === "x_screenshot" ? "text-white" : "text-slate-600"}`}>𝕏</span>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "x_screenshot" ? "bg-black" : "bg-[var(--toggle-bg)]"}`}>
+                    <span className={`text-lg font-black leading-none ${imageMode === "x_screenshot" ? "text-white" : "text-[var(--text-sub)]"}`}>𝕏</span>
                   </div>
                   <div>
-                    <p className={`text-xs font-semibold ${imageMode === "x_screenshot" ? "text-white" : "text-slate-700"}`}>X Screenshot</p>
-                    <p className={`text-[10px] mt-0.5 leading-tight ${imageMode === "x_screenshot" ? "text-slate-400" : "text-slate-400"}`}>Twitter-style dark card</p>
+                    <p className={`text-xs font-semibold ${imageMode === "x_screenshot" ? "text-white" : "text-[var(--foreground)]"}`}>X Screenshot</p>
+                    <p className={`text-[10px] mt-0.5 leading-tight ${imageMode === "x_screenshot" ? "text-[var(--text-muted)]" : "text-[var(--text-muted)]"}`}>Twitter-style dark card</p>
                   </div>
                 </button>
 
                 <button
                   onClick={() => { handleModeChange("upload"); if (fileInputRef.current) { fileInputRef.current.value = ""; fileInputRef.current.click(); } }}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
-                    imageMode === "upload" ? "border-[#0A66C2] bg-blue-50" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    imageMode === "upload" ? "border-[#0A66C2] bg-blue-500/10" : "border-[var(--border)] bg-[var(--card)] hover:border-slate-300 hover:bg-[var(--card-hover)]"
                   }`}
                 >
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "upload" ? "bg-[#0A66C2]" : "bg-slate-100"}`}>
-                    <Upload className={`w-4.5 h-4.5 ${imageMode === "upload" ? "text-white" : "text-slate-500"}`} />
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "upload" ? "bg-[var(--primary)]" : "bg-[var(--toggle-bg)]"}`}>
+                    <Upload className={`w-4.5 h-4.5 ${imageMode === "upload" ? "text-white" : "text-[var(--text-muted)]"}`} />
                   </div>
                   <div>
-                    <p className={`text-xs font-semibold ${imageMode === "upload" ? "text-[#0A66C2]" : "text-slate-700"}`}>Upload Image</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">Use your own photo or graphic</p>
+                    <p className={`text-xs font-semibold ${imageMode === "upload" ? "text-[var(--primary)]" : "text-[var(--foreground)]"}`}>Upload Image</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-tight">Use your own photo or graphic</p>
                   </div>
                 </button>
 
                 <button
                   onClick={() => handleModeChange("none")}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
-                    imageMode === "none" ? "border-slate-400 bg-slate-50" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    imageMode === "none" ? "border-slate-400 bg-[var(--card-hover)]" : "border-[var(--border)] bg-[var(--card)] hover:border-slate-300 hover:bg-[var(--card-hover)]"
                   }`}
                 >
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "none" ? "bg-slate-200" : "bg-slate-100"}`}>
-                    <X className={`w-4.5 h-4.5 ${imageMode === "none" ? "text-slate-600" : "text-slate-400"}`} />
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "none" ? "bg-[var(--border)]" : "bg-[var(--toggle-bg)]"}`}>
+                    <X className={`w-4.5 h-4.5 ${imageMode === "none" ? "text-[var(--text-sub)]" : "text-[var(--text-muted)]"}`} />
                   </div>
                   <div>
-                    <p className={`text-xs font-semibold ${imageMode === "none" ? "text-slate-700" : "text-slate-500"}`}>No Image</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">Text-only post</p>
+                    <p className={`text-xs font-semibold ${imageMode === "none" ? "text-[var(--foreground)]" : "text-[var(--text-muted)]"}`}>No Image</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-tight">Text-only post</p>
                   </div>
                 </button>
 
@@ -1146,13 +1146,13 @@ export default function PostPreviewPage() {
                     <a
                       href="/#pricing"
                       title="Upgrade to Starter or above to use this feature"
-                      className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-center opacity-70 hover:opacity-90 transition-opacity"
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-[var(--border)] bg-[var(--card-hover)] text-center opacity-70 hover:opacity-90 transition-opacity"
                     >
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100">
-                        <User className="w-4 h-4 text-slate-300" />
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--toggle-bg)]">
+                        <User className="w-4 h-4 text-[var(--text-muted)]" />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-slate-400">Use My Face</p>
+                        <p className="text-xs font-semibold text-[var(--text-muted)]">Use My Face</p>
                         <p className="text-[10px] text-amber-500 mt-0.5 leading-tight">Starter plan required</p>
                       </div>
                     </a>
@@ -1170,21 +1170,21 @@ export default function PostPreviewPage() {
                       className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center disabled:opacity-40 disabled:cursor-not-allowed ${
                         imageMode === "face"
                           ? "border-purple-500 bg-purple-50"
-                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                          : "border-[var(--border)] bg-[var(--card)] hover:border-slate-300 hover:bg-[var(--card-hover)]"
                       }`}
                     >
                       {profilePhotoUrl ? (
-                        <div className="w-9 h-9 rounded-xl overflow-hidden border border-slate-200 shrink-0">
+                        <div className="w-9 h-9 rounded-xl overflow-hidden border border-[var(--border)] shrink-0">
                           <img src={profilePhotoUrl} alt="Your face" className="w-full h-full object-cover" />
                         </div>
                       ) : (
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100">
-                          <User className="w-4 h-4 text-slate-400" />
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--toggle-bg)]">
+                          <User className="w-4 h-4 text-[var(--text-muted)]" />
                         </div>
                       )}
                       <div>
-                        <p className={`text-xs font-semibold ${imageMode === "face" ? "text-purple-700" : "text-slate-700"}`}>Use My Face</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                        <p className={`text-xs font-semibold ${imageMode === "face" ? "text-purple-700" : "text-[var(--foreground)]"}`}>Use My Face</p>
+                        <p className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-tight">
                           {profilePhotoUrl
                             ? monthlyUsage?.limits?.faceImagesPerMonth && monthlyUsage.limits.faceImagesPerMonth < 999999
                               ? `${monthlyUsage.faceImagesGenerated ?? 0}/${monthlyUsage.limits.faceImagesPerMonth} used`
@@ -1201,32 +1201,32 @@ export default function PostPreviewPage() {
             </div>
 
             {/* Image display area */}
-            <div className="p-6 min-h-[160px] flex items-center justify-center bg-white">
+            <div className="p-6 min-h-[160px] flex items-center justify-center bg-[var(--card)]">
               {imageMode === "ai" && !isGeneratingImage && !imageUrl && !imageError && (
                 <div className="flex flex-col items-center gap-4 text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center">
-                    <Sparkles className="w-5 h-5 text-[#0A66C2]" />
+                  <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-100 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-[var(--primary)]" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-700">Ready to generate your image</p>
-                    <p className="text-xs text-slate-400 mt-1">Cortex will create a professional image based on your post content</p>
+                    <p className="text-sm font-medium text-[var(--foreground)]">Ready to generate your image</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-1">Cortex will create a professional image based on your post content</p>
                   </div>
                   <button
                     onClick={() => generateImage(imagePrompt)}
                     disabled={(postData?.clientProfile?.imageStyle !== "x_screenshot" && !imagePrompt) || isRegeneratingImage}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#0A66C2] hover:bg-[#0958A8] text-sm font-medium text-white transition-all disabled:opacity-40"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--primary)] hover:bg-[#0958A8] text-sm font-medium text-white transition-all disabled:opacity-40"
                   >
                     <Sparkles className="w-4 h-4" />
                     {postData?.clientProfile?.imageStyle === "x_screenshot" ? "Create X Screenshot" : "Generate Image"}
                   </button>
                   {!imagePrompt && postData?.clientProfile?.imageStyle !== "x_screenshot" && (
-                    <p className="text-[11px] text-amber-600">No image prompt available. Regenerate the post first.</p>
+                    <p className="text-[11px] text-amber-400">No image prompt available. Regenerate the post first.</p>
                   )}
                 </div>
               )}
 
               {(imageMode === "ai" || imageMode === "x_screenshot") && isGeneratingImage && (
-                <div className="flex flex-col items-center gap-3 text-slate-400">
+                <div className="flex flex-col items-center gap-3 text-[var(--text-muted)]">
                   <div className="w-7 h-7 border-2 border-[#0A66C2]/30 border-t-[#0A66C2] rounded-full animate-spin" />
                   <p className="text-xs">{imageMode === "x_screenshot" ? "Creating X screenshot..." : "Generating image with AI..."}</p>
                 </div>
@@ -1236,7 +1236,7 @@ export default function PostPreviewPage() {
                 <div className="flex flex-col items-center gap-3 text-center">
                   <AlertCircle className="w-6 h-6 text-red-400" />
                   <p className="text-sm text-red-500">{imageError}</p>
-                  <button onClick={() => generateImage(imagePrompt)} className="text-xs text-[#0A66C2] hover:underline">Try again</button>
+                  <button onClick={() => generateImage(imagePrompt)} className="text-xs text-[var(--primary)] hover:underline">Try again</button>
                 </div>
               )}
 
@@ -1264,16 +1264,16 @@ export default function PostPreviewPage() {
 
               {imageMode === "upload" && !uploadedPreview && (
                 <div className="flex flex-col items-center gap-4 text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center">
-                    <Upload className="w-5 h-5 text-slate-400" />
+                  <div className="w-12 h-12 rounded-2xl bg-[var(--toggle-bg)] border border-[var(--border)] flex items-center justify-center">
+                    <Upload className="w-5 h-5 text-[var(--text-muted)]" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-600">No image selected yet</p>
-                    <p className="text-xs text-slate-400 mt-1">Click the Upload Image option above to choose a file</p>
+                    <p className="text-sm font-medium text-[var(--text-sub)]">No image selected yet</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-1">Click the Upload Image option above to choose a file</p>
                   </div>
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-white text-sm font-medium text-slate-700 transition-all"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--card-hover)] hover:bg-[var(--card)] text-sm font-medium text-[var(--foreground)] transition-all"
                   >
                     <Upload className="w-4 h-4" /> Choose File
                   </button>
@@ -1302,13 +1302,13 @@ export default function PostPreviewPage() {
                     )}
                     <button
                       onClick={() => { setUploadedFile(null); setUploadedPreview(null); if (fileInputRef.current) { fileInputRef.current.value = ""; fileInputRef.current.click(); } }}
-                      className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-all"
+                      className="absolute top-3 right-3 w-7 h-7 rounded-full bg-[var(--card)] border border-[var(--border)] shadow-sm flex items-center justify-center hover:bg-[var(--card-hover)] transition-all"
                       title="Replace image"
                     >
-                      <RefreshCw className="w-3 h-3 text-slate-500" />
+                      <RefreshCw className="w-3 h-3 text-[var(--text-muted)]" />
                     </button>
                   </div>
-                  <p className="mt-2 text-[11px] text-slate-400 truncate">{uploadedFile?.name}</p>
+                  <p className="mt-2 text-[11px] text-[var(--text-muted)] truncate">{uploadedFile?.name}</p>
                 </div>
               )}
 
@@ -1334,13 +1334,13 @@ export default function PostPreviewPage() {
                     )}
                     <button
                       onClick={handleRemoveReferenceImage}
-                      className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 transition-all"
+                      className="absolute top-3 right-3 w-7 h-7 rounded-full bg-[var(--card)] border border-[var(--border)] shadow-sm flex items-center justify-center hover:bg-[var(--card-hover)] transition-all"
                       title="Remove photo"
                     >
-                      <X className="w-3 h-3 text-slate-500" />
+                      <X className="w-3 h-3 text-[var(--text-muted)]" />
                     </button>
                   </div>
-                  <p className="mt-2 text-[11px] text-green-600 font-medium">Your photo · will be attached to the post</p>
+                  <p className="mt-2 text-[11px] text-emerald-400 font-medium">Your photo · will be attached to the post</p>
                 </div>
               )}
 
@@ -1349,7 +1349,7 @@ export default function PostPreviewPage() {
                   {!faceGeneratedUrl && !isFaceGenerating && (
                     <>
                       <div className="w-full">
-                        <p className="text-xs font-medium text-slate-600 mb-3">Choose a background style</p>
+                        <p className="text-xs font-medium text-[var(--text-sub)] mb-3">Choose a background style</p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {([
                             { id: "professional", label: "Professional", emoji: "💼" },
@@ -1363,7 +1363,7 @@ export default function PostPreviewPage() {
                               className={`py-2.5 px-3 rounded-lg border text-xs font-medium transition-all ${
                                 faceStyle === s.id
                                   ? "border-purple-500 bg-purple-50 text-purple-700"
-                                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                                  : "border-[var(--border)] bg-[var(--card)] text-[var(--text-sub)] hover:border-slate-300"
                               }`}
                             >
                               {s.emoji} {s.label}
@@ -1382,7 +1382,7 @@ export default function PostPreviewPage() {
                     </>
                   )}
                   {isFaceGenerating && (
-                    <div className="flex flex-col items-center gap-3 text-slate-400">
+                    <div className="flex flex-col items-center gap-3 text-[var(--text-muted)]">
                       <div className="w-7 h-7 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
                       <p className="text-xs">Generating your face image... (this takes ~30s)</p>
                     </div>
@@ -1393,7 +1393,7 @@ export default function PostPreviewPage() {
                       <div className="mt-3 flex gap-2 justify-center">
                         <button
                           onClick={() => { setFaceGeneratedUrl(null); setFaceError(null); }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-600 hover:bg-slate-50 transition-all"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--text-sub)] hover:bg-[var(--card-hover)] transition-all"
                         >
                           <RefreshCw className="w-3 h-3" /> Regenerate
                         </button>
@@ -1404,7 +1404,7 @@ export default function PostPreviewPage() {
               )}
 
               {imageMode === "none" && (
-                <div className="flex flex-col items-center gap-3 text-center text-slate-400">
+                <div className="flex flex-col items-center gap-3 text-center text-[var(--text-muted)]">
                   <ImageIcon className="w-8 h-8 text-slate-200" />
                   <p className="text-xs">This post will be published as text only.</p>
                 </div>
@@ -1413,18 +1413,18 @@ export default function PostPreviewPage() {
 
             {/* ── Hook text overlay editor (Layer 2) ── */}
             {imageMode !== "none" && finalImageUrl && (
-              <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/60 space-y-2">
+              <div className="px-5 py-4 border-t border-[var(--border-sub)] bg-[var(--card-hover)]/60 space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                    <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
                       Image Hook Text
                     </label>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Overlaid on the image. 7 words max. Leave blank to hide.</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">Overlaid on the image. 7 words max. Leave blank to hide.</p>
                   </div>
                   <button
                     onClick={generateHook}
                     disabled={isGeneratingHook}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-xs text-slate-600 border border-slate-200 transition-all disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card)] hover:bg-[var(--card-hover)] text-xs text-[var(--text-sub)] border border-[var(--border)] transition-all disabled:opacity-50"
                   >
                     <Sparkles className={`w-3 h-3 ${isGeneratingHook ? "animate-spin" : ""}`} />
                     {isGeneratingHook ? "Generating..." : "Generate Hook"}
@@ -1436,7 +1436,7 @@ export default function PostPreviewPage() {
                   onChange={(e) => setImageHook(e.target.value)}
                   placeholder='e.g. "Are you making this mistake?"'
                   maxLength={80}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-[#0A66C2]/30 text-slate-700 placeholder-slate-400"
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--card)] focus:outline-none focus:ring-1 focus:ring-[#0A66C2]/30 text-[var(--foreground)] placeholder-slate-400"
                 />
               </div>
             )}
@@ -1457,24 +1457,24 @@ export default function PostPreviewPage() {
       )}
 
       {/* ── Research Sidebar ── */}
-      <aside className="w-80 p-6 overflow-auto space-y-6 bg-white border-l border-slate-200">
+      <aside className="w-80 p-6 overflow-auto space-y-6 bg-[var(--card)] border-l border-[var(--border)]">
 
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mb-2">Research Basis</p>
-          <div className={`p-3 rounded-xl border ${isCorp ? "bg-violet-50 border-violet-200" : "bg-blue-50 border-blue-200"}`}>
-            <p className={`text-sm font-medium ${isCorp ? "text-violet-700" : "text-[#0A66C2]"}`}>
+          <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-semibold mb-2">Research Basis</p>
+          <div className={`p-3 rounded-xl border ${isCorp ? "bg-violet-500/10 border-violet-800/40" : "bg-blue-500/10 border-blue-800/40"}`}>
+            <p className={`text-sm font-medium ${isCorp ? "text-violet-400" : "text-[var(--primary)]"}`}>
               {postData.metadata.topic}
             </p>
           </div>
         </div>
 
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mb-3">Core Insights</p>
+          <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-semibold mb-3">Core Insights</p>
           <div className="space-y-4">
             {postData.research.insights.map((insight: any, i: number) => (
               <div key={i} className="space-y-1">
-                <p className="text-xs font-semibold text-slate-700">{insight.title}</p>
-                <p className="text-xs text-slate-500 leading-relaxed">{insight.content}</p>
+                <p className="text-xs font-semibold text-[var(--foreground)]">{insight.title}</p>
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">{insight.content}</p>
               </div>
             ))}
           </div>
@@ -1482,11 +1482,11 @@ export default function PostPreviewPage() {
 
         {postData.research.references?.length > 0 && (
           <div>
-            <p className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mb-3">Sources</p>
+            <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-semibold mb-3">Sources</p>
             <ul className="space-y-2">
               {postData.research.references.map((ref: string, i: number) => (
                 <li key={i}>
-                  <a href={ref} target="_blank" rel="noreferrer" className="text-xs text-[#0A66C2] hover:underline block truncate">
+                  <a href={ref} target="_blank" rel="noreferrer" className="text-xs text-[var(--primary)] hover:underline block truncate">
                     {ref}
                   </a>
                 </li>
@@ -1495,10 +1495,10 @@ export default function PostPreviewPage() {
           </div>
         )}
 
-        <div className="pt-4 border-t border-slate-100">
+        <div className="pt-4 border-t border-[var(--border-sub)]">
           <Link
             href="/dashboard/create"
-            className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-700 transition-colors"
+            className="flex items-center gap-2 text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Back to generator
           </Link>

@@ -78,13 +78,13 @@ function BarChart({
 
 function StatCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string | number; sub?: string }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4">
+    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-4">
       <div className="flex items-center gap-2 mb-2">
-        <div className="w-7 h-7 rounded-lg bg-[#0A66C2]/10 flex items-center justify-center text-[#0A66C2]">{icon}</div>
-        <p className="text-xs text-slate-500 font-medium">{label}</p>
+        <div className="w-7 h-7 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center text-[var(--primary)]">{icon}</div>
+        <p className="text-xs text-[var(--text-muted)] font-medium">{label}</p>
       </div>
-      <p className="text-2xl font-bold text-slate-900">{value}</p>
-      {sub && <p className="text-[11px] text-slate-400 mt-0.5">{sub}</p>}
+      <p className="text-2xl font-bold text-[var(--foreground)]">{value}</p>
+      {sub && <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -93,10 +93,10 @@ function StatCard({ icon, label, value, sub }: { icon: React.ReactNode; label: s
 
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5">
+    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-5">
       <div className="flex items-center gap-2 mb-4">
-        <div className="text-[#0A66C2]">{icon}</div>
-        <h2 className="font-semibold text-slate-800 text-sm">{title}</h2>
+        <div className="text-[var(--primary)]">{icon}</div>
+        <h2 className="font-semibold text-[var(--foreground)] text-sm">{title}</h2>
       </div>
       {children}
     </div>
@@ -133,7 +133,7 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--card-hover)]">
         <div className="w-8 h-8 border-2 border-[#0A66C2] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -141,7 +141,7 @@ export default function AnalyticsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--card-hover)] px-4">
         <p className="text-red-500 text-sm">{error}</p>
       </div>
     );
@@ -149,11 +149,11 @@ export default function AnalyticsPage() {
 
   if (!data || data.empty) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--card-hover)] px-4">
         <div className="text-center">
-          <BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-600 font-medium">No published posts yet</p>
-          <p className="text-slate-400 text-sm mt-1">Publish your first post to see analytics here.</p>
+          <BarChart3 className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-3" />
+          <p className="text-[var(--text-sub)] font-medium">No published posts yet</p>
+          <p className="text-[var(--text-muted)] text-sm mt-1">Publish your first post to see analytics here.</p>
         </div>
       </div>
     );
@@ -174,8 +174,8 @@ export default function AnalyticsPage() {
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-900">Analytics</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Post activity across your LinkedIn account</p>
+        <h1 className="text-xl font-bold text-[var(--foreground)]">Analytics</h1>
+        <p className="text-sm text-[var(--text-muted)] mt-0.5">Post activity across your LinkedIn account</p>
       </div>
 
       {/* ── Overview stat cards ── */}
@@ -202,12 +202,12 @@ export default function AnalyticsPage() {
       {/* ── Best time recommendation ── */}
       {(recommendation.bestHourLabel || recommendation.bestDayLabel) && (
         <div className="bg-gradient-to-r from-[#0A66C2]/10 to-indigo-50 border border-[#0A66C2]/20 rounded-xl p-4 mb-5 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-[#0A66C2]/20 flex items-center justify-center shrink-0">
-            <Clock className="w-5 h-5 text-[#0A66C2]" />
+          <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/20 flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5 text-[var(--primary)]" />
           </div>
           <div>
-            <p className="text-xs font-bold text-[#0A66C2] uppercase tracking-wider mb-0.5">Your Most Active Posting Time</p>
-            <p className="text-sm font-semibold text-slate-800">
+            <p className="text-xs font-bold text-[var(--primary)] uppercase tracking-wider mb-0.5">Your Most Active Posting Time</p>
+            <p className="text-sm font-semibold text-[var(--foreground)]">
               {[recommendation.bestDayLabel, recommendation.bestHourLabel].filter(Boolean).join(" at ")}
               {" "}— based on your historical posting patterns
             </p>
@@ -225,11 +225,11 @@ export default function AnalyticsPage() {
             highlightIndex={bestHourIdx}
             color="#0A66C2"
           />
-          <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+          <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-1">
             <span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>11 PM</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">
-            Yellow bar = most-posted hour: <strong className="text-slate-600">{recommendation.bestHourLabel ?? "—"}</strong>
+          <p className="text-[11px] text-[var(--text-muted)] mt-2">
+            Yellow bar = most-posted hour: <strong className="text-[var(--text-sub)]">{recommendation.bestHourLabel ?? "—"}</strong>
           </p>
         </Section>
 
@@ -242,11 +242,11 @@ export default function AnalyticsPage() {
             highlightIndex={bestDayIdx}
             color="#0A66C2"
           />
-          <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+          <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-1">
             {byDayOfWeek.map(d => <span key={d.day}>{d.label}</span>)}
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">
-            Most active day: <strong className="text-slate-600">{recommendation.bestDayLabel ?? "—"}</strong>
+          <p className="text-[11px] text-[var(--text-muted)] mt-2">
+            Most active day: <strong className="text-[var(--text-sub)]">{recommendation.bestDayLabel ?? "—"}</strong>
           </p>
         </Section>
       </div>
@@ -260,10 +260,10 @@ export default function AnalyticsPage() {
               return (
                 <div key={t.tone}>
                   <div className="flex justify-between text-xs mb-0.5">
-                    <span className="text-slate-600 capitalize">{t.tone}</span>
-                    <span className="text-slate-400">{t.count} posts</span>
+                    <span className="text-[var(--text-sub)] capitalize">{t.tone}</span>
+                    <span className="text-[var(--text-muted)]">{t.count} posts</span>
                   </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-[var(--toggle-bg)] rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
@@ -286,10 +286,10 @@ export default function AnalyticsPage() {
               return (
                 <div key={l.length}>
                   <div className="flex justify-between text-xs mb-0.5">
-                    <span className="text-slate-600 capitalize">{l.length}</span>
-                    <span className="text-slate-400">{l.count} posts</span>
+                    <span className="text-[var(--text-sub)] capitalize">{l.length}</span>
+                    <span className="text-[var(--text-muted)]">{l.count} posts</span>
                   </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-[var(--toggle-bg)] rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
@@ -312,7 +312,7 @@ export default function AnalyticsPage() {
             valueKey="count"
             color="#0A66C2"
           />
-          <div className="flex justify-between text-[10px] text-slate-400 mt-1 overflow-hidden">
+          <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-1 overflow-hidden">
             <span>{weeklyGrowth[0]?.label}</span>
             <span>{weeklyGrowth[weeklyGrowth.length - 1]?.label}</span>
           </div>
@@ -322,33 +322,33 @@ export default function AnalyticsPage() {
       {/* ── Recent Posts ── */}
       <Section title="Recent Published Posts" icon={<Star className="w-4 h-4" />}>
         {recentPosts.length === 0 ? (
-          <p className="text-sm text-slate-400">No published posts yet.</p>
+          <p className="text-sm text-[var(--text-muted)]">No published posts yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left text-xs text-slate-400 font-medium pb-2 pr-4">#</th>
-                  <th className="text-left text-xs text-slate-400 font-medium pb-2 pr-4">Topic</th>
-                  <th className="text-left text-xs text-slate-400 font-medium pb-2 pr-4">Tone</th>
-                  <th className="text-left text-xs text-slate-400 font-medium pb-2">Date</th>
+                <tr className="border-b border-[var(--border-sub)]">
+                  <th className="text-left text-xs text-[var(--text-muted)] font-medium pb-2 pr-4">#</th>
+                  <th className="text-left text-xs text-[var(--text-muted)] font-medium pb-2 pr-4">Topic</th>
+                  <th className="text-left text-xs text-[var(--text-muted)] font-medium pb-2 pr-4">Tone</th>
+                  <th className="text-left text-xs text-[var(--text-muted)] font-medium pb-2">Date</th>
                 </tr>
               </thead>
               <tbody>
                 {recentPosts.map((p, i) => (
                   <tr key={p.id} className="border-b border-slate-50 last:border-0">
                     <td className="py-2 pr-4">
-                      <span className="w-5 h-5 rounded-full bg-[#0A66C2]/10 text-[#0A66C2] text-[10px] font-bold flex items-center justify-center">
+                      <span className="w-5 h-5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] text-[10px] font-bold flex items-center justify-center">
                         {i + 1}
                       </span>
                     </td>
                     <td className="py-2 pr-4">
-                      <span className="text-slate-700 text-xs truncate max-w-[240px] block">{p.topic}</span>
+                      <span className="text-[var(--foreground)] text-xs truncate max-w-[240px] block">{p.topic}</span>
                     </td>
                     <td className="py-2 pr-4">
-                      <span className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full capitalize">{p.tone}</span>
+                      <span className="text-[11px] bg-[var(--toggle-bg)] text-[var(--text-sub)] px-2 py-0.5 rounded-full capitalize">{p.tone}</span>
                     </td>
-                    <td className="py-2 text-xs text-slate-400">
+                    <td className="py-2 text-xs text-[var(--text-muted)]">
                       {p.publishedAt ? new Date(p.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
                     </td>
                   </tr>

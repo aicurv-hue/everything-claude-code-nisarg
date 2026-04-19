@@ -3,11 +3,12 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, UserCircle2, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut, BookOpen, HelpCircle, TrendingUp, Rocket, CreditCard } from "lucide-react";
+import { LayoutDashboard, UserCircle2, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut, BookOpen, HelpCircle, TrendingUp, Rocket, CreditCard, Lightbulb, Zap, MoreHorizontal } from "lucide-react";
 import { SegmentProvider, useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
 import OnboardingModal from "@/components/ui/OnboardingModal";
+import QuickAddIdea from "@/components/ui/QuickAddIdea";
 import BottomNav from "@/components/mobile/BottomNav";
 import MobileHeader from "@/components/mobile/MobileHeader";
 import { PlanStatusProvider, usePlanStatus } from "@/lib/context/planStatus";
@@ -24,7 +25,7 @@ function PlanBadge() {
   if (isFree) {
     return (
       <div className="px-3 pt-2">
-        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-[var(--info-bg)] border border-[var(--border)]">
           <span className="text-[10px] font-semibold text-amber-400">Free plan</span>
           <Link href="/dashboard/billing" className="text-[10px] text-amber-400 hover:text-amber-200 underline underline-offset-2 transition-colors">Upgrade</Link>
         </div>
@@ -34,7 +35,7 @@ function PlanBadge() {
   if (isTrial) {
     return (
       <div className="px-3 pt-2">
-        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-[var(--info-bg)] border border-[var(--border)]">
           <span className="text-[10px] font-semibold text-violet-400">Trial active</span>
           <Link href="/dashboard/billing" className="text-[10px] text-violet-400 hover:text-violet-200 underline underline-offset-2 transition-colors">View</Link>
         </div>
@@ -44,16 +45,17 @@ function PlanBadge() {
   if (isActive) {
     return (
       <div className="px-3 pt-2">
-        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
-          <span className="text-[10px] font-semibold text-green-400">{planLabel} plan</span>
-          <Link href="/dashboard/billing" className="text-[10px] text-green-400 hover:text-green-200 underline underline-offset-2 transition-colors">Usage</Link>
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-[var(--info-bg)] border border-[var(--border)]">
+          <span className="text-[11px] font-semibold text-[var(--text-sub)]">{planLabel} plan</span>
+          <span className="text-[10px] font-bold text-[var(--text-muted)]">Usage</span>
         </div>
+        <div className="text-[10px] text-[var(--text-muted)] px-3 mt-1">Posts go to your LinkedIn profile</div>
       </div>
     );
   }
   return (
     <div className="px-3 pt-2">
-      <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+      <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-[var(--info-bg)] border border-[var(--border)]">
         <span className="text-[10px] font-semibold text-blue-400">{planLabel} — pending</span>
         <Link href="/dashboard/billing" className="text-[10px] text-blue-400 hover:text-blue-200 underline underline-offset-2 transition-colors">Manage</Link>
       </div>
@@ -72,83 +74,78 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
     {
       label: null,
       items: [
-        { href: "/dashboard",           label: "Home",        icon: <LayoutDashboard className="w-4 h-4" /> },
-        { href: "/dashboard/create",    label: "Create Post", icon: <PenSquare className="w-4 h-4" /> },
-        { href: "/dashboard/drafts",    label: "Drafts",      icon: <FileText className="w-4 h-4" /> },
-        { href: "/dashboard/schedule",  label: "Schedule",    icon: <CalendarDays className="w-4 h-4" /> },
-        { href: "/dashboard/campaigns", label: "Campaigns",   icon: <Rocket className="w-4 h-4" /> },
-        { href: "/dashboard/history",   label: "History",     icon: <Clock className="w-4 h-4" /> },
+        { href: "/dashboard",           label: "Home",        icon: <LayoutDashboard className="w-[15px] h-[15px]" /> },
+        { href: "/dashboard/create",    label: "Create Post", icon: <PenSquare className="w-[15px] h-[15px]" /> },
+        { href: "/dashboard/drafts",    label: "Drafts",      icon: <FileText className="w-[15px] h-[15px]" /> },
+        { href: "/dashboard/schedule",  label: "Schedule",    icon: <CalendarDays className="w-[15px] h-[15px]" /> },
+        { href: "/dashboard/campaigns", label: "Campaigns",   icon: <Zap className="w-[15px] h-[15px]" /> },
+        { href: "/dashboard/ideas",     label: "Idea Bank",   icon: <Lightbulb className="w-[15px] h-[15px]" /> },
+        { href: "/dashboard/history",   label: "History",     icon: <Clock className="w-[15px] h-[15px]" /> },
       ],
     },
     {
       label: "Insights",
       items: [
-        { href: "/dashboard/analytics", label: "Analytics",  icon: <TrendingUp className="w-4 h-4" /> },
-        { href: "/dashboard/memory",    label: "AI Memory",  icon: <Brain className="w-4 h-4" /> },
+        { href: "/dashboard/analytics", label: "Analytics",  icon: <TrendingUp className="w-[15px] h-[15px]" /> },
+        { href: "/dashboard/memory",    label: "AI Memory",  icon: <Brain className="w-[15px] h-[15px]" /> },
       ],
     },
     {
       label: "Account",
       items: [
-        { href: "/dashboard/settings", label: "Profile",  icon: <UserCircle2 className="w-4 h-4" /> },
-        { href: "/dashboard/billing",  label: "Billing",  icon: <CreditCard className="w-4 h-4" /> },
-        { href: "/dashboard/guide",    label: "Guide",    icon: <HelpCircle className="w-4 h-4" /> },
+        { href: "/dashboard/settings", label: "Profile",  icon: <UserCircle2 className="w-[15px] h-[15px]" /> },
+        { href: "/dashboard/billing",  label: "Billing",  icon: <CreditCard className="w-[15px] h-[15px]" /> },
+        { href: "/dashboard/guide",    label: "Guide",    icon: <BookOpen className="w-[15px] h-[15px]" /> },
       ],
     },
   ];
 
-  const accentClass = isCorporate ? "bg-violet-600" : "bg-[#0A66C2]";
-
   return (
-    <aside className="w-56 bg-slate-900 flex flex-col shrink-0 h-screen sticky top-0">
+    <aside className="w-[220px] bg-[var(--sidebar)] flex flex-col shrink-0 h-screen sticky top-0">
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-white/[0.07]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#0A66C2] to-[#0854a0] flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-xs">L</span>
-          </div>
-          <span className="text-white font-semibold text-sm tracking-tight">Cridl</span>
+      <div className="px-4 py-[18px] flex items-center gap-2.5">
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#2563eb] to-[oklch(55%_0.22_300)] flex items-center justify-center shrink-0">
+          <Zap className="w-3.5 h-3.5 text-white" strokeWidth={2} />
         </div>
+        <span className="text-[var(--foreground)] font-bold text-[15px] tracking-[-0.02em]">Cridl</span>
       </div>
 
       {/* Segment Toggle */}
-      <div className="px-3 pt-4 pb-2">
-        <div className="bg-white/[0.07] rounded-lg p-1 flex gap-1">
+      <div className="px-3 pb-3">
+        <div className="bg-[var(--toggle-bg)] rounded-lg p-[3px] flex gap-[2px]">
           <button
             onClick={() => setSegment("individual")}
-            className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-[5px] rounded-md text-[11.5px] font-medium transition-all ${
               isIndividual
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-400 hover:text-white"
+                ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm"
+                : "text-[var(--text-muted)] hover:text-[var(--text-sub)]"
             }`}
           >
-            <User className="w-3 h-3" />
             Personal
           </button>
           <button
             onClick={() => setSegment("corporate")}
-            className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-[5px] rounded-md text-[11.5px] font-medium transition-all ${
               isCorporate
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-400 hover:text-white"
+                ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm"
+                : "text-[var(--text-muted)] hover:text-[var(--text-sub)]"
             }`}
           >
-            <Building2 className="w-3 h-3" />
             Company
           </button>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="px-2 pt-2 flex-1 overflow-y-auto">
+      <nav className="px-2 flex-1 overflow-y-auto">
         {navGroups.map((group) => (
-          <div key={group.label ?? "main"} className="mb-1">
+          <div key={group.label ?? "main"}>
             {group.label && (
-              <p className="px-3 pt-3 pb-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+              <p className="px-2.5 pt-3.5 pb-[5px] text-[9.5px] font-bold text-[var(--text-muted)] uppercase tracking-[0.1em]">
                 {group.label}
               </p>
             )}
-            <div className="space-y-0.5">
+            <div className="space-y-[2px]">
               {group.items.map(({ href, label, icon }) => {
                 const isActive = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
                 const showBadge = href === "/dashboard/history" && failedCount > 0;
@@ -156,26 +153,20 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
                   <Link
                     key={href}
                     href={href}
-                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                    className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all ${
                       isActive
-                        ? "bg-white/10 text-white font-medium"
-                        : "text-slate-400 hover:text-white hover:bg-white/[0.06]"
+                        ? "bg-[var(--nav-active)] text-[var(--primary)] font-semibold"
+                        : "text-[var(--text-sub)] hover:bg-[var(--nav-hover)] hover:text-[var(--foreground)]"
                     }`}
                   >
-                    <span className={`relative ${isActive ? "text-white" : "text-slate-500"}`}>
+                    <span className={isActive ? "text-[var(--primary)]" : "text-[var(--text-sub)]"}>
                       {icon}
-                      {showBadge && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
-                      )}
                     </span>
-                    {label}
+                    <span className="flex-1">{label}</span>
                     {showBadge && (
-                      <span className="ml-auto text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">
+                      <span className="text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">
                         {failedCount}
                       </span>
-                    )}
-                    {!showBadge && isActive && (
-                      <div className={`ml-auto w-1 h-4 rounded-full ${accentClass}`} />
                     )}
                   </Link>
                 );
@@ -188,42 +179,27 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
       {/* Plan badge */}
       <PlanBadge />
 
-      {/* Bottom — user + logout */}
-      <div className="px-3 pb-4 pt-3 border-t border-white/[0.07] space-y-2">
-        <div className={`px-3 py-2.5 rounded-lg ${isCorporate ? "bg-violet-500/10" : "bg-[#0A66C2]/10"}`}>
-          <p className={`text-[10px] font-semibold uppercase tracking-wider mb-0.5 ${isCorporate ? "text-violet-400" : "text-[#0A66C2]"}`}>
-            {isIndividual ? "Personal Profile" : "Company Page"}
-          </p>
-          <p className="text-[10px] text-slate-500 leading-relaxed">
-            {isIndividual ? "Posts go to your LinkedIn profile" : "Posts go to your company page"}
-          </p>
-        </div>
+      {/* Bottom — user card */}
+      <div className="px-3 py-2.5 border-t border-[var(--border)] flex items-center gap-[9px]">
         {user && (
-          <div className="flex items-center gap-2 px-1">
-            <div className="w-6 h-6 rounded-full bg-[#0A66C2]/30 flex items-center justify-center shrink-0">
-              <span className="text-[#0A66C2] text-[10px] font-bold">
-                {(user.displayName || user.email || "U")[0].toUpperCase()}
+          <>
+            <div className="w-[30px] h-[30px] rounded-full bg-gradient-to-br from-[#2563eb]/80 to-[#2563eb] flex items-center justify-center shrink-0">
+              <span className="text-white text-[11px] font-semibold">
+                {(user.displayName || user.email || "U").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-[11px] font-medium truncate">{user.displayName || "User"}</p>
-              <p className="text-slate-500 text-[10px] truncate">{user.email}</p>
+              <p className="text-[var(--foreground)] text-[12px] font-semibold truncate">{user.displayName || "User"}</p>
+              <p className="text-[var(--text-muted)] text-[10px] truncate">{user.email}</p>
             </div>
             <button
-              onClick={onOpenGuide}
-              className="text-slate-500 hover:text-blue-400 transition-colors shrink-0"
-              title="Getting Started Guide"
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-            </button>
-            <button
               onClick={async () => { await logOut(); router.replace("/login"); }}
-              className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
-              title="Sign out"
+              className="text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors shrink-0"
+              title="More"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <MoreHorizontal className="w-3.5 h-3.5" />
             </button>
-          </div>
+          </>
         )}
       </div>
     </aside>
@@ -245,8 +221,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#0A66C2] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -321,11 +297,11 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       {/* ── Desktop layout: sidebar + main ── */}
-      <div className="min-h-screen hidden md:flex bg-slate-50 text-slate-900">
+      <div className="min-h-screen hidden md:flex bg-[var(--background)] text-[var(--foreground)]">
         <Sidebar onOpenGuide={() => setShowGuide(true)} failedCount={failedCount} />
-        <main className="flex-1 overflow-auto min-h-screen">
+        <main className="flex-1 overflow-auto min-h-screen bg-[var(--bg-sub)]" style={{ padding: '32px 36px' }}>
           {trialBanner && !bannerDismissed && (
-            <div className="bg-amber-500 text-black text-sm font-medium px-4 py-2 flex items-center justify-between">
+            <div className="bg-amber-500/20 text-amber-400 text-sm font-medium px-4 py-2 flex items-center justify-between rounded-lg mb-4 border border-amber-500/30">
               <span>Trial active — {trialBanner.daysRemaining} day{trialBanner.daysRemaining !== 1 ? "s" : ""} remaining</span>
               <button onClick={() => setBannerDismissed(true)} className="ml-4 font-bold hover:opacity-70">×</button>
             </div>
@@ -337,7 +313,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* ── Mobile layout: header + scrollable content + bottom nav ── */}
-      <div className="flex flex-col min-h-screen md:hidden bg-slate-50 text-slate-900">
+      <div className="flex flex-col min-h-screen md:hidden bg-[var(--background)] text-[var(--foreground)]">
         <MobileHeader />
         <main className="flex-1 overflow-auto pb-20">
           {/* pb-20 = clears the 64px bottom nav */}
@@ -355,6 +331,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {showGuide && <OnboardingModal onClose={() => setShowGuide(false)} />}
+      <QuickAddIdea />
     </>
   );
 }

@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { DM_Sans } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from "@/lib/context/auth";
 import SplashHider from "@/components/SplashHider";
 
-// Plus Jakarta Sans — closest free alternative to OpenAI Sans / Söhne
-// Used for the image hook overlay text to match premium tech brand aesthetic
-const plusJakarta = Plus_Jakarta_Sans({
+const dmSans = DM_Sans({
   subsets: ["latin"],
-  weight: ["400", "600", "700"],  // dropped 800 — saves one font file
-  variable: "--font-jakarta",
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-dm-sans",
   display: "swap",
 });
 
@@ -38,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={plusJakarta.variable}>
+    <html lang="en" className={dmSans.variable}>
       <head>
         {/* DNS + TLS pre-warmed before any API calls fire */}
         <link rel="preconnect" href="https://openrouter.ai" />

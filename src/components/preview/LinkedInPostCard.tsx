@@ -32,7 +32,7 @@ export default function LinkedInPostCard({
       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
         LinkedIn Preview
       </p>
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="bg-[var(--card)] rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         {/* Header */}
         <div className="p-4 pb-2 flex items-start gap-3">
           {avatarUrl ? (
@@ -42,7 +42,7 @@ export default function LinkedInPostCard({
               className={`w-10 h-10 ${avatarShape} object-cover flex-shrink-0`}
             />
           ) : (
-            <div className={`w-10 h-10 ${avatarShape} ${isCompany ? 'bg-violet-100 text-violet-700' : 'bg-gray-300 text-gray-600'} flex items-center justify-center text-xs font-semibold flex-shrink-0`}>
+            <div className={`w-10 h-10 ${avatarShape} ${isCompany ? 'bg-violet-100 text-violet-400' : 'bg-gray-300 text-gray-600'} flex items-center justify-center text-xs font-semibold flex-shrink-0`}>
               {initials}
             </div>
           )}

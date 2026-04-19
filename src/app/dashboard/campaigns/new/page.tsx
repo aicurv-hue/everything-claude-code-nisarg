@@ -160,12 +160,12 @@ export default function NewCampaignPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => step === 1 ? router.push("/dashboard/campaigns") : setStep(s => (s - 1) as any)}
-          className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
+          className="p-2 rounded-lg hover:bg-[var(--toggle-bg)] text-[var(--text-muted)] transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-slate-900">New Campaign</h1>
-          <p className="text-xs text-slate-500">Step {step} of 3 — {steps[step - 1].label}</p>
+          <h1 className="text-xl font-bold text-[var(--foreground)]">New Campaign</h1>
+          <p className="text-xs text-[var(--text-muted)]">Step {step} of 3 — {steps[step - 1].label}</p>
         </div>
       </div>
 
@@ -174,14 +174,14 @@ export default function NewCampaignPage() {
         {steps.map((s, i) => (
           <React.Fragment key={s.n}>
             <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-              step === s.n ? "bg-[#0A66C2] text-white" :
-              step > s.n ? "bg-green-50 text-green-700 border border-green-200" :
-              "bg-slate-100 text-slate-400"
+              step === s.n ? "bg-[var(--primary)] text-white" :
+              step > s.n ? "bg-emerald-500/10 text-emerald-400 border border-emerald-800/40" :
+              "bg-[var(--toggle-bg)] text-[var(--text-muted)]"
             }`}>
               {step > s.n ? <CheckCircle className="w-3 h-3" /> : <span>{s.n}</span>}
               {s.label}
             </div>
-            {i < steps.length - 1 && <div className="flex-1 h-0.5 bg-slate-200 rounded" />}
+            {i < steps.length - 1 && <div className="flex-1 h-0.5 bg-[var(--border)] rounded" />}
           </React.Fragment>
         ))}
       </div>
@@ -190,7 +190,7 @@ export default function NewCampaignPage() {
       {step === 1 && (
         <div className="card p-6">
           {generateError && (
-            <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-600">{generateError}</div>
+            <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-200 text-sm text-red-400">{generateError}</div>
           )}
           <CampaignParamsForm value={params} onChange={setParams} onSubmit={handleGenerate} loading={generating} />
         </div>
@@ -201,14 +201,14 @@ export default function NewCampaignPage() {
         <div className="space-y-4">
           <div className="card p-4 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-slate-800">{params.name}</p>
-              <p className="text-xs text-slate-500">{posts.length} posts generated · every {params.frequency_days} days</p>
+              <p className="text-sm font-semibold text-[var(--foreground)]">{params.name}</p>
+              <p className="text-xs text-[var(--text-muted)]">{posts.length} posts generated · every {params.frequency_days} days</p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleSaveAndExit}
                 disabled={savingAll}
-                className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg transition-all disabled:opacity-50"
+                className="flex items-center gap-1.5 px-4 py-2 bg-[var(--toggle-bg)] hover:bg-[var(--border)] text-[var(--foreground)] text-sm font-semibold rounded-lg transition-all disabled:opacity-50"
               >
                 {savingAll ? (
                   <><div className="w-3.5 h-3.5 border-2 border-slate-400/30 border-t-slate-600 rounded-full animate-spin" /> Saving...</>
@@ -216,7 +216,7 @@ export default function NewCampaignPage() {
               </button>
               <button
                 onClick={() => setStep(3)}
-                className="px-4 py-2 bg-[#0A66C2] text-white text-sm font-semibold rounded-lg hover:bg-[#0854a0] transition-all"
+                className="px-4 py-2 bg-[var(--primary)] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all"
               >
                 Continue to Schedule &rarr;
               </button>
@@ -232,7 +232,7 @@ export default function NewCampaignPage() {
           />
           <button
             onClick={() => setStep(3)}
-            className="w-full py-3 rounded-xl bg-[#0A66C2] hover:bg-[#0854a0] text-white text-sm font-semibold transition-all"
+            className="w-full py-3 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white text-sm font-semibold transition-all"
           >
             Continue to Schedule &rarr;
           </button>
@@ -243,20 +243,20 @@ export default function NewCampaignPage() {
       {step === 3 && (
         <div className="space-y-4">
           <div className="card p-6 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-800">Schedule your campaign</h2>
+            <h2 className="text-sm font-semibold text-[var(--foreground)]">Schedule your campaign</h2>
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">First Post Date & Time</label>
+              <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">First Post Date & Time</label>
               <input
                 type="datetime-local"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] transition-all text-sm"
+                className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] transition-all text-sm"
               />
-              <p className="text-[11px] text-slate-400 mt-1">Timezone: {timezone} · Each subsequent post will be {params.frequency_days} day(s) later</p>
+              <p className="text-[11px] text-[var(--text-muted)] mt-1">Timezone: {timezone} · Each subsequent post will be {params.frequency_days} day(s) later</p>
             </div>
 
             {activateError && (
-              <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-600">{activateError}</div>
+              <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-200 text-sm text-red-400">{activateError}</div>
             )}
 
             <button
@@ -273,7 +273,7 @@ export default function NewCampaignPage() {
           </div>
 
           <div className="card p-6">
-            <h2 className="text-sm font-semibold text-slate-800 mb-4">Post timeline</h2>
+            <h2 className="text-sm font-semibold text-[var(--foreground)] mb-4">Post timeline</h2>
             <CampaignTimeline
               posts={posts.map(p => ({ ...p, status: "draft" as const }))}
               frequencyDays={params.frequency_days}

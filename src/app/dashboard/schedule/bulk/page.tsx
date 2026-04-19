@@ -17,7 +17,7 @@ export default function BulkUploadPage() {
       <div>
         <Link
           href="/dashboard/schedule"
-          className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-700 transition-colors mb-5"
+          className="flex items-center gap-2 text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors mb-5"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Back to Schedule
         </Link>

@@ -19,7 +19,7 @@ export default function BottomNav() {
   const activeColor = isCorporate ? "#7C3AED" : "#0A66C2";
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-white/[0.08] md:hidden safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--sidebar)] border-t border-white/[0.08] md:hidden safe-area-bottom">
       <div className="flex items-stretch h-16">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));

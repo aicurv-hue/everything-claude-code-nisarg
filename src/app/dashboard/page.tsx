@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import {
   BarChart3, Send, CheckCircle, Clock, TrendingUp,
   FileText, RefreshCw, Linkedin, Zap, Image, AlertTriangle,
-  Wifi, WifiOff, Activity, User, Building2, Calendar, X
+  Wifi, WifiOff, Activity, User, Building2, Calendar, X, Plus
 } from "lucide-react";
 import { Post } from "@/lib/db/posts";
 import { UserProfile } from "@/lib/db/profiles";
@@ -41,23 +41,13 @@ interface DashboardStats {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  ready: "text-green-600",
-  active: "text-green-600",
-  connected: "text-green-600",
-  refreshing: "text-amber-500",
-  mock: "text-amber-500",
-  degraded: "text-red-500",
-  disconnected: "text-red-500",
-};
-
-const STATUS_DOT: Record<string, string> = {
-  ready: "bg-green-500",
-  active: "bg-green-500",
-  connected: "bg-green-500",
-  refreshing: "bg-amber-500 animate-pulse",
-  mock: "bg-amber-500",
-  degraded: "bg-red-500",
-  disconnected: "bg-red-500",
+  ready: "#10b981",
+  active: "#2563eb",
+  connected: "#10b981",
+  refreshing: "#f59e0b",
+  mock: "#f59e0b",
+  degraded: "#ef4444",
+  disconnected: "#ef4444",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -85,25 +75,30 @@ function timeAgo(ms: number): string {
   return `${Math.floor(diff / 3600000)}h ago`;
 }
 
-const STATUS_BADGE: Record<string, string> = {
-  published: "bg-green-50 text-green-700 border-green-200",
-  draft:     "bg-blue-50 text-blue-700 border-blue-200",
-  scheduled: "bg-amber-50 text-amber-700 border-amber-200",
-  failed:    "bg-red-50 text-red-700 border-red-200",
-};
-
-const STATUS_ICON_BG: Record<string, string> = {
-  published: "bg-green-50 text-green-600",
-  draft:     "bg-blue-50 text-blue-600",
-  scheduled: "bg-amber-50 text-amber-600",
-  failed:    "bg-red-50 text-red-600",
-};
+function Badge({ label, color }: { label: string; color: string }) {
+  const colors: Record<string, { bg: string; text: string }> = {
+    blue:   { bg: '#1e3a5f', text: '#60a5fa' },
+    green:  { bg: '#14301f', text: '#34d399' },
+    amber:  { bg: '#2d2010', text: '#fbbf24' },
+    red:    { bg: '#2d1010', text: '#f87171' },
+    gray:   { bg: '#1e2130', text: '#6b7280' },
+  };
+  const c = colors[color] || colors.gray;
+  return (
+    <span
+      className="text-[11px] font-semibold px-2 py-[3px] rounded-full tracking-[0.02em] whitespace-nowrap"
+      style={{ background: c.bg, color: c.text }}
+    >
+      {label}
+    </span>
+  );
+}
 
 export default function DashboardHomePage() {
   const { user } = useAuth();
   const { segment, isIndividual, isCorporate, segmentReady } = useSegment();
   const searchParams = useSearchParams();
-  const [welcomeDismissed, setWelcomeDismissed] = useState(true); // default hidden until checked
+  const [welcomeDismissed, setWelcomeDismissed] = useState(true);
   const welcomePlan = searchParams.get("plan") || "Pro";
 
   useEffect(() => {
@@ -127,9 +122,6 @@ export default function DashboardHomePage() {
   const [error, setError]         = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<number>(0);
-
-  const accentColor = isCorporate ? "text-violet-600" : "text-[#0A66C2]";
-  const accentBg    = isCorporate ? "bg-violet-50 border-violet-200" : "bg-blue-50 border-blue-200";
 
   const loadAll = useCallback(async (silent = false) => {
     if (!user || !segmentReady) return;
@@ -174,7 +166,6 @@ export default function DashboardHomePage() {
 
   useEffect(() => { if (user && segmentReady) loadAll(); }, [user, segment, segmentReady, loadAll]);
 
-  // Handle ?linkedin_connected=true redirect from OAuth callback
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("linkedin_connected") === "true") {
@@ -183,7 +174,6 @@ export default function DashboardHomePage() {
     }
   }, [user]);
 
-  // Handle postMessage from OAuth popup
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
@@ -193,69 +183,28 @@ export default function DashboardHomePage() {
     return () => window.removeEventListener("message", handler);
   }, [user]);
 
-  const statCards = stats ? [
-    {
-      label: "Total Generated Posts",
-      value: stats.total,
-      icon: BarChart3,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
-      sub: `${stats.drafts} drafts · ${stats.failed} failed`,
-    },
-    {
-      label: "Live Posts on LinkedIn",
-      value: stats.published,
-      icon: Send,
-      color: "text-green-600",
-      bg: "bg-green-50",
-      sub: stats.published > 0 ? "Confirmed published" : "No posts published yet",
-    },
-    {
-      label: "Published This Week",
-      value: stats.lastWeek,
-      icon: Calendar,
-      color: "text-violet-600",
-      bg: "bg-violet-50",
-      sub: stats.lastWeek > 0 ? "Posts published this week" : "No posts this week",
-    },
-  ] : [];
-
   if (loading) {
     return (
-      <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
-        {/* Header skeleton */}
+      <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
         <div className="flex justify-between items-start">
           <div className="space-y-2">
-            <div className="h-7 w-32 bg-slate-200 rounded-lg shimmer" />
-            <div className="h-4 w-48 bg-slate-100 rounded shimmer" />
+            <div className="h-7 w-32 skeleton" />
+            <div className="h-4 w-48 skeleton" />
           </div>
-          <div className="h-9 w-24 bg-slate-200 rounded-lg shimmer" />
         </div>
-        {/* Stat cards skeleton */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="card p-5 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-slate-200 shimmer" />
-                <div className="h-4 w-24 bg-slate-200 rounded shimmer" />
-              </div>
-              <div className="h-8 w-16 bg-slate-200 rounded shimmer" />
-              <div className="h-3 w-32 bg-slate-100 rounded shimmer" />
+              <div className="h-4 w-24 skeleton" />
+              <div className="h-9 w-16 skeleton" />
+              <div className="h-3 w-32 skeleton" />
             </div>
           ))}
         </div>
-        {/* Recent posts skeleton */}
         <div className="card p-5 space-y-4">
-          <div className="h-5 w-28 bg-slate-200 rounded shimmer" />
+          <div className="h-5 w-28 skeleton" />
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="flex items-center gap-3 py-2">
-              <div className="w-8 h-8 rounded-lg bg-slate-200 shimmer shrink-0" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-3/4 bg-slate-200 rounded shimmer" />
-                <div className="h-3 w-1/2 bg-slate-100 rounded shimmer" />
-              </div>
-              <div className="h-5 w-16 bg-slate-100 rounded-full shimmer" />
-            </div>
+            <div key={i} className="h-[5px] w-full skeleton rounded-full" />
           ))}
         </div>
       </div>
@@ -266,14 +215,14 @@ export default function DashboardHomePage() {
     return (
       <div className="flex items-center justify-center h-full min-h-[400px]">
         <div className="flex flex-col items-center gap-4 text-center max-w-md px-6">
-          <AlertTriangle className="w-8 h-8 text-red-500" />
+          <AlertTriangle className="w-8 h-8 text-red-400" />
           <div>
-            <p className="text-sm font-semibold text-slate-800 mb-1">Dashboard failed to load</p>
-            <p className="text-xs text-slate-500">{error}</p>
+            <p className="text-sm font-semibold text-[var(--foreground)] mb-1">Dashboard failed to load</p>
+            <p className="text-xs text-[var(--text-muted)]">{error}</p>
           </div>
           <button
             onClick={() => { setError(""); setLoading(true); loadAll(); }}
-            className="px-4 py-2 bg-[#0A66C2] text-white text-sm font-medium rounded-lg hover:bg-[#0854a0] transition-all"
+            className="px-4 py-2 bg-[var(--primary)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-all"
           >
             Retry
           </button>
@@ -282,17 +231,46 @@ export default function DashboardHomePage() {
     );
   }
 
-  return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
+  const statCards = stats ? [
+    {
+      label: "Total Generated",
+      value: stats.total,
+      icon: "bar",
+      color: "#2563eb",
+      sub: `${stats.drafts} drafts · ${stats.failed} failed`,
+    },
+    {
+      label: "Live on LinkedIn",
+      value: stats.published,
+      icon: "send",
+      color: "#10b981",
+      sub: stats.published > 0 ? "Confirmed published" : "No posts published yet",
+    },
+    {
+      label: "Published This Week",
+      value: stats.lastWeek,
+      icon: "calendar",
+      color: "#f59e0b",
+      sub: stats.lastWeek > 0 ? "Posts this week" : "No posts this week",
+    },
+  ] : [];
 
-      {/* Welcome banner — shown after payment */}
+  const IconMap: Record<string, React.FC<{ className?: string }>> = {
+    bar: BarChart3, send: Send, calendar: Calendar,
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-5 animate-fade-in">
+
+      {/* Welcome banner */}
       {!welcomeDismissed && (
-        <div className="flex items-center gap-3 px-5 py-3.5 rounded-xl bg-green-50 border border-green-200">
-          <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
-          <p className="flex-1 text-sm text-green-800">
-            You&apos;re on the <strong>{welcomePlan}</strong> plan — your 14-day free trial has started. No charge until it ends.
+        <div className="flex items-center gap-3 px-5 py-3.5 rounded-[14px]"
+          style={{ background: '#14301f', border: '1px solid #1a4028' }}>
+          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+          <p className="flex-1 text-sm text-emerald-300">
+            You&apos;re on the <strong>{welcomePlan}</strong> plan — your 14-day free trial has started.
           </p>
-          <button onClick={dismissWelcome} className="text-green-500 hover:text-green-700 transition-colors shrink-0">
+          <button onClick={dismissWelcome} className="text-emerald-500 hover:text-emerald-300 transition-colors shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -301,100 +279,72 @@ export default function DashboardHomePage() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-[22px] font-bold text-[var(--foreground)]">Dashboard</h1>
+          <p className="text-[13px] text-[var(--text-muted)] mt-[3px]">
             {isIndividual ? "Personal branding workspace" : "Company page workspace"}
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           {lastUpdated > 0 && (
-            <span className="text-xs text-slate-400">{timeAgo(lastUpdated)}</span>
+            <span className="text-[12px] text-[var(--text-muted)]">{timeAgo(lastUpdated)}</span>
           )}
           <button
             onClick={() => loadAll(true)}
             disabled={refreshing}
-            className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-all disabled:opacity-40"
+            className="text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors disabled:opacity-40"
             title="Refresh"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${refreshing ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
           </button>
           <Link
             href="/dashboard/create"
-            className="px-4 py-2 bg-[#0A66C2] hover:bg-[#0854a0] text-white text-sm font-medium rounded-lg transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium text-white transition-all"
+            style={{ background: 'var(--primary)' }}
           >
-            + Create Post
+            <Plus className="w-3.5 h-3.5" />
+            Create Post
           </Link>
         </div>
       </div>
 
-      {/* Active Account Banner */}
+      {/* Profile banner */}
       {(() => {
         const seg      = isIndividual ? profile?.individual : profile?.corporate;
         const dispName = seg?.name || (isIndividual ? "Your Name" : "Company Name");
         const dispRole = seg?.roleOrIndustry || (isIndividual ? "Add your role in Settings" : "Add your industry in Settings");
-        const hasName  = !!seg?.name;
 
         return (
-          <div className={`flex items-center gap-4 px-5 py-4 rounded-2xl border ${
-            isCorporate
-              ? "bg-violet-50 border-violet-200"
-              : "bg-blue-50 border-blue-200"
-          }`}>
-            {/* Avatar / Icon */}
-            {isIndividual && linkedin?.connected && linkedin.picture ? (
-              <img
-                src={linkedin.picture}
-                alt={linkedin.name}
-                className="w-11 h-11 rounded-full border-2 border-white shadow-sm shrink-0"
-              />
-            ) : (
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${
-                isCorporate
-                  ? "bg-violet-100 border-violet-200"
-                  : "bg-blue-100 border-blue-200"
-              }`}>
-                {isCorporate
-                  ? <Building2 className="w-5 h-5 text-violet-600" />
-                  : <User className="w-5 h-5 text-[#0A66C2]" />
-                }
-              </div>
-            )}
-
-            {/* Name + role */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`text-sm font-bold ${isCorporate ? "text-violet-900" : "text-slate-900"}`}>
-                  {dispName}
-                </span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
-                  isCorporate
-                    ? "bg-violet-100 text-violet-700 border-violet-200"
-                    : "bg-blue-100 text-[#0A66C2] border-blue-200"
-                }`}>
-                  {isCorporate ? "Corporate" : "Individual"}
-                </span>
-              </div>
-              <p className={`text-xs mt-0.5 truncate ${hasName ? "text-slate-500" : "text-slate-400 italic"}`}>
-                {dispRole}
-              </p>
-            </div>
-
-            {/* LinkedIn connection badge */}
-            <div className="shrink-0 text-right">
-              {linkedin?.connected ? (
-                <div className="flex flex-col items-end gap-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-[11px] font-semibold text-green-700">LinkedIn Connected</span>
-                  </div>
-                  <span className="text-[10px] text-slate-400 truncate max-w-[160px]">
-                    {linkedin.email}
+          <div className="card flex items-center justify-between" style={{ padding: '16px 20px' }}>
+            <div className="flex items-center gap-3">
+              {isIndividual && linkedin?.connected && linkedin.picture ? (
+                <img src={linkedin.picture} alt={linkedin.name}
+                  className="w-10 h-10 rounded-full border-2 border-[var(--border)] shrink-0" />
+              ) : (
+                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: `linear-gradient(135deg, var(--primary)cc, var(--primary))` }}>
+                  <span className="text-white text-sm font-semibold">
+                    {dispName.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                   </span>
-                  {linkedin.tokenDaysLeft > 0 && (
-                    <span className="text-[10px] text-slate-400">
-                      Token valid {linkedin.tokenDaysLeft}d{linkedin.hasRefreshToken ? " · auto-renews" : ""}
-                    </span>
-                  )}
+                </div>
+              )}
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-[14px] text-[var(--foreground)]">{dispName}</span>
+                  <Badge label={isCorporate ? "Corporate" : "Individual"} color="gray" />
+                </div>
+                <div className="text-[12px] text-[var(--text-muted)] mt-[2px]">{dispRole}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              {linkedin?.connected ? (
+                <div className="text-right">
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <span className="w-[7px] h-[7px] rounded-full bg-emerald-500 inline-block" />
+                    <span className="text-[12px] font-semibold text-emerald-400">LinkedIn Connected</span>
+                  </div>
+                  <div className="text-[11px] text-[var(--text-muted)] mt-[2px]">
+                    {linkedin.email}{linkedin.tokenDaysLeft > 0 ? ` · Token valid ${linkedin.tokenDaysLeft}d` : ""}
+                  </div>
                 </div>
               ) : (
                 <button
@@ -403,113 +353,107 @@ export default function DashboardHomePage() {
                     const popup = window.open(url, "linkedin-oauth", "width=620,height=720,scrollbars=yes,resizable=yes");
                     if (!popup || popup.closed || typeof popup.closed === "undefined") window.location.href = url;
                   }}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                    isCorporate
-                      ? "bg-violet-100 border-violet-300 text-violet-700 hover:bg-violet-200"
-                      : "bg-white border-[#0A66C2]/30 text-[#0A66C2] hover:bg-blue-50"
-                  }`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--text-sub)] transition-all"
+                  style={{ background: 'var(--card)', border: '1.5px solid var(--border)' }}
                 >
                   <Linkedin className="w-3.5 h-3.5" />
                   Connect LinkedIn
                 </button>
               )}
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: '#0a66c2' }}>
+                <Linkedin className="w-3.5 h-3.5 text-white" />
+              </div>
             </div>
-
-            {/* Settings shortcut */}
-            {!hasName && (
-              <Link
-                href="/dashboard/settings"
-                className="shrink-0 text-[11px] text-slate-400 hover:text-slate-700 underline underline-offset-2 transition-colors"
-              >
-                Set up profile →
-              </Link>
-            )}
           </div>
         );
       })()}
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {statCards.map((stat, i) => (
-          <div key={i} className="card p-5 flex items-center gap-4">
-            <div className={`w-11 h-11 rounded-xl ${stat.bg} flex items-center justify-center shrink-0`}>
-              <stat.icon className={`w-5 h-5 ${stat.color}`} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {statCards.map((stat, i) => {
+          const StatIcon = IconMap[stat.icon];
+          return (
+            <div key={i} className="card flex items-start justify-between" style={{ padding: '20px 24px' }}>
+              <div>
+                <div className="text-[11px] text-[var(--text-muted)] font-semibold tracking-[0.05em] uppercase mb-2">{stat.label}</div>
+                <div className="text-[34px] font-bold text-[var(--foreground)] leading-none">{stat.value}</div>
+                <div className="text-[12px] text-[var(--text-muted)] mt-1.5">{stat.sub}</div>
+              </div>
+              <div className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center shrink-0"
+                style={{ background: `${stat.color}20` }}>
+                {StatIcon && <span style={{ color: stat.color }}><StatIcon className="w-[18px] h-[18px]" /></span>}
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">{stat.label}</p>
-              <p className="text-2xl font-bold text-slate-900 mt-0.5">{stat.value}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">{stat.sub}</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
+      {/* Post Breakdown + System Status */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '16px' }}>
         {/* Post Breakdown */}
-        <div className="lg:col-span-2 card p-6 space-y-5">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-slate-900">Post Breakdown</h3>
-            <span className="text-[10px] text-slate-400 uppercase tracking-wide font-medium">Live Data</span>
+        <div className="card" style={{ padding: '20px 24px' }}>
+          <div className="flex justify-between items-center mb-1">
+            <h3 className="text-[14px] font-semibold text-[var(--foreground)]">Post Breakdown</h3>
+            <Badge label="Live Data" color="green" />
           </div>
           {stats && stats.total > 0 ? (
-            <div className="space-y-4">
+            <div className="pt-1">
               {[
-                { label: "Published & Live", count: stats.published, color: "bg-green-500", total: stats.total },
-                { label: "Drafts", count: stats.drafts, color: "bg-blue-500", total: stats.total },
-                { label: "Scheduled", count: stats.scheduled, color: "bg-amber-500", total: stats.total },
-                { label: "Failed", count: stats.failed, color: "bg-red-400", total: stats.total },
+                { label: "Published & Live", count: stats.published, color: "#10b981" },
+                { label: "Drafts", count: stats.drafts, color: "#2563eb" },
+                { label: "Scheduled", count: stats.scheduled, color: "#f59e0b" },
+                { label: "Failed", count: stats.failed, color: "#ef4444" },
               ].map((row) => (
-                <div key={row.label}>
-                  <div className="flex justify-between text-xs mb-1.5">
-                    <span className="text-slate-600">{row.label}</span>
-                    <span className="font-semibold text-slate-900">{row.count}</span>
+                <div key={row.label} className="py-3.5" style={{ borderBottom: '1px solid var(--border-sub)' }}>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[13px] text-[var(--text-sub)] font-medium">{row.label}</span>
+                    <span className="text-[13px] font-semibold text-[var(--foreground)]">{row.count}</span>
                   </div>
-                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-[5px] rounded-full" style={{ background: 'var(--progress-bg)' }}>
                     <div
-                      className={`h-full ${row.color} rounded-full transition-all duration-700`}
-                      style={{ width: row.total > 0 ? `${Math.round((row.count / row.total) * 100)}%` : "0%" }}
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: stats.total > 0 ? `${Math.min((row.count / stats.total) * 100, 100)}%` : "0%",
+                        background: row.color,
+                      }}
                     />
                   </div>
                 </div>
               ))}
 
               {/* Posting-as footer */}
-              <div className={`pt-4 border-t border-slate-100 flex items-center gap-2.5 ${accentBg} -mx-6 px-6 -mb-5 py-3 rounded-b-xl border-t`}>
-                <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${
-                  isCorporate ? "bg-violet-100" : "bg-blue-100"
-                }`}>
-                  {isCorporate
-                    ? <Building2 className="w-3 h-3 text-violet-600" />
-                    : <User className="w-3 h-3 text-[#0A66C2]" />
-                  }
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-slate-600">
-                    Posting as{" "}
-                    <span className={`font-semibold ${accentColor}`}>
-                      {(isIndividual ? profile?.individual?.name : profile?.corporate?.name)
-                        || (isIndividual ? "You (Individual)" : "Your Company")}
+              <div className="mt-4 rounded-lg flex items-center justify-between"
+                style={{ padding: '12px 14px', background: 'var(--info-bg)', border: '1px solid var(--info-border)' }}>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: `linear-gradient(135deg, var(--primary)cc, var(--primary))` }}>
+                    <span className="text-white text-[9px] font-semibold">
+                      {((isIndividual ? profile?.individual?.name : profile?.corporate?.name) || "U")
+                        .split(' ').map((n: string) => n[0]).join('').slice(0,2).toUpperCase()}
                     </span>
-                  </p>
-                  {!linkedin?.connected && (
-                    <p className="text-[10px] text-slate-400">LinkedIn not connected — save to drafts only</p>
-                  )}
+                  </div>
+                  <span className="text-[12px] text-[var(--text-muted)]">
+                    Posting as{" "}
+                    <strong className="text-[var(--foreground)]">
+                      {(isIndividual ? profile?.individual?.name : profile?.corporate?.name)
+                        || (isIndividual ? "You" : "Your Company")}
+                    </strong>
+                  </span>
                 </div>
-                <Link
-                  href="/dashboard/settings"
-                  className={`text-[10px] font-medium ${accentColor} hover:underline shrink-0`}
-                >
-                  Edit profile
+                <Link href="/dashboard/settings"
+                  className="text-[12px] text-[var(--text-muted)] font-medium hover:text-[var(--foreground)] transition-colors">
+                  Edit profile →
                 </Link>
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
-              <TrendingUp className="w-9 h-9 text-slate-300" />
-              <p className="text-sm font-medium text-slate-500">No posts yet</p>
-              <p className="text-xs text-slate-400">Generate your first post to see data here.</p>
-              <Link href="/dashboard/create" className="mt-1 px-4 py-2 rounded-lg bg-blue-50 text-[#0A66C2] text-xs font-medium hover:bg-blue-100 transition-all border border-blue-200">
+              <TrendingUp className="w-9 h-9 text-[var(--text-muted)]" />
+              <p className="text-sm font-medium text-[var(--text-sub)]">No posts yet</p>
+              <p className="text-xs text-[var(--text-muted)]">Generate your first post to see data here.</p>
+              <Link href="/dashboard/create" className="mt-1 px-4 py-2 rounded-lg text-xs font-medium transition-all"
+                style={{ background: 'var(--primary)', color: '#fff' }}>
                 Create First Post →
               </Link>
             </div>
@@ -517,55 +461,49 @@ export default function DashboardHomePage() {
         </div>
 
         {/* System Status */}
-        <div className="card p-6 space-y-5">
-          <h3 className="font-semibold text-slate-900">System Status</h3>
+        <div className="card" style={{ padding: '20px 24px' }}>
+          <h3 className="text-[14px] font-semibold text-[var(--foreground)] mb-4">System Status</h3>
 
-          {/* Active account identity */}
-          <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-2.5 mb-[18px]">
             {isIndividual && linkedin?.connected && linkedin.picture ? (
               <img src={linkedin.picture} alt={linkedin.name} className="w-9 h-9 rounded-full" />
             ) : (
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                isCorporate ? "bg-violet-100" : "bg-blue-100"
-              }`}>
-                {isCorporate
-                  ? <Building2 className="w-4 h-4 text-violet-600" />
-                  : <User className="w-4 h-4 text-[#0A66C2]" />
-                }
+              <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: `linear-gradient(135deg, var(--primary)cc, var(--primary))` }}>
+                <span className="text-white text-xs font-semibold">
+                  {((isIndividual ? profile?.individual?.name : profile?.corporate?.name) || "U")
+                    .split(' ').map((n: string) => n[0]).join('').slice(0,2).toUpperCase()}
+                </span>
               </div>
             )}
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-800 truncate">
+            <div>
+              <div className="text-[13px] font-semibold text-[var(--foreground)]">
                 {(isIndividual ? profile?.individual?.name : profile?.corporate?.name)
                   || (isIndividual ? "Individual Account" : "Corporate Account")}
-              </p>
-              <p className="text-[11px] text-slate-400 truncate">
+              </div>
+              <div className="text-[11px] text-[var(--text-muted)]">
                 {(isIndividual ? profile?.individual?.roleOrIndustry : profile?.corporate?.roleOrIndustry)
                   || (linkedin?.connected ? linkedin.email : "No profile set up yet")}
-              </p>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Live Status</p>
-            {system && [
-              { label: "Cridl Cortex", key: system.aiEngine, icon: Zap },
-              { label: "Image Engine", key: system.imageEngine, icon: Image },
-              { label: "Profile Sync", key: system.profileSync, icon: Activity },
-              { label: "LinkedIn", key: system.linkedin, icon: system.linkedin === "connected" ? Wifi : WifiOff },
-            ].map((s) => (
-              <div key={s.label} className="flex justify-between items-center">
-                <span className="text-xs text-slate-500 flex items-center gap-1.5">
-                  <s.icon className="w-3.5 h-3.5" />
-                  {s.label}
-                </span>
-                <span className={`text-xs font-medium ${STATUS_COLOR[s.key]} flex items-center gap-1.5`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[s.key]}`} />
-                  {STATUS_LABEL[s.key]}
-                </span>
+          <div className="text-[10px] font-bold text-[var(--text-muted)] tracking-[0.08em] uppercase mb-2.5">Live Status</div>
+          {system && [
+            { label: "Cridl Cortex",  key: system.aiEngine,    color: STATUS_COLOR[system.aiEngine] },
+            { label: "Image Engine",  key: system.imageEngine,  color: STATUS_COLOR[system.imageEngine] },
+            { label: "Profile Sync",  key: system.profileSync,  color: STATUS_COLOR[system.profileSync] },
+            { label: "LinkedIn",      key: system.linkedin,     color: STATUS_COLOR[system.linkedin] },
+          ].map((s) => (
+            <div key={s.label} className="flex justify-between items-center py-2"
+              style={{ borderBottom: '1px solid var(--border-sub)' }}>
+              <span className="text-[12px] text-[var(--text-sub)]">{s.label}</span>
+              <div className="flex items-center gap-[5px]">
+                <span className="w-[7px] h-[7px] rounded-full inline-block" style={{ background: s.color }} />
+                <span className="text-[11px] font-semibold" style={{ color: s.color }}>{STATUS_LABEL[s.key]}</span>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
 
           {system?.linkedin === "disconnected" && (
             <button
@@ -577,7 +515,8 @@ export default function DashboardHomePage() {
                 const popup = window.open(url, "linkedin_oauth", `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
                 if (!popup || popup.closed) window.location.href = url;
               }}
-              className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-[#0A66C2]/10 hover:bg-[#0A66C2]/15 text-[#0A66C2] text-xs font-medium transition-all border border-[#0A66C2]/20"
+              className="flex items-center justify-center gap-2 w-full py-2 mt-4 rounded-lg text-xs font-medium transition-all"
+              style={{ background: '#0a66c220', color: '#60a5fa', border: '1px solid #1e3a5f' }}
             >
               <Linkedin className="w-3.5 h-3.5" />
               Connect LinkedIn
@@ -585,63 +524,13 @@ export default function DashboardHomePage() {
           )}
 
           {stats && stats.failed > 0 && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200">
-              <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 p-3 rounded-lg mt-4"
+              style={{ background: '#2d1010', border: '1px solid #3d1515' }}>
+              <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-medium text-red-600">{stats.failed} post{stats.failed > 1 ? "s" : ""} failed</p>
+                <p className="text-xs font-medium text-red-400">{stats.failed} post{stats.failed > 1 ? "s" : ""} failed</p>
                 <Link href="/dashboard/drafts" className="text-[11px] text-red-500 hover:underline">View in Drafts →</Link>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="card overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="font-semibold text-slate-900">Recent Activity</h3>
-          <Link href="/dashboard/history" className="text-xs text-[#0A66C2] hover:underline font-medium">
-            View All →
-          </Link>
-        </div>
-        <div className="divide-y divide-slate-50">
-          {recentPosts.length > 0 ? recentPosts.map((post) => (
-            <div key={post.id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${STATUS_ICON_BG[post.status] || STATUS_ICON_BG.draft}`}>
-                  <FileText className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-800 group-hover:text-[#0A66C2] transition-colors line-clamp-1 max-w-md">
-                    {post.topic}
-                  </p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[11px] text-slate-400">{post.tone}</span>
-                    <span className="text-slate-300">·</span>
-                    <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />{formatDate(post)}
-                    </span>
-                    {post.linkedin_post_id && (
-                      <>
-                        <span className="text-slate-300">·</span>
-                        <span className="text-[11px] text-[#0A66C2] font-medium flex items-center gap-1">
-                          <Linkedin className="w-2.5 h-2.5" /> Live
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <span className={`px-2.5 py-1 rounded-full text-[11px] font-medium border ${STATUS_BADGE[post.status] || STATUS_BADGE.draft}`}>
-                {post.status}
-              </span>
-            </div>
-          )) : (
-            <div className="px-6 py-12 text-center">
-              <p className="text-sm text-slate-400 mb-2">No activity yet.</p>
-              <Link href="/dashboard/create" className="text-[#0A66C2] text-sm font-medium hover:underline">
-                Generate your first post →
-              </Link>
             </div>
           )}
         </div>

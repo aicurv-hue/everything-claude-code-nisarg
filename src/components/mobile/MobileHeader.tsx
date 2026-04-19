@@ -31,11 +31,11 @@ export default function MobileHeader() {
   const accentColor = isCorporate ? "#7C3AED" : "#0A66C2";
 
   return (
-    <header className="md:hidden sticky top-0 z-30 flex items-center h-14 px-4 bg-slate-900 border-b border-white/[0.08] safe-area-top">
+    <header className="md:hidden sticky top-0 z-30 flex items-center h-14 px-4 bg-[var(--sidebar)] border-b border-white/[0.08] safe-area-top">
       {backHref ? (
         <button
           onClick={() => router.back()}
-          className="w-8 h-8 -ml-1 flex items-center justify-center text-slate-400 active:text-white transition-colors"
+          className="w-8 h-8 -ml-1 flex items-center justify-center text-[var(--text-muted)] active:text-white transition-colors"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>

@@ -79,17 +79,17 @@ export default function RichTextEditor({
       { label: '1. List', title: 'Numbered List', style: 'text-[11px]', action: () => exec('insertOrderedList') },
     ],
     [
-      { label: 'Clear', title: 'Clear Formatting', style: 'text-[11px] text-red-400 hover:text-red-600 hover:border-red-200', action: handleClearFormatting },
+      { label: 'Clear', title: 'Clear Formatting', style: 'text-[11px] text-red-400 hover:text-red-400 hover:border-red-200', action: handleClearFormatting },
     ],
   ];
 
   return (
     <div className="relative">
       {/* Toolbar */}
-      <div className="flex items-center gap-1.5 mb-3 px-1 pb-3 border-b border-slate-100">
+      <div className="flex items-center gap-1.5 mb-3 px-1 pb-3 border-b border-[var(--border-sub)]">
         {toolbarGroups.map((group, gi) => (
           <React.Fragment key={gi}>
-            {gi > 0 && <span className="w-px h-5 bg-slate-200 mx-0.5 flex-shrink-0" />}
+            {gi > 0 && <span className="w-px h-5 bg-[var(--border)] mx-0.5 flex-shrink-0" />}
             {group.map((btn) => (
               <button
                 key={btn.title}
@@ -100,14 +100,14 @@ export default function RichTextEditor({
                   btn.action();
                 }}
                 disabled={disabled}
-                className={`min-w-[36px] px-2.5 py-1.5 font-medium rounded-md border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 transition-colors disabled:opacity-40 ${btn.style}`}
+                className={`min-w-[36px] px-2.5 py-1.5 font-medium rounded-md border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card-hover)] hover:border-slate-300 text-[var(--foreground)] transition-colors disabled:opacity-40 ${btn.style}`}
               >
                 {btn.label}
               </button>
             ))}
           </React.Fragment>
         ))}
-        <span className="ml-auto text-[11px] text-slate-400 select-none">Formatting</span>
+        <span className="ml-auto text-[11px] text-[var(--text-muted)] select-none">Formatting</span>
       </div>
 
       <div
@@ -117,10 +117,10 @@ export default function RichTextEditor({
         onInput={handleInput}
         spellCheck={false}
         style={disabled ? { opacity: 0.6 } : undefined}
-        className="w-full min-h-[300px] px-1 py-2 bg-white text-gray-900 text-sm leading-relaxed focus:outline-none overflow-auto"
+        className="w-full min-h-[300px] px-1 py-2 bg-[var(--card)] text-gray-900 text-sm leading-relaxed focus:outline-none overflow-auto"
       />
 
-      <div className="mt-3 pt-2 border-t border-slate-100 flex justify-between text-[11px] text-gray-400">
+      <div className="mt-3 pt-2 border-t border-[var(--border-sub)] flex justify-between text-[11px] text-gray-400">
         <span>
           {value.length}{maxLength ? ` / ${maxLength} characters` : ' characters'}
         </span>

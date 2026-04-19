@@ -103,19 +103,19 @@ export default function UpgradePlans({ currentPlan = "free" }: { currentPlan?: s
         <span className={`text-sm font-medium ${!yearly ? "text-gray-900" : "text-gray-400"}`}>Monthly</span>
         <button
           onClick={() => setYearly(v => !v)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${yearly ? "bg-[#0A66C2]" : "bg-gray-300"}`}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${yearly ? "bg-[var(--primary)]" : "bg-gray-300"}`}
           aria-label="Toggle billing period"
         >
-          <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${yearly ? "translate-x-6" : "translate-x-1"}`} />
+          <span className={`inline-block h-4 w-4 rounded-full bg-[var(--card)] shadow transition-transform ${yearly ? "translate-x-6" : "translate-x-1"}`} />
         </button>
         <span className={`text-sm font-medium ${yearly ? "text-gray-900" : "text-gray-400"}`}>
           Yearly
-          <span className="ml-1.5 text-[10px] font-semibold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">2 months free</span>
+          <span className="ml-1.5 text-[10px] font-semibold bg-green-100 text-emerald-400 px-1.5 py-0.5 rounded-full">2 months free</span>
         </span>
       </div>
 
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg py-2 px-3">
+        <div className="text-sm text-red-400 bg-red-50 border border-red-200 rounded-lg py-2 px-3">
           {error}
         </div>
       )}
@@ -134,7 +134,7 @@ export default function UpgradePlans({ currentPlan = "free" }: { currentPlan?: s
               }`}
             >
               {plan.popular && (
-                <span className="absolute -top-2.5 left-4 bg-[#0A66C2] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                <span className="absolute -top-2.5 left-4 bg-[var(--primary)] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
                   Most Popular
                 </span>
               )}
@@ -156,8 +156,8 @@ export default function UpgradePlans({ currentPlan = "free" }: { currentPlan?: s
                 disabled={loading === plan.name}
                 className={`shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${
                   plan.popular
-                    ? "bg-[#0A66C2] text-white hover:bg-[#0854a0]"
-                    : "border border-[#0A66C2] text-[#0A66C2] hover:bg-[#0A66C2]/5"
+                    ? "bg-[var(--primary)] text-white hover:opacity-90"
+                    : "border border-[#0A66C2] text-[var(--primary)] hover:bg-[var(--primary)]/5"
                 }`}
               >
                 {loading === plan.name ? "Opening..." : "Upgrade"}

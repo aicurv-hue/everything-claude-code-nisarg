@@ -40,50 +40,50 @@ export default function CampaignPostReview({ posts, frequencyDays, startDate, on
   return (
     <div className="space-y-3">
       {posts.map((post) => (
-        <div key={post.campaign_position} className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+        <div key={post.campaign_position} className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--card)]">
           <button
             onClick={() => setExpanded(expanded === post.campaign_position ? 0 : post.campaign_position)}
-            className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors"
+            className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-[var(--card-hover)] transition-colors"
           >
             <div className="flex items-center gap-3">
-              <span className="w-6 h-6 rounded-full bg-[#0A66C2] text-white text-xs font-bold flex items-center justify-center shrink-0">
+              <span className="w-6 h-6 rounded-full bg-[var(--primary)] text-white text-xs font-bold flex items-center justify-center shrink-0">
                 {post.campaign_position}
               </span>
               <div className="text-left">
-                <p className="text-sm font-medium text-slate-800">Post {post.campaign_position}</p>
+                <p className="text-sm font-medium text-[var(--foreground)]">Post {post.campaign_position}</p>
                 {getPostDate(post.campaign_position) && (
-                  <p className="text-[11px] text-slate-400">Scheduled: {getPostDate(post.campaign_position)}</p>
+                  <p className="text-[11px] text-[var(--text-muted)]">Scheduled: {getPostDate(post.campaign_position)}</p>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-2">
               {!post.content && <span className="text-[10px] text-red-500 font-medium bg-red-50 px-2 py-0.5 rounded-full border border-red-200">Failed — needs regeneration</span>}
-              {expanded === post.campaign_position ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+              {expanded === post.campaign_position ? <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" /> : <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />}
             </div>
           </button>
 
           {expanded === post.campaign_position && (
-            <div className="border-t border-slate-100 p-5 space-y-3">
+            <div className="border-t border-[var(--border-sub)] p-5 space-y-3">
               <textarea
                 value={post.content}
                 onChange={e => onContentChange(post.campaign_position, e.target.value)}
                 rows={8}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] resize-none leading-relaxed transition-all"
+                className="w-full bg-[var(--card-hover)] border border-[var(--border)] rounded-lg px-4 py-3 text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/20 focus:border-[#0A66C2] resize-none leading-relaxed transition-all"
                 placeholder="Post content..."
               />
               <div className="flex items-center justify-between">
-                <span className="text-[11px] text-slate-400">{post.content.length} characters · {post.content.split(/\s+/).filter(Boolean).length} words</span>
+                <span className="text-[11px] text-[var(--text-muted)]">{post.content.length} characters · {post.content.split(/\s+/).filter(Boolean).length} words</span>
                 <div className="flex items-center gap-2">
                   {(autoSavingPositions?.has(post.campaign_position)) && (
-                    <span className="text-[10px] text-slate-400 italic">Saving...</span>
+                    <span className="text-[10px] text-[var(--text-muted)] italic">Saving...</span>
                   )}
                   {(!autoSavingPositions?.has(post.campaign_position) && autoSavedPositions?.has(post.campaign_position)) && (
-                    <span className="text-[10px] text-green-600 font-medium">✓ Saved</span>
+                    <span className="text-[10px] text-emerald-400 font-medium">✓ Saved</span>
                   )}
                   <button
                     onClick={() => handleSave(post.campaign_position)}
                     disabled={saving === post.campaign_position}
-                    className="px-4 py-1.5 bg-[#0A66C2] text-white text-xs font-medium rounded-lg hover:bg-[#0854a0] transition-all disabled:opacity-50"
+                    className="px-4 py-1.5 bg-[var(--primary)] text-white text-xs font-medium rounded-lg hover:opacity-90 transition-all disabled:opacity-50"
                   >
                     {saving === post.campaign_position ? "Saving..." : saved.has(post.campaign_position) ? "✓ Saved" : "Save Edits"}
                   </button>

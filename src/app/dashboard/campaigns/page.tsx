@@ -8,10 +8,10 @@ import { Rocket, Plus, Trash2, ChevronRight } from "lucide-react";
 import type { Campaign } from "@/lib/db/campaigns";
 
 const STATUS_CONFIG = {
-  draft:     { label: "Draft",     color: "bg-slate-100 text-slate-600 border-slate-200" },
-  active:    { label: "Active",    color: "bg-green-50 text-green-700 border-green-200" },
-  paused:    { label: "Paused",    color: "bg-amber-50 text-amber-700 border-amber-200" },
-  completed: { label: "Completed", color: "bg-blue-50 text-blue-700 border-blue-200" },
+  draft:     { label: "Draft",     color: "bg-[var(--toggle-bg)] text-[var(--text-sub)] border-[var(--border)]" },
+  active:    { label: "Active",    color: "bg-emerald-500/10 text-emerald-400 border-emerald-800/40" },
+  paused:    { label: "Paused",    color: "bg-amber-500/10 text-amber-400 border-amber-200" },
+  completed: { label: "Completed", color: "bg-blue-500/10 text-blue-400 border-blue-800/40" },
 };
 
 export default function CampaignsPage() {
@@ -74,12 +74,12 @@ export default function CampaignsPage() {
     <div className="p-4 md:p-8 max-w-6xl mx-auto animate-fade-in space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Campaigns</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Multi-post drip sequences for your LinkedIn strategy</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">Campaigns</h1>
+          <p className="text-sm text-[var(--text-muted)] mt-0.5">Multi-post drip sequences for your LinkedIn strategy</p>
         </div>
         <button
           onClick={() => router.push("/dashboard/campaigns/new")}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0A66C2] hover:bg-[#0854a0] text-white text-sm font-semibold transition-all shadow-sm"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-90 text-white text-sm font-semibold transition-all shadow-sm"
         >
           <Plus className="w-4 h-4" /> New Campaign
         </button>
@@ -87,16 +87,16 @@ export default function CampaignsPage() {
 
       {campaigns.length === 0 ? (
         <div className="text-center py-20">
-          <div className="w-16 h-16 rounded-2xl bg-[#0A66C2]/10 flex items-center justify-center mx-auto mb-4">
-            <Rocket className="w-8 h-8 text-[#0A66C2]" />
+          <div className="w-16 h-16 rounded-2xl bg-[var(--primary)]/10 flex items-center justify-center mx-auto mb-4">
+            <Rocket className="w-8 h-8 text-[var(--primary)]" />
           </div>
-          <h2 className="text-lg font-semibold text-slate-800 mb-2">No campaigns yet</h2>
-          <p className="text-sm text-slate-500 mb-6 max-w-sm mx-auto">
+          <h2 className="text-lg font-semibold text-[var(--foreground)] mb-2">No campaigns yet</h2>
+          <p className="text-sm text-[var(--text-muted)] mb-6 max-w-sm mx-auto">
             Create your first campaign — a series of LinkedIn posts all focused on one topic, automatically scheduled over time.
           </p>
           <button
             onClick={() => router.push("/dashboard/campaigns/new")}
-            className="px-6 py-2.5 rounded-xl bg-[#0A66C2] text-white text-sm font-semibold hover:bg-[#0854a0] transition-all"
+            className="px-6 py-2.5 rounded-xl bg-[var(--primary)] text-white text-sm font-semibold hover:opacity-90 transition-all"
           >
             Create Your First Campaign
           </button>
@@ -116,16 +116,16 @@ export default function CampaignsPage() {
                   <button
                     onClick={e => handleDelete(c.id!, e)}
                     disabled={deleting === c.id}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--text-muted)] hover:text-red-500"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                <h3 className="font-semibold text-slate-900 text-sm mb-1 line-clamp-1">{c.name}</h3>
-                <p className="text-xs text-slate-500 line-clamp-2 mb-4 leading-relaxed">{c.topic}</p>
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                <h3 className="font-semibold text-[var(--foreground)] text-sm mb-1 line-clamp-1">{c.name}</h3>
+                <p className="text-xs text-[var(--text-muted)] line-clamp-2 mb-4 leading-relaxed">{c.topic}</p>
+                <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
                   <span>{c.post_count} posts · every {c.frequency_days}d</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#0A66C2] transition-colors" />
+                  <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors" />
                 </div>
               </div>
             );

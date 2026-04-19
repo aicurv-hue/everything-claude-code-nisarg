@@ -38,14 +38,14 @@ export function HelpTooltip({ text, position = "top", example, width = "w-64" }:
 
   return (
     <span className="relative inline-flex items-center group">
-      <HelpCircle className="w-3.5 h-3.5 text-slate-300 hover:text-[#0A66C2] cursor-help transition-colors" />
+      <HelpCircle className="w-3.5 h-3.5 text-[var(--text-muted)] hover:text-[var(--primary)] cursor-help transition-colors" />
       <span
         className={`pointer-events-none absolute z-50 ${positionClass} ${width} rounded-lg bg-slate-800 px-3 py-2.5 shadow-xl
           opacity-0 group-hover:opacity-100 transition-opacity duration-150`}
       >
         <p className="text-[12px] text-slate-100 leading-relaxed">{text}</p>
         {example && (
-          <p className="mt-1.5 text-[11px] text-slate-400 bg-slate-700/60 rounded px-2 py-1 leading-relaxed italic">
+          <p className="mt-1.5 text-[11px] text-[var(--text-muted)] bg-slate-700/60 rounded px-2 py-1 leading-relaxed italic">
             {example}
           </p>
         )}
@@ -66,6 +66,6 @@ interface FieldHintProps {
  */
 export function FieldHint({ children }: FieldHintProps) {
   return (
-    <p className="mt-1.5 text-[11px] text-slate-400 leading-relaxed">{children}</p>
+    <p className="mt-1.5 text-[11px] text-[var(--text-muted)] leading-relaxed">{children}</p>
   );
 }
