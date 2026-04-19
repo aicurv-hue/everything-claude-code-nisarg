@@ -16,7 +16,7 @@ import { HelpTooltip } from "@/components/ui/HelpTooltip";
 import RichTextEditor from "@/components/preview/RichTextEditor";
 import LinkedInPostCard from "@/components/preview/LinkedInPostCard";
 // Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
-import { uploadDataUrlToStorage, uploadRemoteImageToStorage } from "@/lib/storage/uploadImage";
+import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 
 type ImageMode = "ai" | "upload" | "reference" | "face" | "none" | "x_screenshot";
 
@@ -334,8 +334,22 @@ export default function PostPreviewPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Image generation failed.");
-      // Upload fal.ai URL to Firebase Storage so it doesn't expire
-      const persistentUrl = await uploadRemoteImageToStorage(data.url, `post-images/${Date.now()}-ai.jpg`);
+      // Upload fal.ai URL server-side to avoid CORS — fal.ai CDN blocks browser fetches
+      let persistentUrl = data.url;
+      try {
+        const uploadRes = await fetch("/api/image/upload-url", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ url: data.url, fileName: `post-images/${Date.now()}-ai.jpg` }),
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          if (uploadData.url) persistentUrl = uploadData.url;
+        }
+      } catch { /* fallback to original url */ }
       setImageUrl(persistentUrl);
     } catch (err: any) {
       setImageError(err.message || "Failed to generate image.");
@@ -375,7 +389,23 @@ export default function PostPreviewPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Face image generation failed");
-      const persistentFaceUrl = await uploadRemoteImageToStorage(data.url, `post-images/${Date.now()}-face.jpg`);
+      // Upload fal.ai URL server-side to avoid CORS — fal.ai CDN blocks browser fetches
+      let persistentFaceUrl = data.url;
+      try {
+        const faceToken = await getAuthToken();
+        const uploadRes = await fetch("/api/image/upload-url", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(faceToken ? { Authorization: `Bearer ${faceToken}` } : {}),
+          },
+          body: JSON.stringify({ url: data.url, fileName: `post-images/${Date.now()}-face.jpg` }),
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          if (uploadData.url) persistentFaceUrl = uploadData.url;
+        }
+      } catch { /* fallback */ }
       setFaceGeneratedUrl(persistentFaceUrl);
     } catch (err: any) {
       setFaceError(err.message || "Failed to generate face image");

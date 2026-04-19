@@ -34,6 +34,9 @@ export async function uploadProfilePhotoToStorage(
 }
 
 /**
+ * @deprecated CORS issue: fal.ai CDN blocks browser fetches.
+ * Use POST /api/image/upload-url instead (server-side upload).
+ *
  * Fetch a remote image URL and upload it to Firebase Storage.
  * Useful for persisting temporary CDN URLs (e.g. fal.ai) before they expire.
  * Returns a permanent HTTPS Firebase Storage URL, or the original URL if upload fails.
