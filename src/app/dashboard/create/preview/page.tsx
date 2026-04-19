@@ -305,9 +305,8 @@ export default function PostPreviewPage() {
     try {
       const token = await getAuthToken();
 
-      // X Screenshot style: render server-side HTML template, no fal.ai
-      const imageStyle = postData?.clientProfile?.imageStyle;
-      if (imageStyle === "x_screenshot" || imageMode === "x_screenshot") {
+      // X Screenshot style: only when user explicitly picks x_screenshot mode
+      if (imageMode === "x_screenshot") {
         const postContent = editedContent || postData?.content || "";
         const res = await fetch("/api/image/x-screenshot", {
           method: "POST",
@@ -369,10 +368,7 @@ export default function PostPreviewPage() {
       setImageUrl(null);
       setTimeout(() => generateImage(""), 50);
     }
-    // Also auto-generate if profile style is x_screenshot and switching to ai
-    if (mode === "ai" && postData?.clientProfile?.imageStyle === "x_screenshot" && !imageUrl) {
-      setTimeout(() => generateImage(""), 50);
-    }
+    // AI mode: user clicks Generate Image button manually (no auto-generate)
   };
 
   const generateFaceImage = async () => {
@@ -1246,13 +1242,13 @@ export default function PostPreviewPage() {
                   </div>
                   <button
                     onClick={() => generateImage(imagePrompt)}
-                    disabled={(postData?.clientProfile?.imageStyle !== "x_screenshot" && !imagePrompt) || isRegeneratingImage}
+                    disabled={!imagePrompt || isRegeneratingImage}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--primary)] hover:bg-[#0958A8] text-sm font-medium text-white transition-all disabled:opacity-40"
                   >
                     <Sparkles className="w-4 h-4" />
-                    {postData?.clientProfile?.imageStyle === "x_screenshot" ? "Create X Screenshot" : "Generate Image"}
+                    Generate Image
                   </button>
-                  {!imagePrompt && postData?.clientProfile?.imageStyle !== "x_screenshot" && (
+                  {!imagePrompt && (
                     <p className="text-[11px] text-amber-400">No image prompt available. Regenerate the post first.</p>
                   )}
                 </div>
