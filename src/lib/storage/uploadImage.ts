@@ -34,6 +34,36 @@ export async function uploadProfilePhotoToStorage(
 }
 
 /**
+ * Fetch a remote image URL and upload it to Firebase Storage.
+ * Useful for persisting temporary CDN URLs (e.g. fal.ai) before they expire.
+ * Returns a permanent HTTPS Firebase Storage URL, or the original URL if upload fails.
+ */
+export async function uploadRemoteImageToStorage(
+  remoteUrl: string,
+  fileName?: string
+): Promise<string> {
+  if (isMock || !app) return remoteUrl;
+
+  try {
+    const res = await fetch(remoteUrl);
+    if (!res.ok) return remoteUrl;
+    const blob = await res.blob();
+
+    const storage = getStorage(app as any);
+    const name = fileName || `post-images/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+    const storageRef = ref(storage, name);
+
+    const snapshot = await uploadBytes(storageRef, blob, { contentType: blob.type || "image/jpeg" });
+    const downloadUrl = await getDownloadURL(snapshot.ref);
+    console.log("[uploadRemoteImage] Uploaded to Firebase Storage:", downloadUrl);
+    return downloadUrl;
+  } catch (err: any) {
+    console.error("[uploadRemoteImage] Firebase Storage upload failed:", err?.message || err);
+    return remoteUrl; // fallback: use original URL
+  }
+}
+
+/**
  * Upload a data: URL string to Firebase Storage.
  * Returns a public HTTPS URL, or null if upload fails.
  */

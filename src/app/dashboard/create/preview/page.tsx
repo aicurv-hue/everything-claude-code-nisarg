@@ -16,7 +16,7 @@ import { HelpTooltip } from "@/components/ui/HelpTooltip";
 import RichTextEditor from "@/components/preview/RichTextEditor";
 import LinkedInPostCard from "@/components/preview/LinkedInPostCard";
 // Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
-import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
+import { uploadDataUrlToStorage, uploadRemoteImageToStorage } from "@/lib/storage/uploadImage";
 
 type ImageMode = "ai" | "upload" | "reference" | "face" | "none" | "x_screenshot";
 
@@ -334,7 +334,9 @@ export default function PostPreviewPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Image generation failed.");
-      setImageUrl(data.url);
+      // Upload fal.ai URL to Firebase Storage so it doesn't expire
+      const persistentUrl = await uploadRemoteImageToStorage(data.url, `post-images/${Date.now()}-ai.jpg`);
+      setImageUrl(persistentUrl);
     } catch (err: any) {
       setImageError(err.message || "Failed to generate image.");
     } finally {
@@ -373,7 +375,8 @@ export default function PostPreviewPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Face image generation failed");
-      setFaceGeneratedUrl(data.url);
+      const persistentFaceUrl = await uploadRemoteImageToStorage(data.url, `post-images/${Date.now()}-face.jpg`);
+      setFaceGeneratedUrl(persistentFaceUrl);
     } catch (err: any) {
       setFaceError(err.message || "Failed to generate face image");
     } finally {
