@@ -29,10 +29,10 @@ export default function LinkedInPostCard({
 
   return (
     <div>
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+      <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide mb-2">
         LinkedIn Preview
       </p>
-      <div className="bg-[var(--card)] rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] overflow-hidden shadow-sm">
         {/* Header */}
         <div className="p-4 pb-2 flex items-start gap-3">
           {avatarUrl ? (
@@ -42,20 +42,20 @@ export default function LinkedInPostCard({
               className={`w-10 h-10 ${avatarShape} object-cover flex-shrink-0`}
             />
           ) : (
-            <div className={`w-10 h-10 ${avatarShape} ${isCompany ? 'bg-violet-100 text-violet-400' : 'bg-gray-300 text-gray-600'} flex items-center justify-center text-xs font-semibold flex-shrink-0`}>
+            <div className={`w-10 h-10 ${avatarShape} ${isCompany ? 'bg-violet-100 text-violet-400' : 'bg-[var(--border)] text-[var(--text-sub)]'} flex items-center justify-center text-xs font-semibold flex-shrink-0`}>
               {initials}
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm text-gray-900 truncate">{name || 'Your Name'}</p>
-            <p className="text-xs text-gray-500">1st &middot; Now &middot; 🌐</p>
+            <p className="font-semibold text-sm text-[var(--foreground)] truncate">{name || 'Your Name'}</p>
+            <p className="text-xs text-[var(--text-sub)]">1st &middot; Now &middot; 🌐</p>
           </div>
-          <span className="text-gray-400 text-base leading-none select-none">···</span>
+          <span className="text-[var(--text-muted)] text-base leading-none select-none">···</span>
         </div>
 
         {/* Body */}
         <div className="px-4 pb-3">
-          <p className="text-sm text-gray-900 whitespace-pre-wrap break-words">
+          <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap break-words">
             {content}
           </p>
         </div>
@@ -91,7 +91,7 @@ export default function LinkedInPostCard({
         )}
 
         {/* Footer */}
-        <div className="px-4 py-2 border-t border-gray-100 flex justify-around">
+        <div className="px-4 py-2 border-t border-[var(--border)] flex justify-around">
           {[
             { icon: '👍', label: 'Like' },
             { icon: '💬', label: 'Comment' },
@@ -100,7 +100,7 @@ export default function LinkedInPostCard({
           ].map(({ icon, label }) => (
             <button
               key={label}
-              className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 py-1 px-2 rounded hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-1 text-xs text-[var(--text-sub)] hover:text-[var(--foreground)] py-1 px-2 rounded hover:bg-[var(--card-hover)] transition-colors"
             >
               <span>{icon}</span>
               <span>{label}</span>

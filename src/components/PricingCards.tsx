@@ -136,21 +136,21 @@ function PricingCardsInner() {
     <section className="py-20 bg-[var(--card)]">
       <div className="max-w-6xl mx-auto px-6">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-3">Simple, transparent pricing</h2>
-          <p className="text-gray-500">Start free. Upgrade when you&apos;re ready.</p>
+          <h2 className="text-3xl font-bold text-[var(--foreground)] mb-3">Simple, transparent pricing</h2>
+          <p className="text-[var(--text-sub)]">Start free. Upgrade when you&apos;re ready.</p>
         </div>
 
         {/* Monthly / Yearly toggle */}
         <div className="flex items-center justify-center gap-3 mb-10">
-          <span className={`text-sm font-medium ${!yearly ? "text-gray-900" : "text-gray-400"}`}>Monthly</span>
+          <span className={`text-sm font-medium ${!yearly ? "text-[var(--foreground)]" : "text-[var(--text-muted)]"}`}>Monthly</span>
           <button
             onClick={() => setYearly(v => !v)}
-            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${yearly ? "bg-[var(--primary)]" : "bg-gray-300"}`}
+            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${yearly ? "bg-[var(--primary)]" : "bg-[var(--border)]"}`}
             aria-label="Toggle billing period"
           >
             <span className={`inline-block h-5 w-5 rounded-full bg-[var(--card)] shadow transition-transform ${yearly ? "translate-x-6" : "translate-x-1"}`} />
           </button>
-          <span className={`text-sm font-medium ${yearly ? "text-gray-900" : "text-gray-400"}`}>
+          <span className={`text-sm font-medium ${yearly ? "text-[var(--foreground)]" : "text-[var(--text-muted)]"}`}>
             Yearly
             <span className="ml-2 text-xs font-semibold bg-green-100 text-emerald-400 px-2 py-0.5 rounded-full">2 months free</span>
           </span>
@@ -163,25 +163,25 @@ function PricingCardsInner() {
         )}
         <div className="grid md:grid-cols-4 gap-6">
           {/* Free plan card */}
-          <div className="relative rounded-2xl border border-gray-200 p-6 flex flex-col">
+          <div className="relative rounded-2xl border border-[var(--border)] p-6 flex flex-col">
             <div className="mb-4">
-              <p className="font-semibold text-gray-900 text-lg">{FREE_PLAN.name}</p>
+              <p className="font-semibold text-[var(--foreground)] text-lg">{FREE_PLAN.name}</p>
               <p className="mt-1">
-                <span className="text-3xl font-bold text-gray-900">₹0</span>
-                <span className="text-gray-400 text-sm">/month</span>
+                <span className="text-3xl font-bold text-[var(--foreground)]">₹0</span>
+                <span className="text-[var(--text-muted)] text-sm">/month</span>
               </p>
             </div>
             <ul className="space-y-2 mb-6 flex-1">
               {FREE_PLAN.features.slice(0, -1).map((f) => (
-                <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
-                  <span className="text-gray-400">✓</span> {f}
+                <li key={f} className="flex items-center gap-2 text-sm text-[var(--text-sub)]">
+                  <span className="text-[var(--text-muted)]">✓</span> {f}
                 </li>
               ))}
-              <li className="text-xs text-gray-400 italic pt-1">{FREE_PLAN.features[FREE_PLAN.features.length - 1]}</li>
+              <li className="text-xs text-[var(--text-muted)] italic pt-1">{FREE_PLAN.features[FREE_PLAN.features.length - 1]}</li>
             </ul>
             <a
               href="/signup"
-              className="w-full py-2.5 rounded-xl text-sm font-semibold text-center border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-center border border-[var(--border)] text-[var(--text-sub)] hover:bg-[var(--card-hover)] transition-colors"
             >
               Sign Up Free
             </a>
@@ -198,7 +198,7 @@ function PricingCardsInner() {
                 className={`relative rounded-2xl border p-6 flex flex-col ${
                   plan.popular
                     ? "border-[#0A66C2] ring-2 ring-[#0A66C2]/20 shadow-lg"
-                    : "border-gray-200"
+                    : "border-[var(--border)]"
                 }`}
               >
                 {plan.popular && (
@@ -207,26 +207,26 @@ function PricingCardsInner() {
                   </span>
                 )}
                 <div className="mb-4">
-                  <p className="font-semibold text-gray-900 text-lg">{plan.name}</p>
+                  <p className="font-semibold text-[var(--foreground)] text-lg">{plan.name}</p>
                   <p className="mt-1">
-                    <span className="text-3xl font-bold text-gray-900">
+                    <span className="text-3xl font-bold text-[var(--foreground)]">
                       ₹{displayMonthly.toLocaleString("en-IN")}
                     </span>
-                    <span className="text-gray-400 text-sm">/month</span>
+                    <span className="text-[var(--text-muted)] text-sm">/month</span>
                   </p>
                   {yearly && (
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5">
                       ₹{plan.yearlyPrice.toLocaleString("en-IN")} billed annually
                     </p>
                   )}
                 </div>
                 <ul className="space-y-2 mb-6 flex-1">
                   {plan.features.slice(0, -1).map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
+                    <li key={f} className="flex items-center gap-2 text-sm text-[var(--text-sub)]">
                       <span className="text-[var(--primary)]">✓</span> {f}
                     </li>
                   ))}
-                  <li className="text-xs text-gray-400 italic pt-1">{plan.features[plan.features.length - 1]}</li>
+                  <li className="text-xs text-[var(--text-muted)] italic pt-1">{plan.features[plan.features.length - 1]}</li>
                 </ul>
                 <button
                   onClick={() => handleCheckout(plan)}

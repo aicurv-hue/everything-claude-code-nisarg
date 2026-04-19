@@ -117,10 +117,10 @@ export default function RichTextEditor({
         onInput={handleInput}
         spellCheck={false}
         style={disabled ? { opacity: 0.6 } : undefined}
-        className="w-full min-h-[300px] px-1 py-2 bg-[var(--card)] text-gray-900 text-sm leading-relaxed focus:outline-none overflow-auto"
+        className="w-full min-h-[300px] px-1 py-2 bg-[var(--card)] text-[var(--foreground)] text-sm leading-relaxed focus:outline-none overflow-auto"
       />
 
-      <div className="mt-3 pt-2 border-t border-[var(--border-sub)] flex justify-between text-[11px] text-gray-400">
+      <div className="mt-3 pt-2 border-t border-[var(--border-sub)] flex justify-between text-[11px] text-[var(--text-muted)]">
         <span>
           {value.length}{maxLength ? ` / ${maxLength} characters` : ' characters'}
         </span>

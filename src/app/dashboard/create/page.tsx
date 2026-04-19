@@ -677,8 +677,8 @@ export default function CreatePostPage() {
                         onClick={() => setLength(l.value)}
                         className={`flex-1 py-2.5 rounded-lg text-xs font-medium border transition-all text-center ${
                           length === l.value
-                            ? "bg-slate-900 text-white border-slate-900"
-                            : "bg-[var(--card)] text-[var(--text-muted)] border-[var(--border)] hover:border-slate-300"
+                            ? "bg-[var(--primary)] text-white border-[var(--primary)]"
+                            : "bg-[var(--card)] text-[var(--text-muted)] border-[var(--border)] hover:border-[var(--primary)]/40"
                         }`}
                       >
                         <div>{l.label}</div>

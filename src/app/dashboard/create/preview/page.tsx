@@ -897,7 +897,7 @@ export default function PostPreviewPage() {
                   disabled={isRegeneratingPost}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
                     showRegenHint
-                      ? "bg-slate-800 text-white border-slate-800"
+                      ? "bg-[var(--primary)] text-white border-[var(--primary)]"
                       : "bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-sub)] border-[var(--border)]"
                   }`}
                 >
@@ -1098,7 +1098,7 @@ export default function PostPreviewPage() {
                 <button
                   onClick={() => handleModeChange("x_screenshot")}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
-                    imageMode === "x_screenshot" ? "border-slate-700 bg-slate-900" : "border-[var(--border)] bg-[var(--card)] hover:border-slate-300 hover:bg-[var(--card-hover)]"
+                    imageMode === "x_screenshot" ? "border-[var(--primary)] bg-[var(--primary)]/10" : "border-[var(--border)] bg-[var(--card)] hover:border-[var(--primary)]/40 hover:bg-[var(--card-hover)]"
                   }`}
                 >
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "x_screenshot" ? "bg-black" : "bg-[var(--toggle-bg)]"}`}>
@@ -1128,7 +1128,7 @@ export default function PostPreviewPage() {
                 <button
                   onClick={() => handleModeChange("none")}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
-                    imageMode === "none" ? "border-slate-400 bg-[var(--card-hover)]" : "border-[var(--border)] bg-[var(--card)] hover:border-slate-300 hover:bg-[var(--card-hover)]"
+                    imageMode === "none" ? "border-[var(--primary)] bg-[var(--primary)]/10" : "border-[var(--border)] bg-[var(--card)] hover:border-[var(--primary)]/40 hover:bg-[var(--card-hover)]"
                   }`}
                 >
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "none" ? "bg-[var(--border)]" : "bg-[var(--toggle-bg)]"}`}>
@@ -1405,7 +1405,7 @@ export default function PostPreviewPage() {
 
               {imageMode === "none" && (
                 <div className="flex flex-col items-center gap-3 text-center text-[var(--text-muted)]">
-                  <ImageIcon className="w-8 h-8 text-slate-200" />
+                  <ImageIcon className="w-8 h-8 text-[var(--text-muted)]" />
                   <p className="text-xs">This post will be published as text only.</p>
                 </div>
               )}

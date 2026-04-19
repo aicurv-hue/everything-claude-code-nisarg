@@ -228,7 +228,7 @@ export default function MemoryPage() {
 
       {/* C3: Undo delete toast */}
       {pendingDelete && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 bg-slate-900 text-white rounded-xl shadow-2xl text-sm font-medium animate-fade-in">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] rounded-xl shadow-2xl text-sm font-medium animate-fade-in">
           <span>Removed {pendingDelete.label}</span>
           <button
             onClick={handleUndoDelete}

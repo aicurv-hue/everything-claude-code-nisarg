@@ -100,15 +100,15 @@ export default function UpgradePlans({ currentPlan = "free" }: { currentPlan?: s
     <div className="space-y-3">
       {/* Monthly / Yearly toggle */}
       <div className="flex items-center justify-center gap-3 py-1">
-        <span className={`text-sm font-medium ${!yearly ? "text-gray-900" : "text-gray-400"}`}>Monthly</span>
+        <span className={`text-sm font-medium ${!yearly ? "text-[var(--foreground)]" : "text-[var(--text-muted)]"}`}>Monthly</span>
         <button
           onClick={() => setYearly(v => !v)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${yearly ? "bg-[var(--primary)]" : "bg-gray-300"}`}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${yearly ? "bg-[var(--primary)]" : "bg-[var(--border)]"}`}
           aria-label="Toggle billing period"
         >
           <span className={`inline-block h-4 w-4 rounded-full bg-[var(--card)] shadow transition-transform ${yearly ? "translate-x-6" : "translate-x-1"}`} />
         </button>
-        <span className={`text-sm font-medium ${yearly ? "text-gray-900" : "text-gray-400"}`}>
+        <span className={`text-sm font-medium ${yearly ? "text-[var(--foreground)]" : "text-[var(--text-muted)]"}`}>
           Yearly
           <span className="ml-1.5 text-[10px] font-semibold bg-green-100 text-emerald-400 px-1.5 py-0.5 rounded-full">2 months free</span>
         </span>
@@ -130,7 +130,7 @@ export default function UpgradePlans({ currentPlan = "free" }: { currentPlan?: s
               className={`relative rounded-xl border p-4 flex items-center justify-between gap-4 ${
                 plan.popular
                   ? "border-[#0A66C2] ring-1 ring-[#0A66C2]/20"
-                  : "border-gray-200"
+                  : "border-[var(--border)]"
               }`}
             >
               {plan.popular && (
@@ -140,16 +140,16 @@ export default function UpgradePlans({ currentPlan = "free" }: { currentPlan?: s
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2">
-                  <span className="font-semibold text-gray-900">{plan.name}</span>
-                  <span className="text-sm font-bold text-gray-900">{displayPrice}</span>
-                  <span className="text-xs text-gray-400">/mo</span>
+                  <span className="font-semibold text-[var(--foreground)]">{plan.name}</span>
+                  <span className="text-sm font-bold text-[var(--foreground)]">{displayPrice}</span>
+                  <span className="text-xs text-[var(--text-muted)]">/mo</span>
                   {yearly && (
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-[var(--text-muted)]">
                       (₹{plan.yearlyPrice.toLocaleString("en-IN")}/yr)
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5 truncate">{plan.features.join(" · ")}</p>
+                <p className="text-xs text-[var(--text-sub)] mt-0.5 truncate">{plan.features.join(" · ")}</p>
               </div>
               <button
                 onClick={() => handleCheckout(plan)}

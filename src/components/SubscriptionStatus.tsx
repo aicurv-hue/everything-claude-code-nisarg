@@ -50,12 +50,12 @@ export default function SubscriptionStatus() {
     setCancelling(false);
   }
 
-  if (loading) return <div className="text-sm text-gray-400">Loading billing info...</div>;
+  if (loading) return <div className="text-sm text-[var(--text-muted)]">Loading billing info...</div>;
   if (!sub || sub.plan === "free") {
     return (
-      <div className="rounded-xl border border-gray-200 p-6">
-        <p className="font-semibold text-gray-900 mb-1">Free plan</p>
-        <p className="text-sm text-gray-500 mb-4">5 posts/month · 2 AI images · 1 profile · Free forever</p>
+      <div className="rounded-xl border border-[var(--border)] p-6">
+        <p className="font-semibold text-[var(--foreground)] mb-1">Free plan</p>
+        <p className="text-sm text-[var(--text-sub)] mb-4">5 posts/month · 2 AI images · 1 profile · Free forever</p>
         <a href="#upgrade" className="inline-block bg-[var(--primary)] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[var(--primary)]/90">
           Upgrade
         </a>
@@ -73,15 +73,15 @@ export default function SubscriptionStatus() {
     sub.status;
 
   return (
-    <div className="rounded-xl border border-gray-200 p-6 space-y-4">
+    <div className="rounded-xl border border-[var(--border)] p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-semibold text-gray-900 text-lg">{planLabel} Plan</p>
+          <p className="font-semibold text-[var(--foreground)] text-lg">{planLabel} Plan</p>
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
             sub.status === "active" ? "bg-green-100 text-emerald-400" :
             sub.status === "pending" || sub.status === "created" || sub.status === "authenticated" ? "bg-blue-100 text-blue-400" :
             sub.status === "cancelled" ? "bg-red-100 text-red-400" :
-            "bg-gray-100 text-gray-600"
+            "bg-[var(--card-hover)] text-[var(--text-sub)]"
           }`}>
             {statusLabel}
           </span>
@@ -89,10 +89,10 @@ export default function SubscriptionStatus() {
       </div>
 
       {periodEnd && sub.status === "active" && (
-        <p className="text-sm text-gray-500">Next billing: {periodEnd.toLocaleDateString()}</p>
+        <p className="text-sm text-[var(--text-sub)]">Next billing: {periodEnd.toLocaleDateString()}</p>
       )}
       {sub.status === "cancelled" && periodEnd && (
-        <p className="text-sm text-gray-500">Access until: {periodEnd.toLocaleDateString()}</p>
+        <p className="text-sm text-[var(--text-sub)]">Access until: {periodEnd.toLocaleDateString()}</p>
       )}
 
       {sub.status !== "cancelled" && sub.subscriptionId && (
