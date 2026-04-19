@@ -19,9 +19,12 @@ import {
   Image as ImageIcon,
   Camera,
   Upload,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { UserProfile, ProfileSegment, ImageStyle } from "@/lib/db/profiles";
 import { useAuth } from "@/lib/context/auth";
+import { useTheme } from "@/lib/context/theme";
 import { HelpTooltip, FieldHint } from "@/components/ui/HelpTooltip";
 import { ProfileAIAssist } from "@/components/ui/ProfileAIAssist";
 
@@ -58,6 +61,7 @@ const labelClass = "block text-xs font-semibold text-[var(--text-muted)] upperca
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab]   = useState("identity");
   const [profileType, setProfileType] = useState<"individual" | "corporate">("individual");
   const [segments, setSegments] = useState<{ individual: ProfileSegment; corporate: ProfileSegment }>({
@@ -335,17 +339,27 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold text-[var(--foreground)]">Profile</h1>
           <p className="text-sm text-[var(--text-muted)] mt-0.5">Define your brand context for Individual and Corporate profiles.</p>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={!hasChanges}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            hasChanges
-              ? "bg-[var(--primary)] text-white hover:opacity-90 shadow-sm"
-              : "bg-[var(--toggle-bg)] text-[var(--text-muted)] border border-[var(--border)] cursor-not-allowed"
-          }`}
-        >
-          {isSaved ? "✓ Saved" : <><Save className="w-4 h-4" /> Save Changes</>}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-[var(--border)] bg-[var(--card)] text-[var(--text-sub)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover)] transition-all"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {theme === "dark" ? "Light" : "Dark"}
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!hasChanges}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              hasChanges
+                ? "bg-[var(--primary)] text-white hover:opacity-90 shadow-sm"
+                : "bg-[var(--toggle-bg)] text-[var(--text-muted)] border border-[var(--border)] cursor-not-allowed"
+            }`}
+          >
+            {isSaved ? "✓ Saved" : <><Save className="w-4 h-4" /> Save Changes</>}
+          </button>
+        </div>
       </div>
 
       {/* LinkedIn OAuth error banner */}

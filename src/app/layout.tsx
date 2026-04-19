@@ -3,6 +3,7 @@ import { DM_Sans } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from "@/lib/context/auth";
+import { ThemeProvider } from "@/lib/context/theme";
 import SplashHider from "@/components/SplashHider";
 
 const dmSans = DM_Sans({
@@ -46,10 +47,12 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://media.licdn.com" />
       </head>
       <body className="antialiased selection:bg-primary/20 selection:text-primary">
-        <AuthProvider>
-          <SplashHider />
-          {children}
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <SplashHider />
+            {children}
+          </AuthProvider>
+        </ThemeProvider>
         <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="beforeInteractive" />
       </body>
     </html>

@@ -32,6 +32,8 @@ export default function IdeaBankPage() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "active" | "ai_suggested" | "manual" | "used">("active");
   const [addTitle, setAddTitle] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -40,13 +42,16 @@ export default function IdeaBankPage() {
     if (!user) return;
     try {
       const token = await getAuthToken();
+      if (!token) { setLoading(false); return; }
       const res = await fetch(`/api/ideas?segment=${segment}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setIdeas(data.ideas || []);
     } catch (err) {
       console.error("[ideas] fetch failed", err);
+      setError("Failed to load ideas. Please refresh.");
     } finally {
       setLoading(false);
     }
@@ -56,16 +61,23 @@ export default function IdeaBankPage() {
 
   async function handleGenerate() {
     setGenerating(true);
+    setError(null);
     try {
       const token = await getAuthToken();
-      await fetch("/api/ideas/generate", {
+      if (!token) throw new Error("Not authenticated");
+      const res = await fetch("/api/ideas/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ segment, count: 10 }),
       });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error((d as any).error || `HTTP ${res.status}`);
+      }
       await fetchIdeas();
-    } catch (err) {
+    } catch (err: any) {
       console.error("[ideas] generate failed", err);
+      setError(err.message || "AI generation failed. Make sure your profile is filled in.");
     } finally {
       setGenerating(false);
     }
@@ -73,15 +85,26 @@ export default function IdeaBankPage() {
 
   async function handleAdd() {
     if (!addTitle.trim()) return;
-    const token = await getAuthToken();
-    await fetch("/api/ideas", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ title: addTitle.trim(), segment, source: "manual" }),
-    });
-    setAddTitle("");
-    setShowAdd(false);
-    await fetchIdeas();
+    setAdding(true);
+    setError(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error("Not authenticated");
+      const res = await fetch("/api/ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ title: addTitle.trim(), segment, source: "manual" }),
+      });
+      if (!res.ok) throw new Error(`Save failed: HTTP ${res.status}`);
+      setAddTitle("");
+      setShowAdd(false);
+      await fetchIdeas();
+    } catch (err: any) {
+      console.error("[ideas] add failed", err);
+      setError(err.message || "Failed to save idea.");
+    } finally {
+      setAdding(false);
+    }
   }
 
   async function handleUse(idea: Idea) {
@@ -156,6 +179,14 @@ export default function IdeaBankPage() {
         </div>
       </div>
 
+      {/* Error banner */}
+      {error && (
+        <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-800/40 text-red-400 text-sm">
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError(null)} className="font-bold hover:opacity-70">×</button>
+        </div>
+      )}
+
       {/* Add idea inline */}
       {showAdd && (
         <div className="mb-4 flex gap-2">
@@ -163,15 +194,19 @@ export default function IdeaBankPage() {
             type="text"
             value={addTitle}
             onChange={(e) => setAddTitle(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            onKeyDown={(e) => e.key === "Enter" && !adding && handleAdd()}
             placeholder="Type your content idea..."
             className="flex-1 px-3 py-2 text-sm bg-[var(--input)] border border-[var(--input-border)] rounded-lg text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
             autoFocus
           />
-          <button onClick={handleAdd} className="px-4 py-2 text-sm font-semibold bg-[var(--primary)] text-white rounded-lg hover:opacity-90">
-            Save
+          <button
+            onClick={handleAdd}
+            disabled={adding || !addTitle.trim()}
+            className="px-4 py-2 text-sm font-semibold bg-[var(--primary)] text-white rounded-lg hover:opacity-90 disabled:opacity-50"
+          >
+            {adding ? "Saving..." : "Save"}
           </button>
-          <button onClick={() => { setShowAdd(false); setAddTitle(""); }} className="px-3 py-2 text-sm text-[var(--text-sub)] hover:text-[var(--foreground)]">
+          <button onClick={() => { setShowAdd(false); setAddTitle(""); setError(null); }} className="px-3 py-2 text-sm text-[var(--text-sub)] hover:text-[var(--foreground)]">
             Cancel
           </button>
         </div>
