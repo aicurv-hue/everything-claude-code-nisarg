@@ -16,7 +16,7 @@ import { HelpTooltip } from "@/components/ui/HelpTooltip";
 import RichTextEditor from "@/components/preview/RichTextEditor";
 import LinkedInPostCard from "@/components/preview/LinkedInPostCard";
 // Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
-import { uploadDataUrlToStorage, uploadBlobToStorage } from "@/lib/storage/uploadImage";
+import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 
 type ImageMode = "ai" | "upload" | "reference" | "face" | "none" | "x_screenshot";
 
@@ -96,6 +96,22 @@ export default function PostPreviewPage() {
     } finally {
       clearTimeout(timeout);
     }
+  };
+
+  /** Upload image via server-side API (avoids Firebase Storage client SDK / CORS issues) */
+  const uploadImageToServer = async (blob: Blob): Promise<string | null> => {
+    const token = await getAuthToken();
+    if (!token) return null;
+    const fd = new FormData();
+    fd.append("file", blob, `image-${Date.now()}.${blob.type?.includes("png") ? "png" : "jpg"}`);
+    const res = await fetch("/api/image/upload", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.url || null;
   };
 
   const updatePost = async (id: string, updates: Partial<Post>): Promise<void> => {
@@ -586,7 +602,7 @@ export default function PostPreviewPage() {
             const blobRes = await fetch(publishImageUrl);
             blob = await blobRes.blob();
           }
-          const stored = await uploadBlobToStorage(blob, `post-images/${Date.now()}-pub.png`);
+          const stored = await uploadImageToServer(blob);
           publishImageUrl = stored || null;
         } catch {
           publishImageUrl = null;
@@ -706,8 +722,7 @@ export default function PostPreviewPage() {
               blob = await fetch(imgSrc).then(r => r.blob());
             }
 
-            const ext = blob.type?.includes("png") ? "png" : "jpg";
-            const uploaded = await uploadBlobToStorage(blob, `post-images/${Date.now()}.${ext}`);
+            const uploaded = await uploadImageToServer(blob);
             if (uploaded) {
               await updatePost(saved.id, { image_url: uploaded });
               setScheduleMessage(`Scheduled for ${label} (${timezone}) · Image attached`);
