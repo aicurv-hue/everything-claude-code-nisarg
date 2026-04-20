@@ -94,3 +94,28 @@ export async function uploadDataUrlToStorage(
     return null;
   }
 }
+
+/**
+ * Upload a Blob directly to Firebase Storage (faster than data: URL conversion).
+ * Returns a public HTTPS URL, or null if upload fails.
+ */
+export async function uploadBlobToStorage(
+  blob: Blob,
+  fileName?: string
+): Promise<string | null> {
+  if (isMock || !app) return null;
+
+  try {
+    const storage = getStorage(app as any);
+    const name = fileName || `post-images/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+    const storageRef = ref(storage, name);
+
+    const snapshot = await uploadBytes(storageRef, blob, { contentType: blob.type || "image/jpeg" });
+    const downloadUrl = await getDownloadURL(snapshot.ref);
+    console.log("[uploadBlob] Uploaded to Firebase Storage:", downloadUrl);
+    return downloadUrl;
+  } catch (err: any) {
+    console.error("[uploadBlob] Firebase Storage upload failed:", err?.message || err);
+    return null;
+  }
+}

@@ -16,7 +16,7 @@ import { HelpTooltip } from "@/components/ui/HelpTooltip";
 import RichTextEditor from "@/components/preview/RichTextEditor";
 import LinkedInPostCard from "@/components/preview/LinkedInPostCard";
 // Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
-import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
+import { uploadDataUrlToStorage, uploadBlobToStorage } from "@/lib/storage/uploadImage";
 
 type ImageMode = "ai" | "upload" | "reference" | "face" | "none" | "x_screenshot";
 
@@ -573,15 +573,9 @@ export default function PostPreviewPage() {
       }
       // Upload blob: or data: URLs to Firebase Storage — LinkedIn API needs a real HTTPS URL
       if (publishImageUrl && (publishImageUrl.startsWith("blob:") || publishImageUrl.startsWith("data:"))) {
-        let dataForUpload = publishImageUrl;
-        if (publishImageUrl.startsWith("blob:")) {
-          const blobRes = await fetch(publishImageUrl);
-          const blobData = await blobRes.blob();
-          dataForUpload = await new Promise<string>((res2, rej2) => {
-            const r = new FileReader(); r.onload = () => res2(r.result as string); r.onerror = rej2; r.readAsDataURL(blobData);
-          });
-        }
-        const stored = await uploadDataUrlToStorage(dataForUpload);
+        const blobRes = await fetch(publishImageUrl);
+        const blob = await blobRes.blob();
+        const stored = await uploadBlobToStorage(blob, `post-images/${Date.now()}-pub.png`);
         publishImageUrl = stored || null;
       }
 
@@ -654,18 +648,25 @@ export default function PostPreviewPage() {
       if (scheduleImageSrc) {
         if (scheduleImageSrc.startsWith("blob:") || scheduleImageSrc.startsWith("data:")) {
           try {
-            let dataForUpload = scheduleImageSrc;
-            if (scheduleImageSrc.startsWith("blob:")) {
-              const blobRes = await fetch(scheduleImageSrc);
-              const blobData = await blobRes.blob();
-              dataForUpload = await new Promise<string>((res2, rej2) => {
-                const r = new FileReader(); r.onload = () => res2(r.result as string); r.onerror = rej2; r.readAsDataURL(blobData);
-              });
-            }
-            const uploadPromise = uploadDataUrlToStorage(dataForUpload, `post-images/${Date.now()}.png`);
-            const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 30_000));
+            // Convert to blob directly — skip redundant FileReader/dataURL conversion
+            const blobRes = await fetch(scheduleImageSrc);
+            const blob = await blobRes.blob();
+            const uploadPromise = uploadBlobToStorage(blob, `post-images/${Date.now()}.png`);
+            const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 45_000));
             const uploaded = await Promise.race([uploadPromise, timeoutPromise]);
-            immediateImageUrl = uploaded || undefined;
+            if (!uploaded) {
+              console.warn("[Schedule] Image upload timed out or returned null — trying data URL fallback");
+              // Fallback: try uploadDataUrlToStorage for data: URLs
+              if (scheduleImageSrc.startsWith("data:")) {
+                const fallback = await Promise.race([
+                  uploadDataUrlToStorage(scheduleImageSrc, `post-images/${Date.now()}-fb.png`),
+                  new Promise<null>((r) => setTimeout(() => r(null), 20_000)),
+                ]);
+                immediateImageUrl = fallback || undefined;
+              }
+            } else {
+              immediateImageUrl = uploaded;
+            }
           } catch (uploadErr) {
             console.warn("[Schedule] Image upload error — scheduling without image:", uploadErr);
           }
