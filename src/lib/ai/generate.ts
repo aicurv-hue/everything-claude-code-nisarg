@@ -414,11 +414,7 @@ Start directly with the hook line. Output nothing else.`;
     const raw = completion.choices[0].message.content || "";
     const post = sanitizePost(raw) || raw.trim();
 
-    // Stage 2: Generate image prompt — skipped for x_screenshot (image is rendered from post text directly)
-    if (imageStyle === "x_screenshot") {
-      return { post, imagePrompt: "" };
-    }
-
+    // Stage 2: Generate image prompt — always generate so user can switch modes on preview page
     const imageSystemPrompt = section("IMAGE_PROMPT_SYSTEM");
     const imageUserPrompt = section("IMAGE_PROMPT_USER", {
       TOPIC:   topic,
