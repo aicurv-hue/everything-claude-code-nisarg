@@ -468,49 +468,54 @@ export default function PostPreviewPage() {
         img.crossOrigin = "anonymous";
 
         img.onload = () => {
-          // Draw base image scaled to square
-          ctx.drawImage(img, 0, 0, SIZE, SIZE);
+          try {
+            // Draw base image scaled to square
+            ctx.drawImage(img, 0, 0, SIZE, SIZE);
 
-          // Gradient overlay matching CSS: linear-gradient(105deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.38) 38%, transparent 58%)
-          const grad = ctx.createLinearGradient(0, 0, SIZE * 0.75, SIZE * 0.55);
-          grad.addColorStop(0,    "rgba(0,0,0,0.62)");
-          grad.addColorStop(0.38, "rgba(0,0,0,0.38)");
-          grad.addColorStop(0.58, "rgba(0,0,0,0)");
-          ctx.fillStyle = grad;
-          ctx.fillRect(0, 0, SIZE, SIZE);
+            // Gradient overlay matching CSS: linear-gradient(105deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.38) 38%, transparent 58%)
+            const grad = ctx.createLinearGradient(0, 0, SIZE * 0.75, SIZE * 0.55);
+            grad.addColorStop(0,    "rgba(0,0,0,0.62)");
+            grad.addColorStop(0.38, "rgba(0,0,0,0.38)");
+            grad.addColorStop(0.58, "rgba(0,0,0,0)");
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, SIZE, SIZE);
 
-          // Text settings — matches CSS: weight 800, left 44%, top-left
-          const MAX_TEXT_WIDTH = SIZE * 0.42;
-          const FONT_SIZE = 58;
-          const LINE_HEIGHT = FONT_SIZE * 1.18;
-          const PAD_X = SIZE * 0.05;
-          const PAD_Y = SIZE * 0.055;
+            // Text settings — matches CSS: weight 800, left 44%, top-left
+            const MAX_TEXT_WIDTH = SIZE * 0.42;
+            const FONT_SIZE = 58;
+            const LINE_HEIGHT = FONT_SIZE * 1.18;
+            const PAD_X = SIZE * 0.05;
+            const PAD_Y = SIZE * 0.055;
 
-          ctx.font = `800 ${FONT_SIZE}px 'Plus Jakarta Sans', Inter, Arial, sans-serif`;
-          ctx.fillStyle = "white";
-          ctx.shadowColor = "rgba(0,0,0,0.9)";
-          ctx.shadowBlur = 18;
+            ctx.font = `800 ${FONT_SIZE}px 'Plus Jakarta Sans', Inter, Arial, sans-serif`;
+            ctx.fillStyle = "white";
+            ctx.shadowColor = "rgba(0,0,0,0.9)";
+            ctx.shadowBlur = 18;
 
-          // Word-wrap
-          const words = hookText.split(" ");
-          const lines: string[] = [];
-          let current = "";
-          for (const word of words) {
-            const test = current ? `${current} ${word}` : word;
-            if (ctx.measureText(test).width > MAX_TEXT_WIDTH && current) {
-              lines.push(current);
-              current = word;
-            } else {
-              current = test;
+            // Word-wrap
+            const words = hookText.split(" ");
+            const lines: string[] = [];
+            let current = "";
+            for (const word of words) {
+              const test = current ? `${current} ${word}` : word;
+              if (ctx.measureText(test).width > MAX_TEXT_WIDTH && current) {
+                lines.push(current);
+                current = word;
+              } else {
+                current = test;
+              }
             }
+            if (current) lines.push(current);
+
+            lines.forEach((line, i) => {
+              ctx.fillText(line, PAD_X, PAD_Y + FONT_SIZE + i * LINE_HEIGHT);
+            });
+
+            resolve(canvas.toDataURL("image/jpeg", 0.93));
+          } catch (canvasErr) {
+            console.warn("[compositeImageWithHook] Canvas export failed (CORS taint?) — using original URL:", canvasErr);
+            resolve(imgSrc);
           }
-          if (current) lines.push(current);
-
-          lines.forEach((line, i) => {
-            ctx.fillText(line, PAD_X, PAD_Y + FONT_SIZE + i * LINE_HEIGHT);
-          });
-
-          resolve(canvas.toDataURL("image/jpeg", 0.93));
         };
 
         img.onerror = () => resolve(imgSrc); // fallback: send raw image
@@ -641,16 +646,24 @@ export default function PostPreviewPage() {
       // Bake hook text into image before scheduling — cron worker publishes the stored URL as-is
       let scheduleImageSrc = finalImageUrl;
       if (finalImageUrl && imageHook) {
-        scheduleImageSrc = await compositeImageWithHook(finalImageUrl, imageHook);
+        try {
+          const compositePromise = compositeImageWithHook(finalImageUrl, imageHook);
+          const compositeTimeout = new Promise<string>((r) => setTimeout(() => r(finalImageUrl!), 10_000));
+          scheduleImageSrc = await Promise.race([compositePromise, compositeTimeout]);
+        } catch {
+          scheduleImageSrc = finalImageUrl;
+        }
       }
 
       let immediateImageUrl: string | undefined = undefined;
+      console.log("[Schedule] imageMode:", imageMode, "finalImageUrl:", finalImageUrl?.slice(0, 80), "scheduleImageSrc:", scheduleImageSrc?.slice(0, 80));
       if (scheduleImageSrc) {
         if (scheduleImageSrc.startsWith("blob:") || scheduleImageSrc.startsWith("data:")) {
           try {
             // Convert to blob directly — skip redundant FileReader/dataURL conversion
             const blobRes = await fetch(scheduleImageSrc);
             const blob = await blobRes.blob();
+            console.log("[Schedule] Uploading image blob, size:", blob.size, "type:", blob.type);
             const uploadPromise = uploadBlobToStorage(blob, `post-images/${Date.now()}.png`);
             const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 45_000));
             const uploaded = await Promise.race([uploadPromise, timeoutPromise]);
@@ -674,6 +687,7 @@ export default function PostPreviewPage() {
           immediateImageUrl = scheduleImageSrc;
         }
       }
+      console.log("[Schedule] Final immediateImageUrl:", immediateImageUrl?.slice(0, 100));
 
       const saved = await createPost({
         user_id: user!.uid,
