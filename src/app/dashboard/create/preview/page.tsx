@@ -79,13 +79,23 @@ export default function PostPreviewPage() {
   const createPost = async (post: Omit<Post, "id">): Promise<{ id?: string }> => {
     const token = await getAuthToken();
     if (!token) throw new Error("Not authenticated");
-    const res = await fetch("/api/posts", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ post }),
-    });
-    if (!res.ok) throw new Error("Failed to save post");
-    return res.json();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    try {
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        signal: controller.signal,
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ post }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).error || "Failed to save post");
+      }
+      return res.json();
+    } finally {
+      clearTimeout(timeout);
+    }
   };
 
   const updatePost = async (id: string, updates: Partial<Post>): Promise<void> => {
@@ -652,7 +662,9 @@ export default function PostPreviewPage() {
                 const r = new FileReader(); r.onload = () => res2(r.result as string); r.onerror = rej2; r.readAsDataURL(blobData);
               });
             }
-            const uploaded = await uploadDataUrlToStorage(dataForUpload, `post-images/${Date.now()}.png`);
+            const uploadPromise = uploadDataUrlToStorage(dataForUpload, `post-images/${Date.now()}.png`);
+            const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 30_000));
+            const uploaded = await Promise.race([uploadPromise, timeoutPromise]);
             immediateImageUrl = uploaded || undefined;
           } catch (uploadErr) {
             console.warn("[Schedule] Image upload error — scheduling without image:", uploadErr);
