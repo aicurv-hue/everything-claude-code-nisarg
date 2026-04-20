@@ -614,7 +614,7 @@ export default function PostPreviewPage() {
           custom_instructions: postData.metadata.customInstructions || undefined,
           segment: postData.metadata.segment || "individual",
           research_data: postData.research,
-          image_url: finalImageUrl || undefined,
+          image_url: publishImageUrl || finalImageUrl || undefined,
           image_hook: imageHook || undefined,
           linkedin_post_id: (data as any).postId || undefined,
           published_at: new Date().toISOString(),
@@ -652,9 +652,7 @@ export default function PostPreviewPage() {
                 const r = new FileReader(); r.onload = () => res2(r.result as string); r.onerror = rej2; r.readAsDataURL(blobData);
               });
             }
-            const uploadPromise = uploadDataUrlToStorage(dataForUpload, `post-images/${Date.now()}.png`);
-            const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000));
-            const uploaded = await Promise.race([uploadPromise, timeoutPromise]);
+            const uploaded = await uploadDataUrlToStorage(dataForUpload, `post-images/${Date.now()}.png`);
             immediateImageUrl = uploaded || undefined;
           } catch (uploadErr) {
             console.warn("[Schedule] Image upload error — scheduling without image:", uploadErr);
