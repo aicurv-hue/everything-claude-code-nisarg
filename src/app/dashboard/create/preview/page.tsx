@@ -577,11 +577,20 @@ export default function PostPreviewPage() {
         publishImageUrl = await compositeImageWithHook(finalImageUrl, imageHook);
       }
       // Upload blob: or data: URLs to Firebase Storage — LinkedIn API needs a real HTTPS URL
-      if (publishImageUrl && (publishImageUrl.startsWith("blob:") || publishImageUrl.startsWith("data:"))) {
-        const blobRes = await fetch(publishImageUrl);
-        const blob = await blobRes.blob();
-        const stored = await uploadBlobToStorage(blob, `post-images/${Date.now()}-pub.png`);
-        publishImageUrl = stored || null;
+      if (publishImageUrl && !publishImageUrl.startsWith("http")) {
+        try {
+          let blob: Blob;
+          if (imageMode === "upload" && uploadedFile && publishImageUrl === finalImageUrl) {
+            blob = uploadedFile;
+          } else {
+            const blobRes = await fetch(publishImageUrl);
+            blob = await blobRes.blob();
+          }
+          const stored = await uploadBlobToStorage(blob, `post-images/${Date.now()}-pub.png`);
+          publishImageUrl = stored || null;
+        } catch {
+          publishImageUrl = null;
+        }
       }
 
       const res = await fetch("/api/linkedin/publish", {
@@ -658,18 +667,31 @@ export default function PostPreviewPage() {
       let immediateImageUrl: string | undefined = undefined;
       console.log("[Schedule] imageMode:", imageMode, "finalImageUrl:", finalImageUrl?.slice(0, 80), "scheduleImageSrc:", scheduleImageSrc?.slice(0, 80));
       if (scheduleImageSrc) {
-        if (scheduleImageSrc.startsWith("blob:") || scheduleImageSrc.startsWith("data:")) {
+        if (scheduleImageSrc.startsWith("http://") || scheduleImageSrc.startsWith("https://")) {
+          // Remote URL — use as-is (already on Firebase Storage or fal.ai)
+          immediateImageUrl = scheduleImageSrc;
+        } else {
+          // blob: or data: URL — upload to Firebase Storage
           try {
-            // Convert to blob directly — skip redundant FileReader/dataURL conversion
-            const blobRes = await fetch(scheduleImageSrc);
-            const blob = await blobRes.blob();
-            console.log("[Schedule] Uploading image blob, size:", blob.size, "type:", blob.type);
-            const uploadPromise = uploadBlobToStorage(blob, `post-images/${Date.now()}.png`);
-            const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 45_000));
-            const uploaded = await Promise.race([uploadPromise, timeoutPromise]);
-            if (!uploaded) {
-              console.warn("[Schedule] Image upload timed out or returned null — trying data URL fallback");
-              // Fallback: try uploadDataUrlToStorage for data: URLs
+            let blob: Blob;
+            // For uploaded files without hook modification, use the original File directly
+            if (imageMode === "upload" && uploadedFile && scheduleImageSrc === finalImageUrl) {
+              blob = uploadedFile;
+              console.log("[Schedule] Using original uploaded file, size:", blob.size, "type:", blob.type);
+            } else {
+              const blobRes = await fetch(scheduleImageSrc);
+              blob = await blobRes.blob();
+              console.log("[Schedule] Converted to blob, size:", blob.size, "type:", blob.type);
+            }
+            const ext = blob.type?.includes("png") ? "png" : "jpg";
+            const uploaded = await Promise.race([
+              uploadBlobToStorage(blob, `post-images/${Date.now()}.${ext}`),
+              new Promise<null>((r) => setTimeout(() => r(null), 45_000)),
+            ]);
+            if (uploaded) {
+              immediateImageUrl = uploaded;
+            } else {
+              console.warn("[Schedule] Image upload returned null — trying data URL fallback");
               if (scheduleImageSrc.startsWith("data:")) {
                 const fallback = await Promise.race([
                   uploadDataUrlToStorage(scheduleImageSrc, `post-images/${Date.now()}-fb.png`),
@@ -677,14 +699,10 @@ export default function PostPreviewPage() {
                 ]);
                 immediateImageUrl = fallback || undefined;
               }
-            } else {
-              immediateImageUrl = uploaded;
             }
           } catch (uploadErr) {
-            console.warn("[Schedule] Image upload error — scheduling without image:", uploadErr);
+            console.warn("[Schedule] Image upload error:", uploadErr);
           }
-        } else {
-          immediateImageUrl = scheduleImageSrc;
         }
       }
       console.log("[Schedule] Final immediateImageUrl:", immediateImageUrl?.slice(0, 100));
