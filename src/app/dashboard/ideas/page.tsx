@@ -37,6 +37,7 @@ export default function IdeaBankPage() {
   const [filter, setFilter] = useState<"all" | "active" | "ai_suggested" | "manual" | "used">("active");
   const [addTitle, setAddTitle] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const fetchIdeas = useCallback(async () => {
     if (!user) return;
@@ -116,7 +117,8 @@ export default function IdeaBankPage() {
         body: JSON.stringify({ id: idea.id, status: "used" }),
       });
     }
-    const params = new URLSearchParams({ idea: idea.id || "", title: idea.title });
+    const fullTopic = idea.description ? `${idea.title}\n${idea.description}` : idea.title;
+    const params = new URLSearchParams({ idea: idea.id || "", title: fullTopic });
     if (idea.suggestedTone) params.set("tone", idea.suggestedTone);
     if (idea.suggestedAudience) params.set("audience", idea.suggestedAudience);
     router.push(`/dashboard/create?${params.toString()}`);
@@ -254,7 +256,24 @@ export default function IdeaBankPage() {
               </div>
 
               {idea.description && (
-                <p className="text-xs text-[var(--text-sub)] mt-1.5 line-clamp-2">{idea.description}</p>
+                <div className="mt-1.5">
+                  <p className={`text-xs text-[var(--text-sub)] ${idea.id && expandedIds.has(idea.id) ? "" : "line-clamp-2"}`}>{idea.description}</p>
+                  {idea.description.length > 100 && (
+                    <button
+                      onClick={() => {
+                        if (!idea.id) return;
+                        setExpandedIds((prev) => {
+                          const next = new Set(prev);
+                          next.has(idea.id!) ? next.delete(idea.id!) : next.add(idea.id!);
+                          return next;
+                        });
+                      }}
+                      className="text-[10px] text-[var(--primary)] hover:underline mt-0.5"
+                    >
+                      {idea.id && expandedIds.has(idea.id) ? "Show less" : "View more"}
+                    </button>
+                  )}
+                </div>
               )}
 
               <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
