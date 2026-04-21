@@ -668,11 +668,38 @@ export default function PostPreviewPage() {
     setIsScheduling(true);
     setScheduleStatus("idle");
     try {
-      // Determine if image is already a remote URL (no upload needed)
-      const hasRemoteImage = finalImageUrl?.startsWith("http");
-      const needsUpload = finalImageUrl && !hasRemoteImage;
+      // Upload local/data: images to Firebase Storage BEFORE saving the post
+      // This ensures image_url is a real HTTPS URL when the cron job publishes
+      let scheduleImageUrl: string | null = finalImageUrl || null;
+      if (scheduleImageUrl && !scheduleImageUrl.startsWith("http")) {
+        try {
+          // Composite hook text onto image if needed
+          let imgSrc = scheduleImageUrl;
+          if (imageHook) {
+            try {
+              imgSrc = await Promise.race([
+                compositeImageWithHook(scheduleImageUrl, imageHook),
+                new Promise<string>((r) => setTimeout(() => r(scheduleImageUrl!), 10_000)),
+              ]);
+            } catch { /* use original */ }
+          }
 
-      // Save post IMMEDIATELY — don't block on image upload
+          let blob: Blob;
+          if (imageMode === "upload" && uploadedFile && imgSrc === finalImageUrl) {
+            blob = uploadedFile;
+          } else {
+            blob = await fetch(imgSrc).then(r => r.blob());
+          }
+
+          const uploaded = await uploadImageToServer(blob);
+          if (uploaded) scheduleImageUrl = uploaded;
+          else scheduleImageUrl = null; // upload failed — don't save broken URL
+        } catch (err) {
+          console.warn("[Schedule] Image upload failed:", err);
+          scheduleImageUrl = null;
+        }
+      }
+
       const saved = await createPost({
         user_id: user!.uid,
         account_id: "personal-account",
@@ -686,7 +713,7 @@ export default function PostPreviewPage() {
         segment: postData.metadata.segment || "individual",
         organization_id: organizationId || undefined,
         research_data: postData.research,
-        image_url: hasRemoteImage ? finalImageUrl! : undefined,
+        image_url: scheduleImageUrl || undefined,
         image_hook: imageHook || undefined,
         scheduled_at: scheduledAt.toISOString(),
         schedule_timezone: timezone,
@@ -694,44 +721,11 @@ export default function PostPreviewPage() {
         created_at: null,
       });
 
-      // Show success immediately
+      // Show success
       setScheduleStatus("success");
       const label = scheduledAt.toLocaleString("en-US", { timeZone: timezone, day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
-      setScheduleMessage(`Scheduled for ${label} (${timezone})${needsUpload ? " · Uploading image…" : hasRemoteImage ? " · Image attached" : ""}`);
+      setScheduleMessage(`Scheduled for ${label} (${timezone})${scheduleImageUrl ? " · Image attached" : ""}`);
       setShowSchedulePicker(false);
-
-      // Upload image in BACKGROUND after schedule is confirmed
-      if (needsUpload && saved?.id) {
-        (async () => {
-          try {
-            // Composite hook text onto image if needed
-            let imgSrc = finalImageUrl!;
-            if (imageHook) {
-              try {
-                imgSrc = await Promise.race([
-                  compositeImageWithHook(finalImageUrl!, imageHook),
-                  new Promise<string>((r) => setTimeout(() => r(finalImageUrl!), 10_000)),
-                ]);
-              } catch { /* use original */ }
-            }
-
-            let blob: Blob;
-            if (imageMode === "upload" && uploadedFile && imgSrc === finalImageUrl) {
-              blob = uploadedFile;
-            } else {
-              blob = await fetch(imgSrc).then(r => r.blob());
-            }
-
-            const uploaded = await uploadImageToServer(blob);
-            if (uploaded) {
-              await updatePost(saved.id, { image_url: uploaded });
-              setScheduleMessage(`Scheduled for ${label} (${timezone}) · Image attached`);
-            }
-          } catch (err) {
-            console.warn("[Schedule] Background image upload failed:", err);
-          }
-        })();
-      }
 
       // Background AI image generation (no existing image)
       const isXShot = imageMode === "x_screenshot" || postData?.clientProfile?.imageStyle === "x_screenshot";
