@@ -94,19 +94,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function writeSession(uid: string) {
     if (!db) return;
     const sessionId = crypto.randomUUID();
+    // Write to localStorage first so the onSnapshot listener always sees a
+    // matching sessionId — even if it fires before the Firestore write resolves.
     localStorage.setItem("cridl_session_id", sessionId);
     await setDoc(doc(db, "sessions", uid), { sessionId, lastLogin: serverTimestamp() });
   }
 
   async function signIn(email: string, password: string) {
+    // Pre-mint and store the sessionId in localStorage BEFORE Firebase auth
+    // completes, so the onSnapshot single-session listener never sees a mismatch
+    // during the brief window between onAuthStateChanged and writeSession.
+    const sessionId = crypto.randomUUID();
+    localStorage.setItem("cridl_session_id", sessionId);
     const { user: u } = await signInWithEmailAndPassword(auth, email, password);
-    await writeSession(u.uid);
+    if (db) {
+      await setDoc(doc(db, "sessions", u.uid), { sessionId, lastLogin: serverTimestamp() });
+    }
   }
 
   async function signUp(email: string, password: string, displayName: string) {
+    const sessionId = crypto.randomUUID();
+    localStorage.setItem("cridl_session_id", sessionId);
     const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(newUser, { displayName });
-    await writeSession(newUser.uid);
+    if (db) {
+      await setDoc(doc(db, "sessions", newUser.uid), { sessionId, lastLogin: serverTimestamp() });
+    }
   }
 
   async function logOut() {
