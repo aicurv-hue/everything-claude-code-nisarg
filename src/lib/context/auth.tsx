@@ -107,8 +107,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const sessionId = crypto.randomUUID();
     localStorage.setItem("cridl_session_id", sessionId);
     const { user: u } = await signInWithEmailAndPassword(auth, email, password);
+    // Fire-and-forget: the onSnapshot listener enforces single-session; no need
+    // to block login on this Firestore write (cold client init can take seconds).
     if (db) {
-      await setDoc(doc(db, "sessions", u.uid), { sessionId, lastLogin: serverTimestamp() });
+      setDoc(doc(db, "sessions", u.uid), { sessionId, lastLogin: serverTimestamp() }).catch(
+        (e) => console.warn("session write failed", e)
+      );
     }
   }
 
@@ -118,7 +122,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(newUser, { displayName });
     if (db) {
-      await setDoc(doc(db, "sessions", newUser.uid), { sessionId, lastLogin: serverTimestamp() });
+      // Fire-and-forget (see signIn).
+      setDoc(doc(db, "sessions", newUser.uid), { sessionId, lastLogin: serverTimestamp() }).catch(
+        (e) => console.warn("session write failed", e)
+      );
     }
   }
 
