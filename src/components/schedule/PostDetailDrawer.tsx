@@ -263,7 +263,7 @@ export default function PostDetailDrawer({ post, onClose, onReschedule, onDelete
                 {editImageUrl ? (
                   <div className="relative rounded-xl overflow-hidden border border-[var(--border)]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={editImageUrl} alt="Post image" className="w-full max-h-48 object-cover" />
+                    <img src={editImageUrl} alt="Post image" className="w-full h-auto object-contain" />
                     <button
                       onClick={() => setEditImageUrl("")}
                       className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-all"
@@ -291,7 +291,7 @@ export default function PostDetailDrawer({ post, onClose, onReschedule, onDelete
               imageToShow ? (
                 <div className="rounded-xl overflow-hidden border border-[var(--border)]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imageToShow} alt="Post image" className="w-full max-h-48 object-cover" />
+                  <img src={imageToShow} alt="Post image" className="w-full h-auto object-contain" />
                   {post.image_hook && (
                     <div className="px-3 py-2 bg-[var(--card-hover)] border-t border-[var(--border-sub)]">
                       <p className="text-[10px] text-[var(--text-muted)] font-medium uppercase tracking-wide mb-0.5">Image Hook</p>
