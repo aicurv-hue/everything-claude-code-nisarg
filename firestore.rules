@@ -61,6 +61,11 @@ service cloud.firestore {
       allow read, write: if false; // Admin SDK bypasses; client must never know who is admin
     }
 
+    // ── Sessions (single-session enforcement) ─────────────────────────────────
+    match /sessions/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
     // ── Feedback ──────────────────────────────────────────────────────────────
     match /feedback/{docId} {
       allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;

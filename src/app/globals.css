@@ -39,6 +39,13 @@
   --nav-hover: rgba(255,255,255,0.04);
   --nav-active: rgba(255,255,255,0.08);
   --info-bg: #12141a;
+  --skeleton-base: #1a1d25;
+  --skeleton-shine: #22252f;
+  --badge-blue-bg: #1e3a5f; --badge-blue-text: #60a5fa;
+  --badge-green-bg: #14301f; --badge-green-text: #34d399;
+  --badge-amber-bg: #2d2010; --badge-amber-text: #fbbf24;
+  --badge-red-bg: #2d1010; --badge-red-text: #f87171;
+  --badge-gray-bg: #1e2130; --badge-gray-text: #6b7280;
 }
 
 /* ── Light theme overrides ───────────────────────────────────────────── */
@@ -64,6 +71,13 @@
   --toggle-bg: #e4e6ef;
   --nav-hover: rgba(0,0,0,0.04);
   --nav-active: rgba(37,99,235,0.08);
+  --skeleton-base: #e4e6ef;
+  --skeleton-shine: #f0f2f7;
+  --badge-blue-bg: #dbeafe; --badge-blue-text: #1d4ed8;
+  --badge-green-bg: #d1fae5; --badge-green-text: #059669;
+  --badge-amber-bg: #fef3c7; --badge-amber-text: #b45309;
+  --badge-red-bg: #fee2e2; --badge-red-text: #dc2626;
+  --badge-gray-bg: #e5e7eb; --badge-gray-text: #4b5563;
 }
 
 body {
@@ -111,9 +125,9 @@ aside a, aside button {
 .skeleton {
   background: linear-gradient(
     90deg,
-    #1a1d25 25%,
-    #22252f 50%,
-    #1a1d25 75%
+    var(--skeleton-base) 25%,
+    var(--skeleton-shine) 50%,
+    var(--skeleton-base) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;

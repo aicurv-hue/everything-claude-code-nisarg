@@ -76,18 +76,12 @@ function timeAgo(ms: number): string {
 }
 
 function Badge({ label, color }: { label: string; color: string }) {
-  const colors: Record<string, { bg: string; text: string }> = {
-    blue:   { bg: '#1e3a5f', text: '#60a5fa' },
-    green:  { bg: '#14301f', text: '#34d399' },
-    amber:  { bg: '#2d2010', text: '#fbbf24' },
-    red:    { bg: '#2d1010', text: '#f87171' },
-    gray:   { bg: '#1e2130', text: '#6b7280' },
-  };
-  const c = colors[color] || colors.gray;
+  const validColors = ['blue', 'green', 'amber', 'red', 'gray'];
+  const c = validColors.includes(color) ? color : 'gray';
   return (
     <span
       className="text-[11px] font-semibold px-2 py-[3px] rounded-full tracking-[0.02em] whitespace-nowrap"
-      style={{ background: c.bg, color: c.text }}
+      style={{ background: `var(--badge-${c}-bg)`, color: `var(--badge-${c}-text)` }}
     >
       {label}
     </span>
