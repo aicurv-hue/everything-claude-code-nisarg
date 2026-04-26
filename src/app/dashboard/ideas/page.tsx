@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Lightbulb, Sparkles, Trash2, PenSquare, Archive } from "lucide-react";
+import { Lightbulb, Sparkles, Trash2, PenSquare, Archive, Wand2, MessageSquareText, X } from "lucide-react";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
@@ -38,6 +38,9 @@ export default function IdeaBankPage() {
   const [addTitle, setAddTitle] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiMode, setAIMode] = useState<"auto" | "guided" | null>(null);
+  const [guidedPrompt, setGuidedPrompt] = useState("");
 
   const fetchIdeas = useCallback(async () => {
     if (!user) return;
@@ -60,21 +63,24 @@ export default function IdeaBankPage() {
 
   useEffect(() => { fetchIdeas(); }, [fetchIdeas]);
 
-  async function handleGenerate() {
+  async function handleGenerate(userPrompt?: string) {
     setGenerating(true);
     setError(null);
+    setShowAIModal(false);
     try {
       const token = await getAuthToken();
       if (!token) throw new Error("Not authenticated");
       const res = await fetch("/api/ideas/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ segment, count: 10 }),
+        body: JSON.stringify({ segment, count: 10, userPrompt: userPrompt?.trim() || undefined }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         throw new Error((d as any).error || `HTTP ${res.status}`);
       }
+      setAIMode(null);
+      setGuidedPrompt("");
       await fetchIdeas();
     } catch (err: any) {
       console.error("[ideas] generate failed", err);
@@ -82,6 +88,19 @@ export default function IdeaBankPage() {
     } finally {
       setGenerating(false);
     }
+  }
+
+  function openAIModal() {
+    setAIMode(null);
+    setGuidedPrompt("");
+    setShowAIModal(true);
+  }
+
+  function closeAIModal() {
+    if (generating) return;
+    setShowAIModal(false);
+    setAIMode(null);
+    setGuidedPrompt("");
   }
 
   async function handleAdd() {
@@ -171,7 +190,7 @@ export default function IdeaBankPage() {
             + Add Idea
           </button>
           <button
-            onClick={handleGenerate}
+            onClick={openAIModal}
             disabled={generating}
             className="px-3 py-2 text-[13px] font-semibold bg-[var(--primary)] text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5 transition-colors"
           >
@@ -180,6 +199,111 @@ export default function IdeaBankPage() {
           </button>
         </div>
       </div>
+
+      {/* AI Suggestions choice modal */}
+      {showAIModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+          onClick={closeAIModal}
+        >
+          <div
+            className="w-full max-w-lg bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between p-5 border-b border-[var(--border)]">
+              <div>
+                <h2 className="text-base font-bold text-[var(--foreground)] flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[var(--primary)]" />
+                  Generate AI Ideas
+                </h2>
+                <p className="text-xs text-[var(--text-sub)] mt-1">
+                  Pick how you'd like Cortex to brainstorm. You'll get 10 fresh ideas either way.
+                </p>
+              </div>
+              <button
+                onClick={closeAIModal}
+                disabled={generating}
+                className="p-1 text-[var(--text-muted)] hover:text-[var(--foreground)] disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {aiMode === null && (
+              <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  onClick={() => handleGenerate()}
+                  disabled={generating}
+                  className="text-left p-4 rounded-xl border border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)] hover:bg-[var(--card-hover)] transition-colors disabled:opacity-50 group"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-violet-500/15 text-violet-400 flex items-center justify-center mb-3">
+                    <Wand2 className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-[var(--foreground)] mb-1">Auto-Pilot</h3>
+                  <p className="text-xs text-[var(--text-sub)] leading-relaxed">
+                    Let Cortex generate ideas using your saved profile — niche, ICP, pillars, and tone. Fastest path; best for variety.
+                  </p>
+                </button>
+
+                <button
+                  onClick={() => setAIMode("guided")}
+                  disabled={generating}
+                  className="text-left p-4 rounded-xl border border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)] hover:bg-[var(--card-hover)] transition-colors disabled:opacity-50"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center mb-3">
+                    <MessageSquareText className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-[var(--foreground)] mb-1">Guided</h3>
+                  <p className="text-xs text-[var(--text-sub)] leading-relaxed">
+                    You give a topic, theme, or angle. Cortex builds 10 ideas around your direction while staying on-brand.
+                  </p>
+                </button>
+              </div>
+            )}
+
+            {aiMode === "guided" && (
+              <div className="p-5">
+                <label className="text-xs font-medium text-[var(--foreground)] block mb-2">
+                  What should the ideas be about?
+                </label>
+                <textarea
+                  value={guidedPrompt}
+                  onChange={(e) => setGuidedPrompt(e.target.value)}
+                  maxLength={500}
+                  rows={4}
+                  placeholder="e.g. Lessons from launching our SaaS to 1k users — focus on pricing mistakes, onboarding, and early retention wins."
+                  className="w-full px-3 py-2 text-sm bg-[var(--input)] border border-[var(--input-border)] rounded-lg text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 resize-none"
+                  autoFocus
+                />
+                <div className="flex justify-between items-center mt-1">
+                  <p className="text-[11px] text-[var(--text-muted)]">
+                    Tip: a clear angle gives sharper ideas than a single keyword.
+                  </p>
+                  <span className="text-[11px] text-[var(--text-muted)]">{guidedPrompt.length}/500</span>
+                </div>
+
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={() => setAIMode(null)}
+                    disabled={generating}
+                    className="px-3 py-2 text-xs font-medium border border-[var(--border)] rounded-lg text-[var(--text-sub)] hover:bg-[var(--card-hover)] disabled:opacity-50"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() => handleGenerate(guidedPrompt)}
+                    disabled={generating || guidedPrompt.trim().length < 5}
+                    className="flex-1 px-3 py-2 text-xs font-semibold bg-[var(--primary)] text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    {generating ? "Generating..." : "Generate 10 ideas"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Error banner */}
       {error && (

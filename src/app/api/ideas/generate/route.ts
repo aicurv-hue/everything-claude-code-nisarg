@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 
-  const { segment = "individual", count = 10 } = await req.json();
+  const { segment = "individual", count = 10, userPrompt } = await req.json();
 
   // Fetch profile
   const profileDoc = await adminDb.collection("profiles").doc(uid).get();
@@ -40,7 +40,8 @@ export async function POST(req: NextRequest) {
     .map((d) => d.topic)
     .filter(Boolean);
 
-  const ideas = await generateIdeas(profile, recentTopics, segment, Math.min(count, 20));
+  const trimmedPrompt = typeof userPrompt === "string" ? userPrompt.slice(0, 500) : undefined;
+  const ideas = await generateIdeas(profile, recentTopics, segment, Math.min(count, 20), trimmedPrompt);
 
   if (!ideas.length) {
     return NextResponse.json({ ideas: [], count: 0 });

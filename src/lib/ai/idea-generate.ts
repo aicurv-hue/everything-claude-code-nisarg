@@ -5,7 +5,8 @@ export async function generateIdeas(
   profile: ProfileSegment,
   recentTopics: string[],
   segment: "individual" | "corporate",
-  count: number = 10
+  count: number = 10,
+  userPrompt?: string
 ): Promise<Array<{ title: string; description: string; pillar?: string; suggestedTone?: string; suggestedAudience?: string }>> {
   const pillars = (profile.pillars || "").split(",").map((s) => s.trim()).filter(Boolean);
   const niche = profile.niche || profile.roleOrIndustry || "";
@@ -23,6 +24,10 @@ Return ONLY a valid JSON array of objects with these fields:
 Content pillars: ${pillars.length ? pillars.join(", ") : "not specified"}
 Generate exactly ${count} ideas. Each must be unique and specific — no generic advice.`;
 
+  const guidance = userPrompt?.trim()
+    ? `\n\nUser direction (HIGHEST PRIORITY — every idea must clearly relate to this):\n"""${userPrompt.trim()}"""\nAll ${count} ideas must explore different angles of this direction while still fitting the profile above.`
+    : "";
+
   const user = `Profile:
 - Niche: ${niche}
 - ICP: ${icp}
@@ -30,7 +35,7 @@ Generate exactly ${count} ideas. Each must be unique and specific — no generic
 - Segment: ${segment}
 
 Already covered (DO NOT repeat these angles):
-${recentTopics.slice(0, 20).map((t) => `- ${t}`).join("\n") || "- (none yet)"}
+${recentTopics.slice(0, 20).map((t) => `- ${t}`).join("\n") || "- (none yet)"}${guidance}
 
 Generate ${count} fresh, specific LinkedIn post ideas.`;
 
