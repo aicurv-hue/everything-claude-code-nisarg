@@ -43,9 +43,9 @@ const IMAGE_STYLE_PREFIXES: Record<string, string> = {
 
 // Maps length label to explicit word-count range and paragraph guidance
 const LENGTH_SPEC: Record<string, { words: string; paragraphs: string }> = {
-  short:  { words: "120–180 words",  paragraphs: "4–6 short paragraphs" },
-  medium: { words: "200–300 words", paragraphs: "6–9 short paragraphs" },
-  long:   { words: "350–450 words", paragraphs: "9–14 short paragraphs" },
+  short:  { words: "exactly 95–105 words (target 100)",  paragraphs: "3–5 short paragraphs" },
+  medium: { words: "exactly 190–210 words (target 200)", paragraphs: "6–8 short paragraphs" },
+  long:   { words: "exactly 380–420 words (target 400)", paragraphs: "10–14 short paragraphs" },
 };
 
 // ─── Prompt section accessor ───────────────────────────────────────────────────
@@ -217,7 +217,7 @@ function sanitizePost(raw: string): string {
 /**
  * Stage 3: Generate a single, publish-ready LinkedIn post.
  *
- * All prompt content is loaded from Master_Cortex_Prompt.md.
+ * All prompt content is loaded from NEEL_RUNTIME.md (synced into neel-prompt-sections.ts).
  * Skills applied:
  *   - ECC: content-engine (platform-native LinkedIn format, hooks, one-idea rule)
  *   - marketing-skills-all: social-content (LinkedIn-specific structure, CTA, tone mapping)
@@ -256,7 +256,7 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
       ].filter(Boolean).join("\n")
     : "No brand profile — write in a clear, credible professional voice.";
 
-  // ── Assemble system prompt from Master_Cortex_Prompt.md sections ────────────
+  // ── Assemble system prompt from NEEL_RUNTIME.md sections ────────────
   const hookKey = `HOOK_${tone.toUpperCase()}` as const;
   const segmentKey = segment === "individual" ? "SEGMENT_INDIVIDUAL" : "SEGMENT_CORPORATE";
 
@@ -375,6 +375,8 @@ ${research.summary}
 
 ${insightLabel}
 ${insightLines}
+
+HARD CONSTRAINT — word count: The post MUST be ${lengthSpec.words}. Count your words before finishing. If outside the range, rewrite tighter or expand until you hit the target. This is non-negotiable — the user explicitly selected this length.
 
 Start directly with the hook line. Output nothing else.`;
 
