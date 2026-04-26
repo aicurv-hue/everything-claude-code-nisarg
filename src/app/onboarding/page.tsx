@@ -2,248 +2,278 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  CheckCircle, Linkedin, User, Sparkles, CalendarDays,
-  ArrowRight, ArrowLeft, Settings, BookOpen
-} from "lucide-react";
+import { Sparkles, ArrowRight, Wand2, ShieldCheck, ExternalLink } from "lucide-react";
 import { useAuth } from "@/lib/context/auth";
+import { getAuthToken } from "@/lib/utils/getAuthToken";
 
-const STEPS = [
-  {
-    badge: "Step 1 of 5",
-    icon: <Linkedin className="w-6 h-6 text-[#0A66C2]" />,
-    title: "Connect LinkedIn",
-    body: (
-      <div className="space-y-3 text-sm text-slate-600">
-        <p>This is the <strong className="text-slate-800">first thing to do</strong> — LinkedIn connection lets the platform auto-publish and schedule posts on your behalf.</p>
-        <div className="space-y-2">
-          {[
-            "From Settings → LinkedIn tab, click Connect LinkedIn",
-            "You'll be redirected to LinkedIn's login page",
-            "Log in and click Allow to grant posting permission",
-            "You'll return with ✅ LinkedIn Connected",
-          ].map((s, i) => (
-            <div key={i} className="flex items-start gap-2.5">
-              <span className="w-5 h-5 rounded-full bg-[#0A66C2] text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
-              <p className="text-slate-700">{s}</p>
-            </div>
-          ))}
-        </div>
-        <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-xs text-green-700">
-          <strong>Token stays valid for 365 days</strong> — auto-renews silently. You won't need to reconnect unless you revoke access from LinkedIn.
-        </div>
-      </div>
-    ),
-  },
-  {
-    badge: "Step 2 of 5",
-    icon: <User className="w-6 h-6 text-[#0A66C2]" />,
-    title: "Set Up Your Profile",
-    body: (
-      <div className="space-y-3 text-sm text-slate-600">
-        <p>Go to <strong className="text-slate-800">Settings</strong> and fill in your profile. This is what the AI uses to write posts in <em>your voice</em>.</p>
-        <div className="space-y-2">
-          {[
-            { tab: "Identity", desc: "Your name, job title, industry — REQUIRED for AI to know who you are", required: true },
-            { tab: "Audience", desc: "Who you're writing for — helps the AI target the right tone" },
-            { tab: "Branding", desc: "Your values, positioning, key messages" },
-            { tab: "Voice", desc: "Writing style preferences — casual, formal, storytelling" },
-            { tab: "AI Config", desc: "Which AI model to use for generation" },
-          ].map(({ tab, desc, required }) => (
-            <div key={tab} className={`flex items-start gap-3 rounded-xl px-3 py-2 border ${required ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-200"}`}>
-              <span className={`text-xs font-bold w-20 shrink-0 mt-0.5 ${required ? "text-[#0A66C2]" : "text-slate-500"}`}>{tab}</span>
-              <div>
-                <span className="text-xs text-slate-600">{desc}</span>
-                {required && <span className="ml-1.5 text-[10px] bg-[#0A66C2] text-white px-1.5 py-0.5 rounded-full font-semibold">Required</span>}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    ),
-  },
-  {
-    badge: "Step 3 of 5",
-    icon: <Sparkles className="w-6 h-6 text-[#0A66C2]" />,
-    title: "Create Your First Post",
-    body: (
-      <div className="space-y-3 text-sm text-slate-600">
-        <p>The AI does the heavy lifting — you just review and approve.</p>
-        <div className="space-y-2">
-          {[
-            { step: "Click Create Post", detail: "In the left sidebar" },
-            { step: "Enter a topic + tone", detail: 'e.g. "My leadership lessons" + Professional' },
-            { step: "Hit Generate", detail: "AI researches → writes → shows preview" },
-            { step: "Edit if needed", detail: "Full editing in the preview — it's your post" },
-            { step: "Publish or Schedule", detail: "Publish now, or pick a date & time" },
-          ].map(({ step, detail }, i) => (
-            <div key={i} className="flex items-start gap-2.5">
-              <span className="w-5 h-5 rounded-full bg-[#0A66C2] text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
-              <div>
-                <p className="font-semibold text-slate-800">{step}</p>
-                <p className="text-slate-500 text-xs">{detail}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    ),
-  },
-  {
-    badge: "Step 4 of 5",
-    icon: <CalendarDays className="w-6 h-6 text-[#0A66C2]" />,
-    title: "Schedule & Automate",
-    body: (
-      <div className="space-y-3 text-sm text-slate-600">
-        <p>Plan weeks of content in advance — the platform publishes automatically at the right time.</p>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: "Single Post", desc: "Create → Preview → Schedule → pick date & time" },
-            { label: "Bulk Upload", desc: "Upload a CSV with up to 500 posts at once" },
-            { label: "Content Calendar", desc: "See all posts color-coded by status" },
-            { label: "AI Best Times", desc: "AI suggests best posting times based on your history" },
-          ].map(({ label, desc }) => (
-            <div key={label} className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-              <p className="font-semibold text-slate-800 text-xs">{label}</p>
-              <p className="text-slate-500 text-xs mt-0.5">{desc}</p>
-            </div>
-          ))}
-        </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-[#0A66C2]">
-          Posts publish automatically at their scheduled time — no action needed from you.
-        </div>
-      </div>
-    ),
-  },
-  {
-    badge: "Step 5 of 5",
-    icon: <CheckCircle className="w-6 h-6 text-green-600" />,
-    title: "You're Ready!",
-    body: (
-      <div className="space-y-4 text-sm text-slate-600">
-        <p>You now know everything to get started. Here's your quick checklist before your first post:</p>
-        <div className="space-y-2">
-          {[
-            "Connect LinkedIn in Settings",
-            "Fill in your name and identity in Settings → Identity",
-            "Pick a topic and generate your first post",
-            "Review, edit, and schedule it",
-          ].map((item, i) => (
-            <div key={i} className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
-              <div className="w-4 h-4 rounded border-2 border-slate-300 shrink-0" />
-              <span className="text-slate-700 text-xs">{item}</span>
-            </div>
-          ))}
-        </div>
-        <div className="bg-gradient-to-r from-[#0A66C2]/10 to-indigo-50 border border-[#0A66C2]/20 rounded-xl p-3 text-xs text-[#0A66C2]">
-          <strong>Click "Go to Settings"</strong> below to complete your profile setup — it takes 2 minutes.
-        </div>
-      </div>
-    ),
-  },
+type ExtractedProfile = {
+  name?: string;
+  roleOrIndustry?: string;
+  niche?: string;
+  bioOrOffering?: string;
+  icp?: string;
+  pillars?: string;
+  personality?: string;
+  usp?: string;
+  verbatimLanguage?: string;
+};
+
+const FIELD_LABELS: Record<keyof ExtractedProfile, string> = {
+  name: "Your name",
+  roleOrIndustry: "Role / Industry",
+  niche: "Niche",
+  bioOrOffering: "What you do",
+  icp: "Ideal audience",
+  pillars: "Content pillars",
+  personality: "Voice & tone",
+  usp: "Unique angle",
+  verbatimLanguage: "Phrases you use",
+};
+
+const FIELD_ORDER: (keyof ExtractedProfile)[] = [
+  "name", "roleOrIndustry", "niche", "bioOrOffering", "icp", "pillars", "personality", "usp", "verbatimLanguage",
 ];
+
+const MULTILINE_FIELDS: Set<keyof ExtractedProfile> = new Set(["bioOrOffering", "icp", "usp"]);
 
 export default function OnboardingPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  const [stage, setStage] = useState<"paste" | "review">("paste");
+  const [pasted, setPasted] = useState("");
+  const [extracting, setExtracting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<ExtractedProfile>({});
 
-  // If not logged in, send to login
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
   }, [user, loading, router]);
 
-  const isLast = step === STEPS.length - 1;
-  const current = STEPS[step];
-
-  const handleDone = () => {
-    // Mark onboarding as seen
+  function markSeenAndGo(target: string) {
     if (user) localStorage.setItem(`cridl_guide_seen_${user.uid}`, "1");
-    router.replace("/dashboard/settings");
-  };
+    router.replace(target);
+  }
+
+  async function handleExtract() {
+    if (pasted.trim().length < 30) {
+      setError("Paste at least your headline and a couple of lines from About.");
+      return;
+    }
+    setExtracting(true);
+    setError(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error("Not authenticated");
+      const res = await fetch("/api/onboarding/extract-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ text: pasted }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      const extracted: ExtractedProfile = data.profile || {};
+      if (!Object.keys(extracted).length) {
+        setError("Couldn't extract enough detail. Try pasting more of your About section, or skip and fill it in Settings.");
+        return;
+      }
+      setProfile(extracted);
+      setStage("review");
+    } catch (err: any) {
+      console.error("[onboarding] extract failed", err);
+      setError(err.message || "Extraction failed. Try again or skip.");
+    } finally {
+      setExtracting(false);
+    }
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error("Not authenticated");
+      const cleaned: Record<string, string> = {};
+      for (const k of FIELD_ORDER) {
+        const v = profile[k]?.trim();
+        if (v) cleaned[k] = v;
+      }
+      const res = await fetch("/api/profiles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          profile: { individual: cleaned, lastActiveSegment: "individual" },
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || `Save failed: HTTP ${res.status}`);
+      }
+      markSeenAndGo("/dashboard");
+    } catch (err: any) {
+      console.error("[onboarding] save failed", err);
+      setError(err.message || "Save failed. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (loading || !user) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#0A66C2] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-
+    <div className="min-h-screen bg-[var(--background)] flex flex-col items-center justify-center p-4 py-10">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 mb-8">
+      <div className="flex items-center gap-2.5 mb-6">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0A66C2] to-[#0854a0] flex items-center justify-center">
-          <span className="text-white font-bold text-sm">L</span>
+          <span className="text-white font-bold text-sm">C</span>
         </div>
-        <span className="text-slate-900 font-bold text-lg tracking-tight">Cridl</span>
+        <span className="text-[var(--foreground)] font-bold text-lg tracking-tight">Cridl</span>
       </div>
 
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
-
-        {/* Header */}
-        <div className="flex items-center gap-2.5 px-6 pt-5 pb-4 border-b border-slate-100">
-          <BookOpen className="w-5 h-5 text-[#0A66C2]" />
-          <span className="font-bold text-slate-900 text-sm">Getting Started — Welcome to Cridl</span>
+      <div className="w-full max-w-xl bg-[var(--card)] rounded-2xl shadow-xl border border-[var(--border)] overflow-hidden">
+        <div className="px-6 pt-5 pb-4 border-b border-[var(--border)]">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="w-4 h-4 text-[var(--primary)]" />
+            <span className="text-[10px] font-semibold text-[var(--primary)] uppercase tracking-wide">
+              {stage === "paste" ? "60-second setup" : "Review & save"}
+            </span>
+          </div>
+          <h1 className="text-lg font-bold text-[var(--foreground)]">
+            {stage === "paste" ? "Bring your LinkedIn into Cridl" : "Looks right? Tweak anything you want."}
+          </h1>
+          <p className="text-xs text-[var(--text-sub)] mt-1">
+            {stage === "paste"
+              ? "Paste your LinkedIn headline and About section. Cortex will turn it into a brand profile so the AI can write in your voice from post #1."
+              : "These fields drive your AI ghostwriter. Edit any of them — you can always change them later in Settings."}
+          </p>
         </div>
 
-        {/* Progress */}
-        <div className="flex gap-1 px-6 pt-4">
-          {STEPS.map((_, i) => (
-            <div
-              key={i}
-              className={`h-1 flex-1 rounded-full transition-all duration-300 ${i <= step ? "bg-[#0A66C2]" : "bg-slate-200"}`}
-            />
-          ))}
-        </div>
+        {error && (
+          <div className="mx-6 mt-4 px-3 py-2 rounded-lg bg-red-500/10 border border-red-800/40 text-red-400 text-xs">
+            {error}
+          </div>
+        )}
 
-        {/* Step content */}
-        <div className="px-6 py-5 min-h-[340px]">
-          <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
-              {current.icon}
+        {stage === "paste" ? (
+          <div className="p-6">
+            <div className="mb-4 p-3 rounded-lg bg-[var(--background)] border border-[var(--border)] text-xs text-[var(--text-sub)] space-y-2">
+              <div className="flex items-start gap-2">
+                <ExternalLink className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[var(--primary)]" />
+                <span>
+                  Open your LinkedIn profile → copy your <strong className="text-[var(--foreground)]">headline</strong> and{" "}
+                  <strong className="text-[var(--foreground)]">About</strong> section. Paste both below — the more context, the sharper the result.
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <ShieldCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-emerald-500" />
+                <span>You're pasting your own public content. Nothing is scraped — fully compliant with LinkedIn's terms.</span>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-semibold text-[#0A66C2] uppercase tracking-wide">{current.badge}</p>
-              <h2 className="text-base font-bold text-slate-900">{current.title}</h2>
+
+            <textarea
+              value={pasted}
+              onChange={(e) => setPasted(e.target.value)}
+              rows={10}
+              maxLength={8000}
+              placeholder={`e.g.\nHeadline: Founder @ Acme — helping B2B SaaS teams ship onboarding that actually converts.\n\nAbout: I've spent 8 years building activation loops for early-stage SaaS. Today I work with seed/Series A teams on...`}
+              className="w-full px-3 py-2.5 text-sm bg-[var(--input)] border border-[var(--input-border)] rounded-lg text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 resize-none"
+              autoFocus
+            />
+            <div className="flex justify-between mt-1">
+              <span className="text-[11px] text-[var(--text-muted)]">Tip: include your About — that's where your voice lives.</span>
+              <span className="text-[11px] text-[var(--text-muted)]">{pasted.length}/8000</span>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 mt-5">
+              <button
+                onClick={() => markSeenAndGo("/dashboard")}
+                disabled={extracting}
+                className="text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] disabled:opacity-50"
+              >
+                Skip — I'll fill it in later
+              </button>
+              <button
+                onClick={handleExtract}
+                disabled={extracting || pasted.trim().length < 30}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--primary)] hover:opacity-90 text-white text-sm font-semibold disabled:opacity-50 transition-colors"
+              >
+                <Wand2 className="w-4 h-4" />
+                {extracting ? "Analyzing..." : "Extract my profile"}
+              </button>
             </div>
           </div>
-          {current.body}
-        </div>
+        ) : (
+          <div className="p-6">
+            <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
+              {FIELD_ORDER.map((key) => {
+                const value = profile[key] ?? "";
+                const isMulti = MULTILINE_FIELDS.has(key);
+                return (
+                  <div key={key}>
+                    <label className="text-[11px] font-semibold text-[var(--text-sub)] uppercase tracking-wide block mb-1">
+                      {FIELD_LABELS[key]}
+                    </label>
+                    {isMulti ? (
+                      <textarea
+                        value={value}
+                        onChange={(e) => setProfile((p) => ({ ...p, [key]: e.target.value }))}
+                        rows={2}
+                        className="w-full px-3 py-2 text-sm bg-[var(--input)] border border-[var(--input-border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 resize-none"
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={value}
+                        onChange={(e) => setProfile((p) => ({ ...p, [key]: e.target.value }))}
+                        className="w-full px-3 py-2 text-sm bg-[var(--input)] border border-[var(--input-border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30"
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 pb-5 pt-3 border-t border-slate-100">
-          <button
-            onClick={() => setStep(s => s - 1)}
-            disabled={step === 0}
-            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back
-          </button>
-          <span className="text-xs text-slate-400">{step + 1} / {STEPS.length}</span>
-          {isLast ? (
-            <button
-              onClick={handleDone}
-              className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-[#0A66C2] hover:bg-[#0854a0] text-white text-sm font-semibold transition-all"
-            >
-              <Settings className="w-4 h-4" /> Go to Settings
-            </button>
-          ) : (
-            <button
-              onClick={() => setStep(s => s + 1)}
-              className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-[#0A66C2] hover:bg-[#0854a0] text-white text-sm font-semibold transition-all"
-            >
-              Next <ArrowRight className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+            <div className="flex items-center justify-between gap-2 mt-5 pt-4 border-t border-[var(--border)]">
+              <button
+                onClick={() => { setStage("paste"); setError(null); }}
+                disabled={saving}
+                className="text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] disabled:opacity-50"
+              >
+                Back
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => markSeenAndGo("/dashboard")}
+                  disabled={saving}
+                  className="px-3 py-2 text-xs font-medium border border-[var(--border)] rounded-lg text-[var(--text-sub)] hover:bg-[var(--card-hover)] disabled:opacity-50"
+                >
+                  Skip
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--primary)] hover:opacity-90 text-white text-sm font-semibold disabled:opacity-50 transition-colors"
+                >
+                  {saving ? "Saving..." : (
+                    <>
+                      Save & enter dashboard <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <p className="text-xs text-slate-400 mt-4">
-        You can re-read this guide anytime from the{" "}
-        <span className="text-slate-600 font-medium">sidebar → Guide</span>
+      <p className="text-xs text-[var(--text-muted)] mt-4">
+        You can connect LinkedIn and refine your profile anytime from Settings.
       </p>
     </div>
   );
