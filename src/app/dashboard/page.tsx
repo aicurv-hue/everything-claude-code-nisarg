@@ -6,7 +6,8 @@ import { useSearchParams } from "next/navigation";
 import {
   BarChart3, Send, CheckCircle, Clock, TrendingUp,
   FileText, RefreshCw, Linkedin, Zap, Image, AlertTriangle,
-  Wifi, WifiOff, Activity, User, Building2, Calendar, X, Plus
+  Wifi, WifiOff, Activity, User, Building2, Calendar, X, Plus,
+  Users, Palette, MessageSquare, ShieldCheck, Sparkles, ArrowRight
 } from "lucide-react";
 import { Post } from "@/lib/db/posts";
 import { UserProfile } from "@/lib/db/profiles";
@@ -93,6 +94,7 @@ export default function DashboardHomePage() {
   const { segment, isIndividual, isCorporate, segmentReady } = useSegment();
   const searchParams = useSearchParams();
   const [welcomeDismissed, setWelcomeDismissed] = useState(true);
+  const [completionDismissed, setCompletionDismissed] = useState(true);
   const welcomePlan = searchParams.get("plan") || "Pro";
 
   useEffect(() => {
@@ -104,6 +106,11 @@ export default function DashboardHomePage() {
   const dismissWelcome = () => {
     sessionStorage.setItem("cridl_welcome_dismissed", "1");
     setWelcomeDismissed(true);
+  };
+
+  const dismissCompletion = () => {
+    if (user) localStorage.setItem(`cridl_completion_dismissed_${user.uid}`, "1");
+    setCompletionDismissed(true);
   };
 
   const [stats, setStats]         = useState<DashboardStats | null>(null);
@@ -159,6 +166,12 @@ export default function DashboardHomePage() {
   }, [user, segment, segmentReady]);
 
   useEffect(() => { if (user && segmentReady) loadAll(); }, [user, segment, segmentReady, loadAll]);
+
+  useEffect(() => {
+    if (!user) return;
+    const dismissed = localStorage.getItem(`cridl_completion_dismissed_${user.uid}`) === "1";
+    setCompletionDismissed(dismissed);
+  }, [user]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -269,6 +282,89 @@ export default function DashboardHomePage() {
           </button>
         </div>
       )}
+
+      {/* Profile completion card */}
+      {(() => {
+        if (completionDismissed) return null;
+        const seg: any = isIndividual ? profile?.individual : profile?.corporate;
+        if (!seg) return null;
+        const has = (k: string) => typeof seg[k] === "string" && seg[k].trim().length > 0;
+        const sections = [
+          { id: "identity", label: "Identity", icon: User,         done: has("name") && has("roleOrIndustry") && has("bioOrOffering"), hint: "Who you are" },
+          { id: "audience", label: "Audience", icon: Users,        done: has("icp") && has("jtbd"),                                    hint: "Who you write for" },
+          { id: "branding", label: "Branding", icon: Palette,      done: has("pillars") && has("usp"),                                  hint: "Pillars & angle" },
+          { id: "voice",    label: "Voice",    icon: MessageSquare,done: has("personality") && has("verbatimLanguage"),               hint: "How you sound" },
+          { id: "ai",       label: "AI Config",icon: ShieldCheck,  done: true,                                                          hint: "Defaults set" },
+          { id: "image",    label: "Image",    icon: Image,         done: has("imageStyle"),                                            hint: "Visual style" },
+        ];
+        const doneCount = sections.filter(s => s.done).length;
+        const pct = Math.round((doneCount / sections.length) * 100);
+        if (pct >= 80) return null;
+        return (
+          <div className="card relative" style={{ padding: '20px 24px' }}>
+            <button
+              onClick={dismissCompletion}
+              className="absolute top-3 right-3 text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
+              title="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0"
+                style={{ background: 'linear-gradient(135deg, var(--primary)cc, var(--primary))' }}>
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1 pr-6">
+                <h3 className="text-[14px] font-semibold text-[var(--foreground)]">Finish setting up your {isIndividual ? "personal" : "company"} profile</h3>
+                <p className="text-[12px] text-[var(--text-muted)] mt-[3px] leading-relaxed">
+                  A complete profile = sharper posts. Cortex uses every field to write in your voice.
+                  Don't have time to fill these manually? <Link href="/dashboard/settings?tab=import" className="text-[var(--primary)] font-medium hover:underline">Paste your LinkedIn About</Link> and we'll auto-fill it.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-[6px] rounded-full" style={{ background: 'var(--progress-bg)' }}>
+                <div className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${pct}%`, background: 'var(--primary)' }} />
+              </div>
+              <span className="text-[12px] font-semibold text-[var(--foreground)] tabular-nums">{doneCount}/{sections.length} · {pct}%</span>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {sections.map(s => {
+                const Icon = s.icon;
+                return (
+                  <Link
+                    key={s.id}
+                    href={`/dashboard/settings?tab=${s.id}`}
+                    className="group flex items-center gap-2.5 px-3 py-2.5 rounded-lg border transition-all hover:bg-[var(--card-hover)]"
+                    style={{
+                      background: s.done ? 'var(--card-hover)' : 'var(--card)',
+                      borderColor: s.done ? 'var(--border-sub)' : 'var(--border)',
+                    }}
+                  >
+                    <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+                      style={{
+                        background: s.done ? 'rgba(16, 185, 129, 0.12)' : 'var(--toggle-bg)',
+                        color: s.done ? '#10b981' : 'var(--text-muted)',
+                      }}>
+                      {s.done ? <CheckCircle className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[12px] font-semibold text-[var(--foreground)] flex items-center gap-1">
+                        {s.label}
+                      </div>
+                      <div className="text-[11px] text-[var(--text-muted)] truncate">{s.hint}</div>
+                    </div>
+                    <ArrowRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors shrink-0" />
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Header */}
       <div className="flex justify-between items-start">

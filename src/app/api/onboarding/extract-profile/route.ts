@@ -33,18 +33,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 
-  const { text } = await req.json();
+  const { text, mode } = await req.json();
   const trimmed = typeof text === "string" ? text.trim().slice(0, 8000) : "";
   if (trimmed.length < 30) {
     return NextResponse.json({ error: "Please paste at least your headline and a few lines from your About section." }, { status: 400 });
   }
+  const isCorporate = mode === "corporate";
 
   async function callModel(model: string) {
     return openRouter.chat.completions.create({
       model,
       messages: [
         { role: "system", content: SYSTEM },
-        { role: "user", content: `Pasted LinkedIn content:\n"""\n${trimmed}\n"""\n\nExtract the profile JSON.` },
+        {
+          role: "user",
+          content: isCorporate
+            ? `Pasted LinkedIn COMPANY PAGE content (tagline + About us + specialties):\n"""\n${trimmed}\n"""\n\nExtract a COMPANY brand profile JSON. Treat "name" as the company name, "roleOrIndustry" as the company's industry, "bioOrOffering" as what the company does and for whom, "icp" as the company's target customer, "personality" as the company's brand voice. Use third-person company language ("we"/"the company"), not first-person individual.`
+            : `Pasted LinkedIn content:\n"""\n${trimmed}\n"""\n\nExtract the profile JSON.`,
+        },
       ],
       temperature: 0.4,
       max_tokens: 700,

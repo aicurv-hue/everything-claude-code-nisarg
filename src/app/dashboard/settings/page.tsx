@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
 import {
   AlertTriangle,
@@ -21,6 +22,9 @@ import {
   Upload,
   Sun,
   Moon,
+  Wand2,
+  ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import { UserProfile, ProfileSegment, ImageStyle } from "@/lib/db/profiles";
 import { useAuth } from "@/lib/context/auth";
@@ -62,7 +66,15 @@ const labelClass = "block text-xs font-semibold text-[var(--text-muted)] upperca
 export default function SettingsPage() {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [activeTab, setActiveTab]   = useState("identity");
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") || "identity";
+  const [activeTab, setActiveTab]   = useState(initialTab);
+
+  // LinkedIn paste-import state (per segment)
+  const [importPaste, setImportPaste] = useState("");
+  const [importExtracting, setImportExtracting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [profileType, setProfileType] = useState<"individual" | "corporate">("individual");
   const [segments, setSegments] = useState<{ individual: ProfileSegment; corporate: ProfileSegment }>({
     individual: { ...INITIAL_SEGMENT },
@@ -248,6 +260,46 @@ export default function SettingsPage() {
     setTimeout(() => setIsSaved(false), 3000);
   };
 
+  const handleImportExtract = async () => {
+    setImportError(null);
+    setImportSuccess(null);
+    if (importPaste.trim().length < 30) {
+      setImportError("Paste at least your headline and a few lines from About.");
+      return;
+    }
+    setImportExtracting(true);
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error("Not authenticated");
+      const res = await fetch("/api/onboarding/extract-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ text: importPaste, mode: profileType }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      const extracted: Record<string, string> = data.profile || {};
+      const keys = Object.keys(extracted);
+      if (!keys.length) {
+        setImportError("Couldn't extract enough detail. Try pasting more of your About section.");
+        return;
+      }
+      setSegments((prev) => ({
+        ...prev,
+        [profileType]: { ...prev[profileType], ...extracted },
+      }));
+      setHasChanges(true);
+      setImportSuccess(`Filled ${keys.length} field${keys.length === 1 ? "" : "s"}. Review them in the tabs below, then click Save Changes.`);
+      setImportPaste("");
+      setTimeout(() => setActiveTab("identity"), 600);
+    } catch (err: any) {
+      console.error("[settings] import extract failed", err);
+      setImportError(err.message || "Extraction failed. Try again.");
+    } finally {
+      setImportExtracting(false);
+    }
+  };
+
   const handleFieldChange = (field: keyof ProfileSegment, value: string) => {
     setSegments(prev => ({
       ...prev,
@@ -312,6 +364,7 @@ export default function SettingsPage() {
   const currentProfile = segments[profileType];
 
   const tabs = [
+    { id: "import",   label: "LinkedIn Import", icon: Linkedin },
     { id: "identity", label: "Identity",       icon: User },
     { id: "audience", label: "Audience",       icon: Users },
     { id: "branding", label: "Branding",       icon: Palette },
@@ -485,6 +538,84 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+
+        {/* Tab 0: LinkedIn Import */}
+        {activeTab === "import" && (
+          <div className="space-y-5">
+            <div className="p-3 bg-blue-500/10 border border-blue-100 rounded-lg text-[12px] text-blue-400 leading-relaxed">
+              <strong>Auto-fill your profile from LinkedIn.</strong>{" "}
+              {profileType === "individual"
+                ? "Paste your LinkedIn headline + About section. Cortex will extract your role, niche, ICP, voice, and pillars — populating Identity, Audience, Branding, and Voice tabs in seconds."
+                : "Paste your company's LinkedIn page tagline + About us + specialties. Cortex will extract your industry, offering, target customer, and brand voice — populating Identity, Audience, Branding, and Voice tabs."}
+            </div>
+
+            <div className="p-4 rounded-xl border border-[var(--border)] bg-[var(--card-hover)] space-y-2 text-xs text-[var(--text-muted)] leading-relaxed">
+              <div className="flex items-start gap-2">
+                <ExternalLink className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[var(--primary)]" />
+                <span>
+                  {profileType === "individual" ? (
+                    <>Open your LinkedIn profile → copy your <strong className="text-[var(--foreground)]">headline</strong> and <strong className="text-[var(--foreground)]">About</strong> section. The more context, the sharper Cortex's writing.</>
+                  ) : (
+                    <>Open your <strong className="text-[var(--foreground)]">LinkedIn Company Page</strong> → copy the <strong className="text-[var(--foreground)]">tagline</strong>, <strong className="text-[var(--foreground)]">About us</strong>, and <strong className="text-[var(--foreground)]">Specialties</strong>. Paste them all below.</>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <ShieldCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-emerald-500" />
+                <span>You're pasting your own public content. Nothing is scraped — fully compliant with LinkedIn's terms.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-500" />
+                <span>Existing fields will be overwritten by extracted values. Empty fields stay empty. You can edit everything before saving.</span>
+              </div>
+            </div>
+
+            {importError && (
+              <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-800/40 text-red-400 text-xs">
+                {importError}
+              </div>
+            )}
+            {importSuccess && (
+              <div className="px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-800/40 text-emerald-400 text-xs">
+                ✓ {importSuccess}
+              </div>
+            )}
+
+            <div>
+              <label className={labelClass}>
+                {profileType === "individual" ? "Paste headline + About" : "Paste tagline + About us + Specialties"}
+              </label>
+              <textarea
+                value={importPaste}
+                onChange={(e) => setImportPaste(e.target.value)}
+                rows={10}
+                maxLength={8000}
+                placeholder={profileType === "individual"
+                  ? `e.g.\nHeadline: Founder @ Acme — helping B2B SaaS teams ship onboarding that actually converts.\n\nAbout: I've spent 8 years building activation loops for early-stage SaaS. Today I work with seed/Series A teams on...`
+                  : `e.g.\nTagline: AI-powered onboarding for B2B SaaS.\n\nAbout us: Acme builds activation loops that turn free signups into paying customers. We work with seed to Series B SaaS teams...\n\nSpecialties: SaaS onboarding, activation, product-led growth, lifecycle marketing`}
+                className={`${textareaClass} font-mono text-[13px]`}
+                style={{ minHeight: 220 }}
+              />
+              <div className="flex justify-between mt-1">
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  Tip: include the full About — that's where your voice lives.
+                </span>
+                <span className="text-[11px] text-[var(--text-muted)]">{importPaste.length}/8000</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={handleImportExtract}
+                disabled={importExtracting || importPaste.trim().length < 30}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--primary)] hover:opacity-90 text-white text-sm font-semibold disabled:opacity-50 transition-colors"
+              >
+                <Wand2 className="w-4 h-4" />
+                {importExtracting ? "Analyzing..." : "Extract & fill profile"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Tab 1: Identity */}
         {activeTab === "identity" && (
