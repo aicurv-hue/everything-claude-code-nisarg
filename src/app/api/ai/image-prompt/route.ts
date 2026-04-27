@@ -21,6 +21,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ imagePrompt });
   } catch (err: any) {
     console.error("[api/ai/image-prompt] Error:", err?.message || err);
-    return NextResponse.json({ error: err?.message || "Image prompt generation failed" }, { status: 500 });
+    return NextResponse.json({ error: "Image prompt generation failed" }, { status: 500 });
   }
 }

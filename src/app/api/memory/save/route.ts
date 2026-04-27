@@ -57,6 +57,30 @@ export async function POST(req: NextRequest) {
     });
 
     console.log(`[memory/save] Memory saved for user ${firebaseUid}, topic: ${(topic || "").slice(0, 60)}`);
+
+    // Trigger Voice DNA rebuild every 10th memory (fire-and-forget)
+    const seg = segment || "individual";
+    adminDb.collection("post_memories")
+      .where("user_id", "==", firebaseUid)
+      .where("segment", "==", seg)
+      .count().get()
+      .then((countSnap) => {
+        const total = countSnap.data().count;
+        if (total >= 5 && total % 10 === 0) {
+          console.log(`[memory/save] Triggering Voice DNA build (${total} memories)`);
+          const origin = req.headers.get("origin") || req.nextUrl.origin;
+          fetch(`${origin}/api/memory/build-voice-dna`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: req.headers.get("authorization") || "",
+            },
+            body: JSON.stringify({ segment: seg }),
+          }).catch((e) => console.error("[memory/save] Voice DNA trigger failed:", e));
+        }
+      })
+      .catch(() => {});
+
     return NextResponse.json({ saved: true });
   } catch (err: any) {
     console.error("[memory/save] Failed:", err?.message || err);

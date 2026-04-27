@@ -212,14 +212,33 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [betaChecked, setBetaChecked] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/login");
+      return;
     }
+    if (!user?.email) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/beta/check?email=${encodeURIComponent(user.email!.toLowerCase().trim())}`);
+        const { approved } = await res.json();
+        if (cancelled) return;
+        if (!approved) {
+          router.replace("/waitlist");
+          return;
+        }
+        setBetaChecked(true);
+      } catch {
+        if (!cancelled) setBetaChecked(true);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [user, loading, router]);
 
-  if (loading) {
+  if (loading || (user && !betaChecked)) {
     return (
       <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />

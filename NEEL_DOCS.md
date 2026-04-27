@@ -1,10 +1,7 @@
-# NEEL — Complete Pipeline Documentation
+# NEEL_DOCS — Cortex Pipeline, SOPs, History
 
-> **NOTE:** Filename is `NEEL.md` (legacy name from April 2026 rebrand). Content documents Cortex pipeline. See [rebrand_neel_cortex.md](./memory/rebrand_neel_cortex.md) for details.
-
-> Cortex is the AI author powering Cridl. This document covers every input layer that reaches Cortex, how each one influences the output, where it is set, and what happens when it is missing.
->
-> **Purpose:** Single source of truth for building user SOPs, internal onboarding, and future feature design. Keep this updated whenever `generate.ts`, `research.ts`, memory, profiles, settings, or the create/preview pages change.
+> Pipeline, SOPs, file map, bug history, deployment.
+> Prompt text → `NEEL_RUNTIME.md`. Update this when `generate.ts`, `research.ts`, memory, profiles, or settings change.
 
 ---
 
@@ -626,7 +623,7 @@ Likes and comments are synced hourly via the cron worker's engagement sync block
 
 | File | Role |
 |---|---|
-| `Master_Cortex_Prompt.md` | **Human-editable source of truth** for all Cortex prompt text — edit here, then sync to `neel-prompt-sections.ts` |
+| `NEEL_RUNTIME.md` | Source of truth for Cortex prompt text — edit here, then sync to `neel-prompt-sections.ts` |
 | `src/lib/ai/neel-prompt-sections.ts` | **Inlined TS constants** for every prompt section — Edge Runtime compatible |
 | `src/app/dashboard/create/page.tsx` | Collects Layers A, E — triggers full pipeline; shows active image style in AI Context sidebar |
 | `src/app/dashboard/create/preview/page.tsx` | Editable post preview — image picker, image overlay + hook editor, schedule button, Regenerate Post/Image |
@@ -658,7 +655,7 @@ Likes and comments are synced hourly via the cron worker's engagement sync block
 
 `generate.ts` imports `NEEL_SECTIONS` from `neel-prompt-sections.ts` — a TypeScript constant containing all prompt sections. Dynamic values use `{{PLACEHOLDER}}` syntax substituted at call time.
 
-`Master_Cortex_Prompt.md` is the human-readable copy. When you edit it, **manually sync the changed section** into `neel-prompt-sections.ts` to apply in production.
+`NEEL_RUNTIME.md` is the human-readable copy. When you edit it, **manually sync the changed section** into `neel-prompt-sections.ts` to apply in production.
 
 | Section | Controls |
 |---|---|
@@ -734,7 +731,7 @@ Go to **Settings → Image Style tab**:
 ## SOP — Internal Team Reference
 
 ### Changing Cortex's Writing Behaviour
-1. Edit the relevant section in `Master_Cortex_Prompt.md`
+1. Edit the relevant section in `NEEL_RUNTIME.md`
 2. Copy the changed section into the matching key in `src/lib/ai/neel-prompt-sections.ts`
 3. Test locally — `npm run dev`, generate a post, check output
 4. Push via `bash push-all.sh`
@@ -782,7 +779,7 @@ Go to **Settings → Image Style tab**:
 - `⛔ INTENT OVERRIDE` injected for personal topics — blocks brand/product content from personal story posts
 - `INTENT_DETECTION` section added to `neel-prompt-sections.ts` — injected as Step 0 in Cortex's system prompt
 - `intentType` flows through: `research.ts` → `ResearchResult` → `create/page.tsx` → generate API → `preview/page.tsx` regeneration
-- **Image Diversity:** `neel-prompt-sections.ts` IMAGE_PROMPT_SYSTEM synced from `Master_Cortex_Prompt.md`
+- **Image Diversity:** `neel-prompt-sections.ts` IMAGE_PROMPT_SYSTEM synced from `NEEL_RUNTIME.md`
 - Old reference prompts ("woman at monitors", "man with wall of glowing screens") replaced with 4 diverse examples
 - Added "OVERUSED DEFAULTS" ban to BANNED IMAGERY section
 - Added VISUAL DIVERSITY section: 3 visual approaches mapped to personal/business/contrarian post types
@@ -794,7 +791,7 @@ Go to **Settings → Image Style tab**:
 - **TEXT ZONE RULE** updated for square 1:1: top-left quadrant (top 45%, left 50%) reserved for hook text, subject always center-right or lower-right
 - Hook text width constrained to 44% of image to prevent subject overlap
 - Diagonal gradient (top-left dark → transparent) replaces bottom-bar gradient
-- `Master_Cortex_Prompt.md` updated to v1.3 with all square format rules
+- `NEEL_RUNTIME.md` updated to v1.3 with all square format rules
 - `neel-prompt-sections.ts` updated with square TEXT ZONE RULE and FIXED FRAME RULES
 
 *Last audited: 2026-03-28 | Pipeline version: 4.3.1 (Mobile-First Square Images + Codex Hook Typography)*

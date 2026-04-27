@@ -48,7 +48,13 @@ function SignupForm() {
         router.replace(redirectTo);
         return;
       }
-      router.replace("/dashboard");
+      try {
+        const res = await fetch(`/api/beta/check?email=${encodeURIComponent(email.toLowerCase().trim())}`);
+        const { approved } = await res.json();
+        router.replace(approved ? "/dashboard" : "/waitlist");
+      } catch {
+        router.replace("/waitlist");
+      }
     } catch (err: any) {
       setError(friendlyError(err.code));
     } finally {

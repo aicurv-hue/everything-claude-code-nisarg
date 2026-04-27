@@ -12,10 +12,13 @@ import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: NextRequest) {
-  // Internal-only endpoint — if INTERNAL_API_SECRET is configured, validate it
-  // If not configured (e.g. not yet set in Vercel), allow through so OAuth still works
+  // Internal-only endpoint — INTERNAL_API_SECRET is REQUIRED
   const internalSecret = process.env.INTERNAL_API_SECRET;
-  if (internalSecret && req.headers.get("x-internal-secret") !== internalSecret) {
+  if (!internalSecret) {
+    console.error("[tokens/save] INTERNAL_API_SECRET not configured — rejecting request");
+    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+  }
+  if (req.headers.get("x-internal-secret") !== internalSecret) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -59,6 +62,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ saved: true });
   } catch (err: any) {
     console.error("[tokens/save] Failed:", err?.message || err);
-    return NextResponse.json({ error: err?.message }, { status: 500 });
+    return NextResponse.json({ error: "Token save failed" }, { status: 500 });
   }
 }

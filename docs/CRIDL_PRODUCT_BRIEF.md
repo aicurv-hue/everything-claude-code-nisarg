@@ -136,7 +136,7 @@ Memory Retrieval (pure JavaScript, zero API cost)
   → Top 5 injected as context for Cortex
          ↓
 Post Generation (Cortex via OpenRouter)
-  → System prompt = Master_Cortex_Prompt + brand profile + memory + writing samples
+  → System prompt = NEEL_RUNTIME + brand profile + memory + writing samples
   → Output: post text + image prompt
          ↓
 Image Generation (fal.ai)
@@ -183,7 +183,7 @@ Cortex is Cridl's AI persona — not a generic AI tool, but a named ghostwriter 
 **Who Cortex is:**
 - "LinkedIn's sharpest ghostwriter and sole author of every post"
 - A blend of conversion copywriter + viral content strategist
-- Governed by a single source-of-truth prompt file (`Master_Cortex_Prompt.md`)
+- Governed by a single source-of-truth prompt file (`NEEL_RUNTIME.md`)
 
 **What makes Cortex different from ChatGPT for LinkedIn:**
 - Reads your full brand profile before writing — not just the topic

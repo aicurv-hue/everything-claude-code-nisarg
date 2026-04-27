@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ posts });
   } catch (err: any) {
     console.error("[/api/posts GET]", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -99,20 +99,31 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Allowlist — only these fields can be set by clients on create
+    const POST_ALLOWED = new Set(["content", "topic", "tone", "audience", "length", "custom_instructions",
+      "image_url", "image_mode", "image_hook", "image_prompt", "scheduled_at", "schedule_timezone",
+      "best_time_applied", "status", "segment", "organization_id", "campaign_id", "research"]);
+    const sanitizedPost: Record<string, any> = {};
+    if (post) {
+      for (const [k, v] of Object.entries(post)) {
+        if (POST_ALLOWED.has(k)) sanitizedPost[k] = v;
+      }
+    }
+
     const postData = {
-      ...post,
+      ...sanitizedPost,
       user_id: uid,
       created_at: FieldValue.serverTimestamp(),
       // Convert scheduled_at ISO string to Firestore Timestamp so cron can compare correctly
-      ...(post.scheduled_at ? { scheduled_at: toFirestoreTimestamp(post.scheduled_at) } : {}),
-      ...(post.published_at ? { published_at: toFirestoreTimestamp(post.published_at) } : {}),
+      ...(sanitizedPost.scheduled_at ? { scheduled_at: toFirestoreTimestamp(sanitizedPost.scheduled_at) } : {}),
+      ...(sanitizedPost.published_at ? { published_at: toFirestoreTimestamp(sanitizedPost.published_at) } : {}),
     };
 
     const ref = await adminDb.collection("posts").add(postData);
     return NextResponse.json({ id: ref.id, ...post, user_id: uid });
   } catch (err: any) {
     console.error("[/api/posts POST]", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -145,7 +156,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error("[/api/posts PATCH]", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -177,6 +188,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error("[/api/posts DELETE]", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

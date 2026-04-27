@@ -177,6 +177,6 @@ Return ONLY valid JSON:
     return NextResponse.json(result);
   } catch (err: any) {
     console.error("[api/ai/research] Error:", err?.message || err);
-    return NextResponse.json({ error: err?.message || "Research failed" }, { status: 500 });
+    return NextResponse.json({ error: "Research failed" }, { status: 500 });
   }
 }

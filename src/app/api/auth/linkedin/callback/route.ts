@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
   // (Node.js runtime + Admin SDK). MUST be awaited — Edge terminates on response,
   // so fire-and-forget gets killed before the Firestore write completes.
   if (firebaseUid) {
-    const appUrl = (request.headers.get("origin") || request.url.split("/api/")[0]);
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.url.split("/api/")[0];
     try {
       const saveRes = await fetch(`${appUrl}/api/tokens/save`, {
         method: "POST",
