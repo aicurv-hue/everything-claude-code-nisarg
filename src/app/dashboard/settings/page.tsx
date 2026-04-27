@@ -364,13 +364,13 @@ export default function SettingsPage() {
   const currentProfile = segments[profileType];
 
   const tabs = [
-    { id: "import",   label: "LinkedIn Import", icon: Linkedin },
-    { id: "identity", label: "Identity",       icon: User },
-    { id: "audience", label: "Audience",       icon: Users },
-    { id: "branding", label: "Branding",       icon: Palette },
-    { id: "voice",    label: "Customer Voice", icon: MessageSquare },
-    { id: "ai",       label: "AI Config",      icon: ShieldCheck },
-    { id: "image",    label: "Image Style",    icon: ImageIcon },
+    { id: "import",   label: "Import",   icon: Linkedin },
+    { id: "identity", label: "Identity", icon: User },
+    { id: "audience", label: "Audience", icon: Users },
+    { id: "branding", label: "Branding", icon: Palette },
+    { id: "voice",    label: "Voice",    icon: MessageSquare },
+    { id: "ai",       label: "AI",       icon: ShieldCheck },
+    { id: "image",    label: "Image",    icon: ImageIcon },
   ];
 
   const IMAGE_STYLES: Array<{ id: ImageStyle; label: string; description: string; emoji: string }> = [
@@ -485,20 +485,20 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 p-1 bg-[var(--toggle-bg)] border border-[var(--border)] rounded-xl overflow-x-auto">
+      {/* Tab bar — single line, no scroll, equal-width */}
+      <div className="flex gap-1 p-1 bg-[var(--toggle-bg)] border border-[var(--border)] rounded-xl">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+            className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[13px] font-medium transition-all ${
               activeTab === tab.id
                 ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm border border-[var(--border)]"
                 : "text-[var(--text-muted)] hover:text-[var(--foreground)]"
             }`}
           >
-            <tab.icon className="w-3.5 h-3.5" />
-            {tab.label}
+            <tab.icon className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{tab.label}</span>
           </button>
         ))}
       </div>
