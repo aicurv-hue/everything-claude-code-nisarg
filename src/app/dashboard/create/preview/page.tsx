@@ -18,7 +18,7 @@ import LinkedInPostCard from "@/components/preview/LinkedInPostCard";
 // Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
 import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 
-type ImageMode = "ai" | "upload" | "reference" | "face" | "none" | "x_screenshot";
+type ImageMode = "ai" | "upload" | "reference" | "face" | "none";
 
 export default function PostPreviewPage() {
   const { user } = useAuth();
@@ -185,11 +185,6 @@ export default function PostPreviewPage() {
     setIsRegeneratingPost(true);
     setPreviousContent(editedContent);
 
-    const effectiveInstructions = [
-      regenHint.trim() ? `Direction for this version: ${regenHint.trim()}` : null,
-      postData.metadata.customInstructions || null,
-    ].filter(Boolean).join("\n") || undefined;
-
     try {
       const imageStyleRegen = postData.clientProfile?.imageStyle ?? undefined;
 
@@ -205,17 +200,20 @@ export default function PostPreviewPage() {
           segment:            postData.metadata.segment,
           research:           postData.research,
           intentType:         postData.intentType       ?? "professional",
-          customInstructions: effectiveInstructions,
+          // Original generation rules (kept separate from the regeneration direction)
+          customInstructions: postData.metadata.customInstructions || undefined,
           imageStyle:         imageStyleRegen,
-          // Full context — same as initial generation
+          // Full context — same as initial generation (preserves brand/profile basics)
           model:              postData.metadata.model   ?? undefined,
           clientProfile:      postData.clientProfile    ?? undefined,
           systemPrompt:       postData.systemPrompt     ?? undefined,
           memoryContext:      postData.memoryContext     ?? undefined,
           writingSamples:     postData.writingSamples   ?? undefined,
           sourceContext:      postData.sourceContext     ?? undefined,
-          // Pass current post so Cortex iterates rather than restarts
-          previousPost:       editedContent             || undefined,
+          // Regeneration signal — forces stronger rewrite path in generate.ts
+          isRegeneration:        true,
+          previousPost:          editedContent          || undefined,
+          regenerateInstruction: regenHint.trim()       || undefined,
         }),
       });
       const data = await res.json();
@@ -331,27 +329,6 @@ export default function PostPreviewPage() {
     try {
       const token = await getAuthToken();
 
-      // X Screenshot style: only when user explicitly picks x_screenshot mode
-      if (imageMode === "x_screenshot") {
-        const postContent = editedContent || postData?.content || "";
-        const res = await fetch("/api/image/x-screenshot", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-          body: JSON.stringify({ post: postContent }),
-        });
-        if (!res.ok) {
-          const errText = await res.text().catch(() => "");
-          let errMsg = "X screenshot generation failed.";
-          try { errMsg = JSON.parse(errText).error || errMsg; } catch { if (errText) errMsg = errText.slice(0, 120); }
-          throw new Error(errMsg);
-        }
-        // Use blob: URL — renders instantly, avoids CSP issues with data: URLs
-        const blob = await res.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        setImageUrl(blobUrl);
-        return;
-      }
-
       const res = await fetch("/api/image/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -386,14 +363,9 @@ export default function PostPreviewPage() {
   const handleModeChange = (mode: ImageMode) => {
     setImageMode(mode);
     setImageError(null);
-    if (mode !== "ai" && mode !== "x_screenshot") { setImageUrl(null); setIsGeneratingImage(false); }
+    if (mode !== "ai") { setImageUrl(null); setIsGeneratingImage(false); }
     if (mode !== "upload") { setUploadedFile(null); setUploadedPreview(null); }
     if (mode !== "face") { setFaceGeneratedUrl(null); setFaceError(null); }
-    // Auto-generate X screenshot when switching to x_screenshot mode
-    if (mode === "x_screenshot") {
-      setImageUrl(null);
-      setTimeout(() => generateImage(""), 50);
-    }
     // AI mode: user clicks Generate Image button manually (no auto-generate)
   };
 
@@ -544,7 +516,6 @@ export default function PostPreviewPage() {
 
   /* Resolve final image URL for publishing */
   const finalImageUrl =
-    imageMode === "x_screenshot" ? imageUrl :
     imageMode === "ai"        ? imageUrl :
     imageMode === "upload"    ? uploadedPreview :
     imageMode === "reference" ? referenceImagePreview :
@@ -728,31 +699,18 @@ export default function PostPreviewPage() {
       setShowSchedulePicker(false);
 
       // Background AI image generation (no existing image)
-      const isXShot = imageMode === "x_screenshot" || postData?.clientProfile?.imageStyle === "x_screenshot";
-      if (imageMode === "ai" && !finalImageUrl && (imagePrompt || isXShot) && saved?.id) {
+      if (imageMode === "ai" && !finalImageUrl && imagePrompt && saved?.id) {
         setScheduleMessage(`Scheduled for ${label} (${timezone}) · Generating image…`);
-        const bgPostContent = editedContent || postData?.content || "";
         getAuthToken().then(bgToken => fetch(
-          isXShot ? "/api/image/x-screenshot" : "/api/image/generate",
+          "/api/image/generate",
           {
             method: "POST",
             headers: { "Content-Type": "application/json", ...(bgToken ? { Authorization: `Bearer ${bgToken}` } : {}) },
-            body: JSON.stringify(isXShot ? { post: bgPostContent } : { prompt: imagePrompt }),
+            body: JSON.stringify({ prompt: imagePrompt }),
           }
         ))
           .then(async (r) => {
             if (!r.ok) return null;
-            if (isXShot) {
-              const blob = await r.blob();
-              const dataUrl = await new Promise<string>((res2, rej2) => {
-                const reader = new FileReader();
-                reader.onload = () => res2(reader.result as string);
-                reader.onerror = rej2;
-                reader.readAsDataURL(blob);
-              });
-              const fbUrl = await uploadDataUrlToStorage(dataUrl, `post-images/${Date.now()}-xshot.png`);
-              return fbUrl ? { url: fbUrl } : null;
-            }
             return r.json();
           })
           .then((d) => {
@@ -1163,21 +1121,6 @@ export default function PostPreviewPage() {
                 </button>
 
                 <button
-                  onClick={() => handleModeChange("x_screenshot")}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
-                    imageMode === "x_screenshot" ? "border-[var(--primary)] bg-[var(--primary)]/10" : "border-[var(--border)] bg-[var(--card)] hover:border-[var(--primary)]/40 hover:bg-[var(--card-hover)]"
-                  }`}
-                >
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "x_screenshot" ? "bg-black" : "bg-[var(--toggle-bg)]"}`}>
-                    <span className={`text-lg font-black leading-none ${imageMode === "x_screenshot" ? "text-white" : "text-[var(--text-sub)]"}`}>𝕏</span>
-                  </div>
-                  <div>
-                    <p className={`text-xs font-semibold ${imageMode === "x_screenshot" ? "text-white" : "text-[var(--foreground)]"}`}>X Screenshot</p>
-                    <p className={`text-[10px] mt-0.5 leading-tight ${imageMode === "x_screenshot" ? "text-[var(--text-muted)]" : "text-[var(--text-muted)]"}`}>Twitter-style dark card</p>
-                  </div>
-                </button>
-
-                <button
                   onClick={() => { handleModeChange("upload"); if (fileInputRef.current) { fileInputRef.current.value = ""; fileInputRef.current.click(); } }}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
                     imageMode === "upload" ? "border-[#0A66C2] bg-blue-500/10" : "border-[var(--border)] bg-[var(--card)] hover:border-slate-300 hover:bg-[var(--card-hover)]"
@@ -1292,14 +1235,14 @@ export default function PostPreviewPage() {
                 </div>
               )}
 
-              {(imageMode === "ai" || imageMode === "x_screenshot") && isGeneratingImage && (
+              {imageMode === "ai" && isGeneratingImage && (
                 <div className="flex flex-col items-center gap-3 text-[var(--text-muted)]">
                   <div className="w-7 h-7 border-2 border-[#0A66C2]/30 border-t-[#0A66C2] rounded-full animate-spin" />
-                  <p className="text-xs">{imageMode === "x_screenshot" ? "Creating X screenshot..." : "Generating image with AI..."}</p>
+                  <p className="text-xs">Generating image with AI...</p>
                 </div>
               )}
 
-              {(imageMode === "ai" || imageMode === "x_screenshot") && !isGeneratingImage && imageError && (
+              {imageMode === "ai" && !isGeneratingImage && imageError && (
                 <div className="flex flex-col items-center gap-3 text-center">
                   <AlertCircle className="w-6 h-6 text-red-400" />
                   <p className="text-sm text-red-500">{imageError}</p>
@@ -1307,7 +1250,7 @@ export default function PostPreviewPage() {
                 </div>
               )}
 
-              {(imageMode === "ai" || imageMode === "x_screenshot") && !isGeneratingImage && imageUrl && !imageError && (
+              {imageMode === "ai" && !isGeneratingImage && imageUrl && !imageError && (
                 <div className="w-full relative">
                   <img src={imageUrl} alt="AI generated LinkedIn image" className="w-full rounded-xl object-cover aspect-square" />
                   {imageHook && (

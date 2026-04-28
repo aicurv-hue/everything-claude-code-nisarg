@@ -107,11 +107,14 @@ Return ONLY valid JSON:
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) return NextResponse.json({ error: "OpenRouter API key not configured" }, { status: 500 });
 
-    // Retry up to 2 times on transient errors (5xx, network failures)
+    // Retry once on transient errors (5xx, network failures, per-attempt timeout).
+    // Each attempt is bounded by AbortController so a slow model can't run out the function's overall budget.
     let data: any = null;
     let lastErr = "";
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if (attempt > 0) await new Promise((r) => setTimeout(r, 1000 * attempt));
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 500));
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 18000); // 18s per attempt
       try {
         const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
@@ -125,8 +128,9 @@ Return ONLY valid JSON:
             model: "google/gemini-2.0-flash-001",
             messages: [{ role: "user", content: prompt }],
             temperature: 0.3,
-            max_tokens: 1200,
+            max_tokens: 800,
           }),
+          signal: controller.signal,
         });
         if (!res.ok) {
           lastErr = `OpenRouter ${res.status}: ${await res.text()}`;
@@ -136,7 +140,9 @@ Return ONLY valid JSON:
         data = await res.json();
         break;
       } catch (fetchErr: any) {
-        lastErr = fetchErr?.message || "network error";
+        lastErr = fetchErr?.name === "AbortError" ? "research timeout" : (fetchErr?.message || "network error");
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
 

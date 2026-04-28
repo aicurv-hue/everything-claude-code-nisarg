@@ -380,7 +380,6 @@ export default function SettingsPage() {
     { id: "3d",           label: "3D Render",     description: "Volumetric lighting, cinematic quality",        emoji: "🧊" },
     { id: "lineart",      label: "Line Art",      description: "Minimal black ink, clean strokes, no fill",     emoji: "✏️" },
     { id: "bw_photo",     label: "B&W Photo",     description: "High contrast, film grain, desaturated",        emoji: "⬛" },
-    { id: "x_screenshot", label: "X Screenshot",  description: "Looks like a viral X/Twitter post screenshot",   emoji: "🐦" },
   ];
 
   return (

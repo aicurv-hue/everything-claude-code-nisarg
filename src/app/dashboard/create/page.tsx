@@ -858,7 +858,7 @@ export default function CreatePostPage() {
                   <p className="text-[11px] text-[var(--text-muted)] font-medium uppercase tracking-wide mb-1">Image Style</p>
                   <p className="text-sm font-semibold text-[var(--foreground)] capitalize">
                     {userProfile?.[segment]?.imageStyle
-                      ? { photo: "📷 Photo", illustration: "🎨 Illustration", abstract: "🔷 Abstract", "3d": "🧊 3D Render", lineart: "✏️ Line Art", bw_photo: "⬛ B&W Photo", x_screenshot: "🐦 X Screenshot" }[userProfile[segment].imageStyle!] || userProfile[segment].imageStyle
+                      ? { photo: "📷 Photo", illustration: "🎨 Illustration", abstract: "🔷 Abstract", "3d": "🧊 3D Render", lineart: "✏️ Line Art", bw_photo: "⬛ B&W Photo" }[userProfile[segment].imageStyle!] || userProfile[segment].imageStyle
                       : "Not set — choose in Settings → Image Style"}
                   </p>
                 </div>

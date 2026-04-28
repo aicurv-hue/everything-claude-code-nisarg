@@ -26,6 +26,8 @@ export interface PostRequest {
   imageStyle?: string;            // Layer 1: art style key (photo|illustration|abstract|3d|lineart|bw_photo)
   sourceContext?: string;         // Extracted text from user-provided URL + image description
   previousPost?: string;          // Current post content when regenerating — Cortex iterates on this, not a blank slate
+  isRegeneration?: boolean;       // True when user clicked Regenerate — triggers stronger rewrite directive + higher temperature
+  regenerateInstruction?: string; // User's free-form direction for the new version (separate from customInstructions)
   intentType?: "personal" | "professional"; // Detected from topic — controls brand context application
 }
 
@@ -223,7 +225,7 @@ function sanitizePost(raw: string): string {
  *   - marketing-skills-all: social-content (LinkedIn-specific structure, CTA, tone mapping)
  */
 export async function generatePost(request: PostRequest): Promise<GenerateResult> {
-  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, writingSamples, imageStyle, sourceContext, previousPost, intentType } = request;
+  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, writingSamples, imageStyle, sourceContext, previousPost, isRegeneration, regenerateInstruction, intentType } = request;
 
   const lengthSpec = LENGTH_SPEC[length] || LENGTH_SPEC.medium;
   const isProfessional = (intentType ?? "professional") === "professional";
@@ -337,13 +339,37 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
           sanitizePromptInput(customInstructions, 500),
         ].join("\n")
       : "",
-    previousPost
+    isRegeneration && previousPost
       ? [
           "",
-          `CURRENT POST — user is iterating on this. Refine it per the direction above. Do NOT restart from scratch.`,
+          `══════════════════════════════════════════`,
+          `REGENERATION MODE — HIGHEST PRIORITY`,
+          `══════════════════════════════════════════`,
+          `The user already received the post below and asked for a NEW version. Your job is to produce a clearly different post on the same topic.`,
+          ``,
+          `PREVIOUS VERSION (do NOT repeat its hook, structure, or phrasing):`,
+          `"""`,
           sanitizePromptInput(previousPost, 3000),
+          `"""`,
+          ``,
+          regenerateInstruction
+            ? `USER'S DIRECTION FOR THE NEW VERSION (apply this exactly — it is the whole reason they regenerated):\n${sanitizePromptInput(regenerateInstruction, 800)}`
+            : `USER'S DIRECTION: No specific instruction given — produce a meaningfully different angle, hook, and structure than the previous version.`,
+          ``,
+          `HARD RULES for this regeneration:`,
+          `- The new post MUST open with a different hook than the previous version.`,
+          `- The new post MUST differ in wording, sentence structure, and order of ideas.`,
+          `- Keep the same topic, audience, tone, and word count.`,
+          `- Apply the user's direction above. If it conflicts with brand context, the user's direction wins.`,
+          `- Output ONLY the new post text. Do not reference the previous version.`,
         ].join("\n")
-      : "",
+      : previousPost
+        ? [
+            "",
+            `CURRENT POST — user is iterating on this. Refine it per the direction above. Do NOT restart from scratch.`,
+            sanitizePromptInput(previousPost, 3000),
+          ].join("\n")
+        : "",
   ].join("\n").trim();
 
   // ── User prompt ────────────────────────────────────────────────────────────
@@ -410,7 +436,7 @@ Start directly with the hook line. Output nothing else.`;
         { role: "system", content: systemInstructions },
         { role: "user",   content: userPrompt },
       ],
-      0.72  // slightly higher for more natural, human-sounding prose
+      isRegeneration ? 0.95 : 0.72  // bump variance for regenerations to push a meaningfully different output
     );
 
     const raw = completion.choices[0].message.content || "";
