@@ -795,3 +795,14 @@ Go to **Settings → Image Style tab**:
 - `neel-prompt-sections.ts` updated with square TEXT ZONE RULE and FIXED FRAME RULES
 
 *Last audited: 2026-03-28 | Pipeline version: 4.3.1 (Mobile-First Square Images + Codex Hook Typography)*
+
+
+---
+
+## Post Quality Score (2026-04-28)
+
+- Route: `POST /api/posts/score` (edge runtime, Bearer auth via `verifyTokenEdge`). Free, ungated.
+- Prompt: `POST_QUALITY_SCORE` section in `NEEL_RUNTIME.md`; mirrored as `POST_QUALITY_SCORE_PROMPT` in `src/lib/ai/neel-prompt-sections.ts`.
+- Component: `src/components/PostQualityScore.tsx` — circular SVG gauge (red 0-40 / amber 41-70 / green 71-100), 5-bar breakdown, 3 suggestions, optional rewritten-hook apply button.
+- Integration point: mounted in `src/app/dashboard/create/preview/page.tsx` between the RichTextEditor and LinkedInPostCard. `onApplyHook` swaps the first 2 lines of `editedContent`.
+- Returns `{ score, breakdown:{hook,voiceMatch,structure,engagement,antiSlop}, suggestions, rewrittenHook? }`. Safe fallback on parse/network failure.

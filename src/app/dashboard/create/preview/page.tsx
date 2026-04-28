@@ -15,6 +15,7 @@ import SchedulePicker from "@/components/schedule/SchedulePicker";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
 import RichTextEditor from "@/components/preview/RichTextEditor";
 import LinkedInPostCard from "@/components/preview/LinkedInPostCard";
+import PostQualityScore from "@/components/PostQualityScore";
 // Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
 import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 
@@ -988,6 +989,18 @@ export default function PostPreviewPage() {
               />
             </div>
           </div>
+
+          <PostQualityScore
+            postText={editedContent}
+            userId={user?.uid ?? ""}
+            onApplyHook={(newHook) => {
+              const lines = editedContent.split("\n");
+              const rest = lines.slice(2);
+              const hookLines = newHook.split("\n").slice(0, 2);
+              while (hookLines.length < 2) hookLines.push("");
+              setEditedContent([...hookLines, ...rest].join("\n"));
+            }}
+          />
 
           </div>{/* end space-y-6 left column */}
 

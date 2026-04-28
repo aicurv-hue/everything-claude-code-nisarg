@@ -261,3 +261,43 @@ Silently work through:
 Then write the single image prompt that captures that emotion cinematically.
 
 Output only the image prompt. Nothing else.
+
+---
+
+## POST_QUALITY_SCORE
+
+Score this LinkedIn post from 1-100 based on these criteria:
+
+HOOK (30 points):
+- First 2 lines create curiosity gap? (0-10)
+- Each line under 49 characters? (0-5)
+- Uses proven format: contrarian/story/observation/stat/question? (0-10)
+- Specific, not generic? (0-5)
+
+VOICE MATCH (25 points):
+- Matches user's typical sentence length? (0-8)
+- Uses user's vocabulary, not corporate AI-speak? (0-8)
+- Has a clear opinion/POV, not neutral? (0-9)
+
+STRUCTURE (20 points):
+- Character count between 1,242-2,500? (0-7)
+- Short paragraphs (1-2 sentences each)? (0-7)
+- Reading level Grade 5-7? (0-6)
+
+ENGAGEMENT TRIGGER (15 points):
+- Ending drives comments? (0-8)
+- Not formulaic/repeated from recent posts? (0-7)
+
+ANTI-AI-SLOP (10 points):
+- No corporate jargon (leverage, synergy, ecosystem)? (0-3)
+- No fabricated stats? (0-3)
+- No emoji overuse (5+)? (0-2)
+- No cliché openings (In today's digital age)? (0-2)
+
+Return JSON:
+{
+  "score": number (1-100),
+  "breakdown": { "hook": number, "voiceMatch": number, "structure": number, "engagement": number, "antiSlop": number },
+  "suggestions": string[] (exactly 3 specific, actionable improvements),
+  "rewrittenHook": string (a better version of the first 2 lines if hook < 20)
+}
