@@ -1,6 +1,45 @@
 # Cridl Changelog — April 2026
 
-_Last updated: 2026-04-19_
+_Last updated: 2026-04-27_
+
+## April 27, 2026 — Regeneration Fix, X Screenshot Removal, Research Timeout
+
+### Issues Fixed
+
+#### 1. **Post Regeneration Returned Same Output (Fixed)**
+- **Issue**: After generating a post, clicking Regenerate (with or without a comment) returned a near-identical post. Affected Individual and Corporate.
+- **Root Cause**: `src/lib/ai/generate.ts` injected the previous post with the directive *"Refine it ... Do NOT restart from scratch"*, which made Gemini copy verbatim. The user's regen hint was merged into `customInstructions` and placed BEFORE the previous post block — so the model read the previous post last and mimicked it.
+- **Fix**:
+  - Added `isRegeneration` and `regenerateInstruction` fields to `PostRequest` (separate from original `customInstructions`).
+  - New REGENERATION MODE block in the system prompt: forbids reusing the previous hook/structure/phrasing, places the user's direction as the dominant final directive, keeps brand/profile context intact.
+  - Bumped sampling temperature 0.72 → 0.95 when `isRegeneration` is true, so output meaningfully differs.
+- **Files**: `src/lib/ai/generate.ts`, `src/app/dashboard/create/preview/page.tsx`
+- **Impact**: Regenerate now produces a clearly different post that applies the user's comment, while retaining topic, audience, tone, word count, and profile basics. Same fix covers Individual + Corporate (single endpoint).
+
+#### 2. **`FUNCTION_INVOCATION_TIMEOUT` on Research & Generate (Fixed)**
+- **Issue**: "Research & Generate Post" intermittently failed with `FUNCTION_INVOCATION_TIMEOUT bom1-...`.
+- **Root Cause**: `/api/ai/research` retried OpenRouter up to 3× with no per-attempt timeout. When Gemini was slow, total elapsed time exceeded Vercel's function budget and the entire route was killed.
+- **Fix** in `src/app/api/ai/research/route.ts`:
+  - Added `AbortController` with 18s timeout per attempt.
+  - Reduced retries 3 → 2 and backoff 1s+2s → 0.5s.
+  - Reduced `max_tokens` 1200 → 800.
+  - On `AbortError` falls through to the existing structured fallback so generation can still proceed.
+- **Impact**: Research route fails fast and falls back gracefully instead of hanging until the platform kills it.
+
+#### 3. **Removed "X Screenshot" Image Style End-to-End**
+- **Issue**: X Screenshot option was no longer wanted in image style chooser (settings) or post-generation image picker.
+- **Files changed**:
+  - `src/lib/db/profiles.ts` — dropped `"x_screenshot"` from `ImageStyle` type
+  - `src/app/dashboard/settings/page.tsx` — removed chip from `IMAGE_STYLES`
+  - `src/app/dashboard/create/preview/page.tsx` — removed mode from `ImageMode` type, removed toggle button, auto-gen branch, publish path, and all `imageMode === "x_screenshot"` conditionals
+  - `src/app/dashboard/create/page.tsx` — removed `x_screenshot` from label map
+  - `src/app/api/image/x-screenshot/route.tsx` — **deleted** (no callers)
+- **Impact**: Image style chooser now shows 6 options (Photo, Illustration, Abstract, 3D, Line Art, B&W Photo). Saved profiles with stale `imageStyle: "x_screenshot"` fall back to the displayed value text harmlessly.
+
+### Commit
+- `9104cbc` — fix(regeneration): force genuine rewrite + remove X Screenshot + research timeout
+
+---
 
 ## April 19, 2026 — UI/UX Fixes & Dark/Light Theme Toggle
 
