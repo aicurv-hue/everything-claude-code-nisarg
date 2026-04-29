@@ -16,6 +16,7 @@ import { HelpTooltip } from "@/components/ui/HelpTooltip";
 import RichTextEditor from "@/components/preview/RichTextEditor";
 import LinkedInPostCard from "@/components/preview/LinkedInPostCard";
 import PostQualityScore from "@/components/PostQualityScore";
+import RewriteButton from "@/components/RewriteButton";
 // Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
 import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 
@@ -988,6 +989,17 @@ export default function PostPreviewPage() {
                 disabled={isRegeneratingPost}
               />
             </div>
+          </div>
+
+          <div className="flex justify-end">
+            <RewriteButton
+              postText={editedContent}
+              userId={user?.uid ?? ""}
+              voiceProfile={postData?.clientProfile?.voiceProfile ?? postData?.clientProfile ?? undefined}
+              writingSamples={postData?.writingSamples ?? undefined}
+              memoryContext={postData?.memoryContext ?? undefined}
+              onApply={(rw) => setEditedContent(rw)}
+            />
           </div>
 
           <PostQualityScore

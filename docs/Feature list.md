@@ -29,6 +29,7 @@
 | **Mobile navigation** | Bottom nav + mobile header — full mobile-first UI |
 | Skeleton loaders | Dashboard shows content shape while data loads |
 | Page transitions | `pageEnter` CSS animation on every route change |
+| **Rewrite In My Voice** | One-click Cortex rewrite of any draft (topic on Create, full post on Preview). Side-by-side modal shows original vs rewrite, a 0–100 quality score badge, and a list of concrete edits. "Use this" applies the rewrite, "Keep original" closes. Uses voice profile + writing samples for fidelity. Counts as 1 post usage. |
 
 ### ❌ Not Yet Built
 | Feature | Notes |

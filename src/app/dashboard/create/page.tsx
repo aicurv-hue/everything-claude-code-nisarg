@@ -10,6 +10,7 @@ import { auth } from "@/lib/firebase";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
 import { Zap, Search, Brain, SlidersHorizontal, ChevronDown, ChevronUp, User, Building2, Sparkles, Link2, ImagePlus, X, CheckCircle2, PenLine } from "lucide-react";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
+import RewriteButton from "@/components/RewriteButton";
 
 const TONES = [
   { value: "professional",  label: "Professional",  desc: "Authority & expertise",     detail: "Opens with a specific stat or insight. Best for establishing credibility and thought leadership." },
@@ -466,7 +467,14 @@ export default function CreatePostPage() {
                 placeholder="Describe your topic or idea. The more specific, the better the research will be. E.g. 'How AI is changing legal due diligence in 2025'"
                 className="w-full bg-[var(--card-hover)] border border-[var(--border)] rounded-xl px-4 py-3.5 text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[#0A66C2]/30 focus:border-[#0A66C2] transition-all resize-none text-sm leading-relaxed"
               />
-              <div className="flex justify-end">
+              <div className="flex items-center justify-between gap-3">
+                <RewriteButton
+                  postText={topic}
+                  userId={user?.uid ?? ""}
+                  voiceProfile={(userProfile?.[segment] as any)?.voiceProfile ?? userProfile?.[segment] ?? undefined}
+                  writingSamples={writingSamples.length > 0 ? writingSamples : undefined}
+                  onApply={(rw) => setTopic(rw)}
+                />
                 <span className={`text-[11px] font-medium ${topic.length > 450 ? "text-amber-500" : "text-[var(--text-muted)]"}`}>
                   {topic.length}/500
                 </span>

@@ -301,3 +301,36 @@ Return JSON:
   "suggestions": string[] (exactly 3 specific, actionable improvements),
   "rewrittenHook": string (a better version of the first 2 lines if hook < 20)
 }
+
+---
+
+## Rewrite In My Voice Prompt
+
+You are Cridl Cortex. Rewrite this text as a LinkedIn post that:
+1. Matches this user's voice: {voiceProfile}
+2. Follows LinkedIn best practices:
+   - Hook in first 2 lines (curiosity gap, under 49 chars/line)
+   - Short paragraphs (1-2 sentences each)
+   - 1,242-2,500 characters total
+   - Grade 5-7 reading level
+   - Clear opinion/POV throughout
+   - Ending that drives comments
+3. Removes AI-slop indicators:
+   - No 'leverage', 'synergy', 'ecosystem', 'game-changer'
+   - No 'In today's digital age'
+   - No excessive emojis (max 3)
+   - No fabricated stats
+   - No 'Excited to announce' or 'I wanted to share'
+4. Keeps the core message and meaning intact
+5. Makes it sound like the user at their best, not like AI
+6. Do not use asterisks anywhere in the output (LinkedIn renders them literally).
+
+Raw text to rewrite:
+{rawText}
+
+Return JSON:
+{
+  "rewrittenPost": string,
+  "changes": string[] (3-6 specific, concrete edits made, e.g. "Removed corporate jargon: 'leverage' -> 'use'", "Split wall of text into 8 short paragraphs", "Rewrote hook from generic to contrarian")
+}
+
