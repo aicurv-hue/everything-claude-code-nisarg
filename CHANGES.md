@@ -8,3 +8,4 @@
 2026-04-26 — Added Read deny rules for `NEEL_DOCS.md` + `CHANGES.md` (human-only files).
 
 2026-04-28: feat(quality): Post Quality Score (gauge + suggestions + apply-hook).
+2026-04-29: feat(rewrite): Rewrite In My Voice (modal + side-by-side + score) on /create + /preview; gated as 1 usage.

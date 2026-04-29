@@ -806,3 +806,17 @@ Go to **Settings → Image Style tab**:
 - Component: `src/components/PostQualityScore.tsx` — circular SVG gauge (red 0-40 / amber 41-70 / green 71-100), 5-bar breakdown, 3 suggestions, optional rewritten-hook apply button.
 - Integration point: mounted in `src/app/dashboard/create/preview/page.tsx` between the RichTextEditor and LinkedInPostCard. `onApplyHook` swaps the first 2 lines of `editedContent`.
 - Returns `{ score, breakdown:{hook,voiceMatch,structure,engagement,antiSlop}, suggestions, rewrittenHook? }`. Safe fallback on parse/network failure.
+
+---
+
+## Rewrite In My Voice (2026-04-29)
+
+- Route: `POST /api/posts/rewrite` (edge runtime, Bearer auth via `verifyTokenEdge`). Counts as 1 generation via `usageTracking` (pre-flight `/api/usage/check { action: "post" }`).
+- Prompt: `## Rewrite In My Voice Prompt` section in `NEEL_RUNTIME.md`; mirrored as `REWRITE_IN_VOICE_PROMPT` in `src/lib/ai/neel-prompt-sections.ts`.
+- Component: `src/components/RewriteButton.tsx` — opens modal with original | rewritten side-by-side, score badge (red/yellow/green via `/api/posts/score`), changes[] list, "Use this" / "Keep original" actions.
+- Integration points:
+  - Primary: `src/app/dashboard/create/preview/page.tsx` (operates on `editedContent`; apply replaces editor text and `PostQualityScore` auto-rescores via existing `useEffect`).
+  - Secondary: `src/app/dashboard/create/page.tsx` (operates on `topic` at input stage).
+- Body input: `{ rawText, userId, voiceProfile?, writingSamples?, memoryContext? }` — caller passes voice/samples (no Firestore reads in edge).
+- Returns: `{ rewrittenPost, score, changes[] }`. Score comes from internal fetch to `/api/posts/score` (defaults to 0 on failure). Safe fallback `{ rewrittenPost: rawText, changes: [] }` on parse failure — never 500s.
+- Removes AI-slop tells (corporate jargon, "In today's digital age", emoji overuse, fabricated stats, "Excited to announce"). No asterisks in output.
