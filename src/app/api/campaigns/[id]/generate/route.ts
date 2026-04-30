@@ -13,18 +13,33 @@ async function getUid(req: NextRequest): Promise<string | null> {
   } catch { return null; }
 }
 
+const CAMPAIGN_FALLBACK_MODEL = "google/gemini-2.0-flash-001";
+
 async function callOpenRouter(messages: any[], model: string): Promise<string> {
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ model, messages, max_tokens: 1200 }),
-  });
-  if (!res.ok) throw new Error(`OpenRouter error: ${res.status}`);
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || "";
+  for (const m of [model, CAMPAIGN_FALLBACK_MODEL]) {
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ model: m, messages, max_tokens: 1200 }),
+      });
+      if (!res.ok) {
+        console.warn(`[campaigns] ${m} HTTP ${res.status} — ${m === CAMPAIGN_FALLBACK_MODEL ? "no more fallbacks" : "trying fallback"}`);
+        if (m === CAMPAIGN_FALLBACK_MODEL) throw new Error(`OpenRouter error: ${res.status}`);
+        continue;
+      }
+      const data = await res.json();
+      const text = data.choices?.[0]?.message?.content || "";
+      if (text) return text;
+    } catch (e) {
+      if (m === CAMPAIGN_FALLBACK_MODEL) throw e;
+      console.warn(`[campaigns] ${m} threw — falling back:`, (e as any)?.message || e);
+    }
+  }
+  return "";
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -61,7 +76,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   }
 
-  const model = "google/gemini-2.0-flash-001";
+  const model = "moonshotai/kimi-k2.6";
 
   // Fetch user profile for brand context
   let clientProfile: string = "";

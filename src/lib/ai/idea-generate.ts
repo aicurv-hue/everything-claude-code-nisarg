@@ -1,5 +1,5 @@
 import type { ProfileSegment } from "@/lib/db/profiles";
-import { openRouter } from "./openrouter";
+import { openRouter, DEFAULT_MODEL, FALLBACK_MODEL } from "./openrouter";
 
 export async function generateIdeas(
   profile: ProfileSegment,
@@ -39,23 +39,28 @@ ${recentTopics.slice(0, 20).map((t) => `- ${t}`).join("\n") || "- (none yet)"}${
 
 Generate ${count} fresh, specific LinkedIn post ideas.`;
 
-  try {
-    const res = await openRouter.chat.completions.create({
-      model: "openai/gpt-4o-mini",
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-      temperature: 0.9,
-      max_tokens: 1200,
-    });
-
-    const text = res.choices?.[0]?.message?.content || "";
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) return [];
-    return JSON.parse(jsonMatch[0]);
-  } catch (err) {
-    console.error("[idea-generate] Failed:", err);
-    return [];
+  for (const model of [DEFAULT_MODEL, FALLBACK_MODEL]) {
+    try {
+      const res = await openRouter.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+        temperature: 0.9,
+        max_tokens: 1200,
+      });
+      const text = res.choices?.[0]?.message?.content || "";
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        console.warn(`[idea-generate] ${model} returned no JSON array — trying next model`);
+        continue;
+      }
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch (err) {
+      console.error(`[idea-generate] ${model} failed:`, err);
+    }
   }
+  return [];
 }

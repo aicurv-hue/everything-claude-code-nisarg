@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       uniquePerspective: "",
       brandVoice: "",
       contentGoals: "",
-      primaryModel: "google/gemini-2.0-flash-001",
+      primaryModel: "moonshotai/kimi-k2.6",
     },
     corporate: {
       companyName: "",

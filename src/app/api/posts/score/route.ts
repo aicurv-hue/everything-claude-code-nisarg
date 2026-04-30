@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyTokenEdge } from "@/lib/utils/verifyTokenEdge";
 import { openRouter } from "@/lib/ai/openrouter";
 
-const PRIMARY_SCORE_MODEL  = "google/gemini-2.0-flash-001";
-const FALLBACK_SCORE_MODEL = "openai/gpt-4o-mini";
+const PRIMARY_SCORE_MODEL  = "moonshotai/kimi-k2.6";
+const FALLBACK_SCORE_MODEL = "google/gemini-2.0-flash-001";
 import { POST_QUALITY_SCORE_PROMPT } from "@/lib/ai/neel-prompt-sections";
 
 // Edge runtime — quality scoring uses OpenRouter, mirrors /api/ai/research pattern.

@@ -19,5 +19,5 @@ export const openRouter = new OpenAI({
   }
 });
 
-export const DEFAULT_MODEL   = "google/gemini-2.0-flash-001";  // Gemini 2.0 Flash via OpenRouter
-export const FALLBACK_MODEL  = "openai/gpt-4o-mini";           // Fallback if Gemini is down
+export const DEFAULT_MODEL   = "moonshotai/kimi-k2.6";         // Kimi K2.6 via OpenRouter (primary)
+export const FALLBACK_MODEL  = "google/gemini-2.0-flash-001";  // Gemini 2.0 Flash fallback if Kimi fails

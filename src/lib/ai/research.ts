@@ -147,15 +147,26 @@ Return ONLY valid JSON (no markdown fences, no extra text):
 
   let synthesis: any;
   try {
-    const res = await openRouter.chat.completions.create({
-      model: "google/gemini-2.0-flash-001",
-      messages: [{ role: "user", content: combinedPrompt }],
-      temperature: 0.3,
-      max_tokens: 1200,
-    });
-    const text = res.choices[0].message.content || "";
-    synthesis = extractJSON(text);
-    if (!synthesis?.summary) throw new Error("Malformed research JSON");
+    let text = "";
+    let lastErr: any = null;
+    for (const model of ["moonshotai/kimi-k2.6", "google/gemini-2.0-flash-001"]) {
+      try {
+        const res = await openRouter.chat.completions.create({
+          model,
+          messages: [{ role: "user", content: combinedPrompt }],
+          temperature: 0.3,
+          max_tokens: 1200,
+        });
+        text = res.choices[0].message.content || "";
+        const candidate = extractJSON(text);
+        if (candidate?.summary) { synthesis = candidate; break; }
+        console.warn(`[research] ${model} returned malformed JSON — trying next`);
+      } catch (e) {
+        lastErr = e;
+        console.warn(`[research] ${model} threw:`, (e as any)?.message || e);
+      }
+    }
+    if (!synthesis?.summary) throw new Error(lastErr?.message || "Malformed research JSON from all models");
   } catch (e) {
     console.error("[research] Research call failed:", e);
     synthesis = {

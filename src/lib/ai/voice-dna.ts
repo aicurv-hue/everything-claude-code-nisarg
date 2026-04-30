@@ -1,4 +1,4 @@
-import { openRouter } from "./openrouter";
+import { openRouter, DEFAULT_MODEL, FALLBACK_MODEL } from "./openrouter";
 import type { VoiceDNA } from "@/lib/db/voice-dna";
 
 export async function buildVoiceDNA(
@@ -29,22 +29,29 @@ Each dimension must be a specific, actionable sentence a ghost-writer could foll
 
   const user = `Style observations from ${styleNotes.length} posts:\n${styleNotes.map((n, i) => `${i + 1}. ${n}`).join("\n")}`;
 
+  let parsed: any = null;
+  for (const model of [DEFAULT_MODEL, FALLBACK_MODEL]) {
+    try {
+      const res = await openRouter.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+        temperature: 0.1,
+        max_tokens: 500,
+      });
+      const text = res.choices?.[0]?.message?.content || "";
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) { console.warn(`[voice-dna] ${model} returned no JSON — trying next`); continue; }
+      parsed = JSON.parse(jsonMatch[0]);
+      if (parsed) break;
+    } catch (err) {
+      console.error(`[voice-dna] ${model} failed:`, err);
+    }
+  }
+  if (!parsed) return null;
   try {
-    const res = await openRouter.chat.completions.create({
-      model: "openai/gpt-4o-mini",
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-      temperature: 0.1,
-      max_tokens: 500,
-    });
-
-    const text = res.choices?.[0]?.message?.content || "";
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return null;
-
-    const parsed = JSON.parse(jsonMatch[0]);
     return {
       user_id: userId,
       segment,

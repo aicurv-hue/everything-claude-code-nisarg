@@ -3,7 +3,8 @@ import { suggestionService } from "@/lib/db/schedule-suggestions";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL          = process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-001";
+const MODEL          = process.env.OPENROUTER_MODEL || "moonshotai/kimi-k2.6";
+const FALLBACK_MODEL = "google/gemini-2.0-flash-001";
 
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
@@ -214,19 +215,23 @@ LinkedIn engagement research:
 Return ONLY a JSON array of exactly 3 objects sorted by score descending, no markdown:
 [{"hour":9,"minute":0,"time_label":"9:00 AM","score":88,"reasoning":"One sentence why this time works for ${dayName}."}]`;
 
-      try {
-        const res = await fetch(OPENROUTER_URL, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: MODEL, temperature: 0.3, messages: [{ role: "user", content: prompt }] }),
-        });
-        const aiData = await res.json();
-        const raw = aiData.choices?.[0]?.message?.content || "[]";
-        let parsed: any[] = [];
+      let parsed: any[] = [];
+      for (const m of [MODEL, FALLBACK_MODEL]) {
         try {
-          parsed = JSON.parse(raw.replace(/```json?|```/g, "").trim());
-          if (!Array.isArray(parsed)) parsed = [];
-        } catch { parsed = []; }
+          const res = await fetch(OPENROUTER_URL, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ model: m, temperature: 0.3, messages: [{ role: "user", content: prompt }] }),
+          });
+          const aiData = await res.json();
+          const raw = aiData.choices?.[0]?.message?.content || "[]";
+          try {
+            const candidate = JSON.parse(raw.replace(/```json?|```/g, "").trim());
+            if (Array.isArray(candidate) && candidate.length > 0) { parsed = candidate; break; }
+          } catch { /* try next model */ }
+        } catch { /* try next model */ }
+      }
+      try {
 
         if (parsed.length > 0) {
           const suggestions = parsed

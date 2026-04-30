@@ -421,8 +421,10 @@ Start directly with the hook line. Output nothing else.`;
       return res;
     } catch (err: any) {
       const status = err?.status || err?.code;
-      if (status === 500 || status === 502 || status === 503 || status === 429) {
-        console.warn(`[Cortex] ${primary} returned ${status} — retrying with ${FALLBACK_MODEL}`);
+      // Fall back on transient HTTP errors AND when the primary model is unreachable / returns
+      // a malformed response — Kimi K2.6 has been seen to occasionally do this.
+      if (primary !== FALLBACK_MODEL) {
+        console.warn(`[Cortex] ${primary} failed (${status || err?.message}) — retrying with ${FALLBACK_MODEL}`);
         return await openRouter.chat.completions.create({ model: FALLBACK_MODEL, messages, temperature, max_tokens: 1200 });
       }
       throw err;
@@ -485,7 +487,7 @@ export async function generateImagePrompt(topic: string, segment: string, post: 
 
   // Use the centralized OpenRouter client — consistent auth, error handling, and future logging
   const completion = await openRouter.chat.completions.create({
-    model: "google/gemini-2.0-flash-001",
+    model: DEFAULT_MODEL,
     messages: [
       { role: "system", content: imageSystemPrompt },
       { role: "user",   content: imageUserPrompt },
@@ -506,7 +508,7 @@ export async function generateImagePrompt(topic: string, segment: string, post: 
 export async function generateImageHook(post: string, topic: string): Promise<string> {
   // Use the centralized OpenRouter client — consistent auth, error handling, and future logging
   const completion = await openRouter.chat.completions.create({
-    model: "google/gemini-2.0-flash-001",
+    model: DEFAULT_MODEL,
     messages: [
       {
         role: "system",

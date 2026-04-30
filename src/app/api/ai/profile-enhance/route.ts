@@ -102,33 +102,43 @@ Current input: "${value}"
 Enhancement instructions:
 ${fieldPrompt}`;
 
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
-        "X-Title": "Cridl Profile Enhancer",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.0-flash-001",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user",   content: userPrompt },
-        ],
-        max_tokens: 350,
-        temperature: 0.72,
-      }),
-    });
+    const callModel = async (model: string) => {
+      return fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
+          "X-Title": "Cridl Profile Enhancer",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user",   content: userPrompt },
+          ],
+          max_tokens: 350,
+          temperature: 0.72,
+        }),
+      });
+    };
 
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("[profile-enhance] OpenRouter error:", err);
-      return NextResponse.json({ error: "AI call failed" }, { status: 500 });
+    let enhanced = "";
+    for (const model of ["moonshotai/kimi-k2.6", "google/gemini-2.0-flash-001"]) {
+      try {
+        const res = await callModel(model);
+        if (!res.ok) {
+          console.warn(`[profile-enhance] ${model} HTTP ${res.status} — trying next`);
+          continue;
+        }
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content?.trim() ?? "";
+        if (text) { enhanced = text; break; }
+      } catch (e: any) {
+        console.warn(`[profile-enhance] ${model} threw:`, e?.message || e);
+      }
     }
-
-    const data = await res.json();
-    const enhanced = data.choices?.[0]?.message?.content?.trim() ?? "";
+    if (!enhanced) return NextResponse.json({ error: "AI call failed" }, { status: 500 });
 
     return NextResponse.json({ enhanced });
   } catch (err: any) {
