@@ -915,6 +915,7 @@ export default function SettingsPage() {
                 <option value="anthropic/claude-haiku-4-5">Claude Haiku 4.5 — nuanced, natural voice</option>
                 <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet — best storytelling</option>
                 <option value="openai/gpt-4o">GPT-4o — structured, data-heavy</option>
+                <option value="moonshotai/kimi-k2.6">Kimi K2.6 — long-context, sharp reasoning</option>
               </select>
             </div>
 

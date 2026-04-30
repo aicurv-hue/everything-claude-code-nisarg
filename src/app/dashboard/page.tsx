@@ -322,12 +322,15 @@ export default function DashboardHomePage() {
         const doneCount = sectionsDone.filter(Boolean).length;
         const pct = Math.round((doneCount / sectionsDone.length) * 100);
 
+        const avatarUrl = (linkedin?.picture && linkedin.picture.trim()) || (profile as any)?.profilePhotoUrl || "";
+
         return (
           <div className="card flex items-center justify-between" style={{ padding: '16px 20px' }}>
             <div className="flex items-center gap-3">
-              {isIndividual && linkedin?.connected && linkedin.picture ? (
-                <img src={linkedin.picture} alt={linkedin.name}
-                  className="w-10 h-10 rounded-full border-2 border-[var(--border)] shrink-0" />
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={dispName} referrerPolicy="no-referrer"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  className="w-10 h-10 rounded-full border-2 border-[var(--border)] shrink-0 object-cover" />
               ) : (
                 <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                   style={{ background: `linear-gradient(135deg, var(--primary)cc, var(--primary))` }}>
@@ -492,8 +495,14 @@ export default function DashboardHomePage() {
           <h3 className="text-[14px] font-semibold text-[var(--foreground)] mb-4">System Status</h3>
 
           <div className="flex items-center gap-2.5 mb-[18px]">
-            {isIndividual && linkedin?.connected && linkedin.picture ? (
-              <img src={linkedin.picture} alt={linkedin.name} className="w-9 h-9 rounded-full" />
+            {((linkedin?.picture && linkedin.picture.trim()) || (profile as any)?.profilePhotoUrl) ? (
+              <img
+                src={(linkedin?.picture && linkedin.picture.trim()) || (profile as any)?.profilePhotoUrl}
+                alt={linkedin?.name || ""}
+                referrerPolicy="no-referrer"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                className="w-9 h-9 rounded-full object-cover"
+              />
             ) : (
               <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
                 style={{ background: `linear-gradient(135deg, var(--primary)cc, var(--primary))` }}>
