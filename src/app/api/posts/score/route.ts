@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyTokenEdge } from "@/lib/utils/verifyTokenEdge";
 import { openRouter } from "@/lib/ai/openrouter";
 
-const SCORE_MODEL = "moonshotai/kimi-k2.6";
+const PRIMARY_SCORE_MODEL  = "google/gemini-2.0-flash-001";
+const FALLBACK_SCORE_MODEL = "openai/gpt-4o-mini";
 import { POST_QUALITY_SCORE_PROMPT } from "@/lib/ai/neel-prompt-sections";
 
 // Edge runtime — quality scoring uses OpenRouter, mirrors /api/ai/research pattern.
@@ -47,7 +48,9 @@ function normalize(parsed: any): ScoreResult {
     engagement:  clamp(b.engagement, 0, 15),
     antiSlop:    clamp(b.antiSlop, 0, 10),
   };
-  const score = clamp(parsed?.score, 1, 100);
+  const sumBreakdown = breakdown.hook + breakdown.voiceMatch + breakdown.structure + breakdown.engagement + breakdown.antiSlop;
+  const rawScore = clamp(parsed?.score, 0, 100);
+  const score = rawScore > 0 ? rawScore : sumBreakdown;
   const suggestionsRaw: string[] = Array.isArray(parsed?.suggestions) ? parsed.suggestions : [];
   const suggestions = suggestionsRaw.filter((s) => typeof s === "string" && s.trim().length > 0).slice(0, 3);
   while (suggestions.length < 3) suggestions.push("Tighten the hook and make the opening more specific.");
@@ -91,35 +94,55 @@ export async function POST(req: NextRequest) {
       ? `USER WRITING SAMPLES (ground-truth voice):\n${samplesArr.map((s, i) => `Sample ${i + 1}:\n${s}`).join("\n\n")}\n\n`
       : "";
 
-    const prompt = `You are Cridl Cortex grading a draft LinkedIn post against the user's own voice.
+    const systemMsg = `You are Cridl Cortex, an expert LinkedIn ghostwriter and editor. You grade drafts strictly against the rubric. You ALWAYS respond with a single valid JSON object — no prose, no code fences, no markdown. Be honest and specific: do not give credit unless the post earns it. Different posts must get different scores.`;
 
-${voiceBlock}${samplesBlock}${POST_QUALITY_SCORE_PROMPT}
+    const userMsg = `${voiceBlock}${samplesBlock}${POST_QUALITY_SCORE_PROMPT}
 
-POST TO SCORE:
+POST TO SCORE (verbatim, between <<< >>>):
+<<<
+${postText.slice(0, 5000)}
+>>>
 
-${postText.slice(0, 5000)}`;
+Return ONLY the JSON object specified above. No commentary.`;
 
-    const completion = await openRouter.chat.completions.create({
-      model: SCORE_MODEL,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.2,
-      max_tokens: 600,
-      response_format: { type: "json_object" },
-    });
-
-    const raw = completion.choices?.[0]?.message?.content || "";
-    let parsed: any = null;
-    try {
-      parsed = JSON.parse(stripFences(raw));
-    } catch {
+    function parseRaw(raw: string): any {
+      if (!raw) return null;
+      try { return JSON.parse(stripFences(raw)); } catch {}
       const match = raw.match(/\{[\s\S]*\}/);
-      if (match) {
-        try { parsed = JSON.parse(match[0]); } catch { parsed = null; }
+      if (match) { try { return JSON.parse(match[0]); } catch {} }
+      return null;
+    }
+
+    async function callModel(model: string) {
+      return openRouter.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: systemMsg },
+          { role: "user", content: userMsg },
+        ],
+        temperature: 0.2,
+        max_tokens: 700,
+        response_format: { type: "json_object" },
+      });
+    }
+
+    let parsed: any = null;
+    let lastErr: any = null;
+    for (const model of [PRIMARY_SCORE_MODEL, FALLBACK_SCORE_MODEL]) {
+      try {
+        const completion = await callModel(model);
+        const raw = completion.choices?.[0]?.message?.content || "";
+        parsed = parseRaw(raw);
+        if (parsed) break;
+        console.error(`[api/posts/score] Unparseable output from ${model}:`, raw.slice(0, 300));
+      } catch (e: any) {
+        lastErr = e;
+        console.error(`[api/posts/score] ${model} failed:`, e?.message || e);
       }
     }
 
     if (!parsed) {
-      console.error("[api/posts/score] Could not parse model output");
+      console.error("[api/posts/score] All models failed", lastErr?.message);
       return NextResponse.json(safeFallback());
     }
 
