@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyTokenEdge } from "@/lib/utils/verifyTokenEdge";
-import { openRouter, DEFAULT_MODEL } from "@/lib/ai/openrouter";
+import { openRouter } from "@/lib/ai/openrouter";
+
+const SCORE_MODEL = "moonshotai/kimi-k2.6";
 import { POST_QUALITY_SCORE_PROMPT } from "@/lib/ai/neel-prompt-sections";
 
 // Edge runtime — quality scoring uses OpenRouter, mirrors /api/ai/research pattern.
@@ -98,7 +100,7 @@ POST TO SCORE:
 ${postText.slice(0, 5000)}`;
 
     const completion = await openRouter.chat.completions.create({
-      model: DEFAULT_MODEL,
+      model: SCORE_MODEL,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.2,
       max_tokens: 600,

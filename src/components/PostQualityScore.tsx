@@ -43,6 +43,7 @@ export default function PostQualityScore({ postText, userId, onApplyHook }: Prop
   const [result, setResult] = useState<ScoreResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hookApplied, setHookApplied] = useState(false);
   const didAutoScoreRef = useRef(false);
 
   const score = useCallback(async () => {
@@ -66,6 +67,7 @@ export default function PostQualityScore({ postText, userId, onApplyHook }: Prop
       }
       const data = (await res.json()) as ScoreResult;
       setResult(data);
+      setHookApplied(false);
     } catch {
       setError("Network issue while scoring.");
     } finally {
@@ -75,11 +77,10 @@ export default function PostQualityScore({ postText, userId, onApplyHook }: Prop
 
   useEffect(() => {
     if (didAutoScoreRef.current) return;
-    if (!userId) return;
     if (!postText || postText.trim().length < 10) return;
     didAutoScoreRef.current = true;
     score();
-  }, [userId, postText, score]);
+  }, [postText, score]);
 
   // Circle math
   const RADIUS = 42;
@@ -217,10 +218,14 @@ export default function PostQualityScore({ postText, userId, onApplyHook }: Prop
           {onApplyHook && (
             <button
               type="button"
-              onClick={() => onApplyHook(result.rewrittenHook!)}
-              className="text-[11px] px-2 py-1 rounded-md bg-[var(--primary)] text-white hover:opacity-90"
+              disabled={hookApplied}
+              onClick={() => {
+                onApplyHook(result.rewrittenHook!);
+                setHookApplied(true);
+              }}
+              className="text-[11px] px-2 py-1 rounded-md bg-[var(--primary)] text-white hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Apply hook
+              {hookApplied ? "Applied ✓" : "Apply hook"}
             </button>
           )}
         </div>
