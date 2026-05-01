@@ -133,7 +133,7 @@ Return ONLY valid JSON:
             model,
             messages: [{ role: "user", content: prompt }],
             temperature: 0.3,
-            max_tokens: 800,
+            max_tokens: 1500,
           }),
           signal: controller.signal,
         });

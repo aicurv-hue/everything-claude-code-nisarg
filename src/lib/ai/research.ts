@@ -155,7 +155,7 @@ Return ONLY valid JSON (no markdown fences, no extra text):
           model,
           messages: [{ role: "user", content: combinedPrompt }],
           temperature: 0.3,
-          max_tokens: 1200,
+          max_tokens: 1500,
         });
         text = res.choices[0].message.content || "";
         const candidate = extractJSON(text);
