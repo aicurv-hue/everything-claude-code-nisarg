@@ -498,30 +498,30 @@ HARD CONSTRAINT — word count: The post MUST be ${lengthSpec.words}. Count your
 
 Start directly with the hook line. Output nothing else.`;
 
-  // Helper: try primary model, fall back to GPT-4o-mini on 5xx errors
-  const chatWithFallback = async (messages: any[], temperature: number) => {
-    // Force Kimi K2.6 as primary across post generation regardless of legacy
-    // user-profile `model` selection. Gemini 2.0 Flash remains the silent
-    // fallback inside the catch below.
-    const raw = DEFAULT_MODEL;
-    const MODEL_ALIASES: Record<string, string> = {
-      "google/gemini-2.0-flash": "google/gemini-2.0-flash-001",
-      "google/gemini-2.5-flash": "google/gemini-2.5-flash-preview-05-20",
-      "anthropic/claude-haiku-4-5": "anthropic/claude-haiku-4-5",
-    };
-    const primary = MODEL_ALIASES[raw] ?? raw;
+  // Per-call timeouts must add up to less than the Vercel edge function budget.
+  // Kimi capped at 12s, Gemini fallback capped at 10s -> 22s worst case for one call.
+  const callWithTimeout = async (model: string, messages: any[], temperature: number, max_tokens: number, timeoutMs: number) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const res = await openRouter.chat.completions.create({ model: primary, messages, temperature, max_tokens: 1200 });
-      return res;
+      return await openRouter.chat.completions.create(
+        { model, messages, temperature, max_tokens },
+        { signal: controller.signal as any }
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
+
+  const chatWithFallback = async (messages: any[], temperature: number, max_tokens: number = 1200) => {
+    // Force Kimi K2.6 as primary across post generation regardless of legacy
+    // user-profile `model` selection. Gemini 2.0 Flash remains silent fallback.
+    try {
+      return await callWithTimeout(DEFAULT_MODEL, messages, temperature, max_tokens, 12000);
     } catch (err: any) {
-      const status = err?.status || err?.code;
-      // Fall back on transient HTTP errors AND when the primary model is unreachable / returns
-      // a malformed response — Kimi K2.6 has been seen to occasionally do this.
-      if (primary !== FALLBACK_MODEL) {
-        console.warn(`[Cortex] ${primary} failed (${status || err?.message}) — retrying with ${FALLBACK_MODEL}`);
-        return await openRouter.chat.completions.create({ model: FALLBACK_MODEL, messages, temperature, max_tokens: 1200 });
-      }
-      throw err;
+      const reason = err?.name === "AbortError" ? "timeout" : (err?.status || err?.code || err?.message);
+      console.warn(`[Cortex] ${DEFAULT_MODEL} failed (${reason}) — retrying with ${FALLBACK_MODEL}`);
+      return await callWithTimeout(FALLBACK_MODEL, messages, temperature, max_tokens, 10000);
     }
   };
 
@@ -546,17 +546,25 @@ Start directly with the hook line. Output nothing else.`;
       POST:    post,
     });
 
-    const imagePromptCompletion = await chatWithFallback(
-      [
-        { role: "system", content: imageSystemPrompt },
-        { role: "user",   content: imageUserPrompt },
-      ],
-      0.7
-    );
-
-    const rawImagePrompt = (imagePromptCompletion.choices[0].message.content || "").trim();
-    const stylePrefix = imageStyle ? (IMAGE_STYLE_PREFIXES[imageStyle] ?? "") : "";
-    const imagePrompt = stylePrefix ? `${stylePrefix} ${rawImagePrompt}` : rawImagePrompt;
+    // Image prompt is short (~150 tokens) and low-stakes — cap it tight so it
+    // can never blow the function budget. If both models fail we still ship
+    // the post with an empty image prompt; the user can regenerate it.
+    let imagePrompt = "";
+    try {
+      const imagePromptCompletion = await chatWithFallback(
+        [
+          { role: "system", content: imageSystemPrompt },
+          { role: "user",   content: imageUserPrompt },
+        ],
+        0.7,
+        220
+      );
+      const rawImagePrompt = (imagePromptCompletion.choices[0].message.content || "").trim();
+      const stylePrefix = imageStyle ? (IMAGE_STYLE_PREFIXES[imageStyle] ?? "") : "";
+      imagePrompt = stylePrefix ? `${stylePrefix} ${rawImagePrompt}` : rawImagePrompt;
+    } catch (e: any) {
+      console.warn("[Cortex] image prompt generation failed, returning empty:", e?.message || e);
+    }
 
     return { post, imagePrompt };
   } catch (error: any) {
