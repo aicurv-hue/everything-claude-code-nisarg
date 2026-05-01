@@ -29,6 +29,13 @@ export interface PostRequest {
   isRegeneration?: boolean;       // True when user clicked Regenerate — triggers stronger rewrite directive + higher temperature
   regenerateInstruction?: string; // User's free-form direction for the new version (separate from customInstructions)
   intentType?: "personal" | "professional"; // Detected from topic — controls brand context application
+  // ── Regeneration session memory (temporary, deleted on finalize) ──────────
+  initialPost?: string;           // Anchor — the very first AI-generated post in the session
+  regenerationTrail?: Array<{     // Append-only log of prior regen turns (turn 0 = anchor)
+    turn_index: number;
+    post_text: string;
+    user_comment: string | null;
+  }>;
 }
 
 // ─── Image style prefix map (Layer 1 — Brand Consistency) ─────────────────────
@@ -181,6 +188,108 @@ function buildMemoryBlock(memories: PostMemory[]): string {
   return block.length > 2000 ? block.slice(0, 2000) + "\n══════════════════════════════════════════" : block;
 }
 
+// ─── Regeneration prompt block ────────────────────────────────────────────────
+
+/**
+ * Builds the REGENERATION MODE section of the system prompt.
+ *
+ * When a regeneration trail is available, includes:
+ *   - the ANCHOR (initial post — keeps the session from drifting)
+ *   - the last 2 prior turns with the user comment that produced each
+ *   - a count of any earlier turns elided for prompt-size sanity
+ *
+ * Falls back to the single-previous-post format when no trail is present
+ * (old drafts, first regen before session is created).
+ */
+function buildRegenerationBlock(args: {
+  previousPost: string;
+  regenerateInstruction?: string;
+  initialPost?: string;
+  regenerationTrail?: Array<{ turn_index: number; post_text: string; user_comment: string | null }>;
+}): string {
+  const { previousPost, regenerateInstruction, initialPost, regenerationTrail } = args;
+  const directive = regenerateInstruction
+    ? `USER'S DIRECTION FOR THE NEW VERSION (apply this exactly — it is the whole reason they regenerated):\n${sanitizePromptInput(regenerateInstruction, 800)}`
+    : `USER'S DIRECTION: No specific instruction given — produce a meaningfully different angle, hook, and structure than the previous version.`;
+
+  const trail = (regenerationTrail || []).filter((t) => t && typeof t.post_text === "string");
+  const hasTrail = trail.length >= 1 && !!initialPost;
+
+  if (!hasTrail) {
+    return [
+      "",
+      `══════════════════════════════════════════`,
+      `REGENERATION MODE — HIGHEST PRIORITY`,
+      `══════════════════════════════════════════`,
+      `The user already received the post below and asked for a NEW version. Your job is to produce a clearly different post on the same topic.`,
+      ``,
+      `PREVIOUS VERSION (do NOT repeat its hook, structure, or phrasing):`,
+      `"""`,
+      sanitizePromptInput(previousPost, 3000),
+      `"""`,
+      ``,
+      directive,
+      ``,
+      `HARD RULES for this regeneration:`,
+      `- The new post MUST open with a different hook than the previous version.`,
+      `- The new post MUST differ in wording, sentence structure, and order of ideas.`,
+      `- Keep the same topic, audience, tone, and word count.`,
+      `- Apply the user's direction above. If it conflicts with brand context, the user's direction wins.`,
+      `- Output ONLY the new post text. Do not reference the previous version.`,
+    ].join("\n");
+  }
+
+  // Trail-aware block: anchor + last 2 turns (excluding turn 0 which is the anchor)
+  const nonAnchorTurns = trail.filter((t) => t.turn_index > 0);
+  const tail = nonAnchorTurns.slice(-2);
+  const elided = Math.max(0, nonAnchorTurns.length - tail.length);
+
+  const lines: string[] = [
+    "",
+    `══════════════════════════════════════════`,
+    `REGENERATION MODE — HIGHEST PRIORITY`,
+    `══════════════════════════════════════════`,
+    `This is an iterative session. The user has already given you feedback on prior versions and is asking for another revision.`,
+    ``,
+    `ANCHOR — the initial post in this session. Preserve its core message, topic, stance, and persona voice. Do NOT drift away from it across revisions:`,
+    `"""`,
+    sanitizePromptInput(initialPost!, 2500),
+    `"""`,
+    ``,
+  ];
+
+  if (elided > 0) {
+    lines.push(`[${elided} earlier revision${elided === 1 ? "" : "s"} elided for brevity — the patterns the user rejected are reflected in the more recent revisions below]`, ``);
+  }
+
+  for (const t of tail) {
+    lines.push(
+      `── PRIOR REVISION (turn ${t.turn_index}) ──`,
+      `User asked: ${t.user_comment ? `"${sanitizePromptInput(t.user_comment, 500)}"` : "(no specific direction)"}`,
+      `You produced:`,
+      `"""`,
+      sanitizePromptInput(t.post_text, 2000),
+      `"""`,
+      ``,
+    );
+  }
+
+  lines.push(
+    `── CURRENT REVISION TARGET ──`,
+    directive,
+    ``,
+    `HARD RULES for this regeneration:`,
+    `- Treat the ANCHOR as the source of truth for topic, stance, and persona voice. Do NOT drift.`,
+    `- Apply each user direction cumulatively — earlier comments still hold unless the latest one contradicts them.`,
+    `- Do NOT reuse hooks, openings, or phrasings already produced in prior revisions above.`,
+    `- Keep the same topic, audience, tone, and word count.`,
+    `- If the user's latest direction conflicts with brand context, the user's direction wins.`,
+    `- Output ONLY the new post text. Do not reference prior revisions or this trail.`,
+  );
+
+  return lines.join("\n");
+}
+
 // ─── Output sanitiser ──────────────────────────────────────────────────────────
 
 /**
@@ -225,7 +334,7 @@ function sanitizePost(raw: string): string {
  *   - marketing-skills-all: social-content (LinkedIn-specific structure, CTA, tone mapping)
  */
 export async function generatePost(request: PostRequest): Promise<GenerateResult> {
-  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, writingSamples, imageStyle, sourceContext, previousPost, isRegeneration, regenerateInstruction, intentType } = request;
+  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, writingSamples, imageStyle, sourceContext, previousPost, isRegeneration, regenerateInstruction, intentType, initialPost, regenerationTrail } = request;
 
   const lengthSpec = LENGTH_SPEC[length] || LENGTH_SPEC.medium;
   const isProfessional = (intentType ?? "professional") === "professional";
@@ -340,29 +449,12 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
         ].join("\n")
       : "",
     isRegeneration && previousPost
-      ? [
-          "",
-          `══════════════════════════════════════════`,
-          `REGENERATION MODE — HIGHEST PRIORITY`,
-          `══════════════════════════════════════════`,
-          `The user already received the post below and asked for a NEW version. Your job is to produce a clearly different post on the same topic.`,
-          ``,
-          `PREVIOUS VERSION (do NOT repeat its hook, structure, or phrasing):`,
-          `"""`,
-          sanitizePromptInput(previousPost, 3000),
-          `"""`,
-          ``,
-          regenerateInstruction
-            ? `USER'S DIRECTION FOR THE NEW VERSION (apply this exactly — it is the whole reason they regenerated):\n${sanitizePromptInput(regenerateInstruction, 800)}`
-            : `USER'S DIRECTION: No specific instruction given — produce a meaningfully different angle, hook, and structure than the previous version.`,
-          ``,
-          `HARD RULES for this regeneration:`,
-          `- The new post MUST open with a different hook than the previous version.`,
-          `- The new post MUST differ in wording, sentence structure, and order of ideas.`,
-          `- Keep the same topic, audience, tone, and word count.`,
-          `- Apply the user's direction above. If it conflicts with brand context, the user's direction wins.`,
-          `- Output ONLY the new post text. Do not reference the previous version.`,
-        ].join("\n")
+      ? buildRegenerationBlock({
+          previousPost,
+          regenerateInstruction,
+          initialPost,
+          regenerationTrail,
+        })
       : previousPost
         ? [
             "",

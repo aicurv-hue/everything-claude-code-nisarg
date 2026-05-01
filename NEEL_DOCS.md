@@ -820,3 +820,27 @@ Go to **Settings → Image Style tab**:
 - Body input: `{ rawText, userId, voiceProfile?, writingSamples?, memoryContext? }` — caller passes voice/samples (no Firestore reads in edge).
 - Returns: `{ rewrittenPost, score, changes[] }`. Score comes from internal fetch to `/api/posts/score` (defaults to 0 on failure). Safe fallback `{ rewrittenPost: rawText, changes: [] }` on parse failure — never 500s.
 - Removes AI-slop tells (corporate jargon, "In today's digital age", emoji overuse, fabricated stats, "Excited to announce"). No asterisks in output.
+
+---
+
+## Regeneration Memory (2026-05-01)
+
+Iterative regeneration with comments now has temporary, session-scoped memory so Cortex stops drifting away from the user's original intent across multiple regen rounds.
+
+- **Storage**: `regeneration_sessions/{sessionId}` — single Firestore doc per draft, keyed by a client-generated UUID seeded into `localStorage.latest_post.regenSessionId` at first generation. Schema: `{ session_id, user_id, segment, initial_post (anchor), turns: RegenTurn[], created_at, updated_at }`. `RegenTurn = { turn_index, post_text, image_prompt?, user_comment, model_used?, created_at }`. Turn 0 is always the anchor.
+- **Helpers**: `src/lib/db/regenerationSessions.ts` exports `getSession`, `createSession`, `appendTurn`, `deleteSession`, `MAX_TURNS = 10`.
+- **API**: `src/app/api/regeneration-sessions/[sessionId]/route.ts` (Node, Bearer auth via Admin SDK).
+  - `GET` — returns `{ session_id, initial_post, segment, turns, regenerations_left }` or 404.
+  - `POST` — create-on-first-write (requires `initial_post` + `segment`) and/or append a turn. Returns 429 + `regenerations_left: 0` once `turns.length >= MAX_TURNS`. Verifies ownership against `user_id`.
+  - `DELETE` — best-effort wipe used by client cleanup hooks.
+- **Edge access**: `/api/ai/generate` stays edge-only. Client (preview page) GETs the session, passes `initialPost` + `regenerationTrail` in the generate body. Same pattern as `clientProfile`/`memoryContext` — no Admin SDK in edge.
+- **Prompt assembly** (`src/lib/ai/generate.ts` → `buildRegenerationBlock`): when a trail is present, the REGENERATION MODE block includes (a) the ANCHOR (initial post), (b) any elided-revision count, (c) the last 2 prior turns each with the user comment that produced them, (d) the current revision target. Anchor is the source of truth for topic/stance/voice — comments apply cumulatively. Falls back to the single-`previousPost` format when no trail (old drafts, very first regen).
+- **Cleanup triggers** (preview page calls `cleanupRegenSession` → `DELETE /api/regeneration-sessions/{sessionId}`):
+  - Save Draft → after `createPost` succeeds.
+  - Schedule → after `setScheduleStatus("success")`.
+  - Publish (direct) → after `setPublishStatus("success")`.
+  - Posts DELETE / cron publish: not wired (sessions are normally cleared at finalize-time on the client; abandoned-draft sessions are accepted as orphans for v1).
+- **UI**: regen hint panel surfaces "X regens left" once a session exists. At the cap, the regenerate button errors out before invoking the model.
+- **Files**:
+  - New: `src/lib/db/regenerationSessions.ts`, `src/app/api/regeneration-sessions/[sessionId]/route.ts`.
+  - Modified: `src/lib/ai/generate.ts` (PostRequest fields `initialPost` + `regenerationTrail`, new `buildRegenerationBlock`), `src/app/dashboard/create/page.tsx` (seeds `regenSessionId` + `initialPost` into `latest_post`), `src/app/dashboard/create/preview/page.tsx` (regen handler fetches trail → calls generate → appends turn; cleanup wired into save/schedule/publish).

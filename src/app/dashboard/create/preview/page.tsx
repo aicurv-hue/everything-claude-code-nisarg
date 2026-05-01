@@ -75,6 +75,8 @@ export default function PostPreviewPage() {
   // Single-level undo for both post and image prompt
   const [previousContent, setPreviousContent]         = useState<string | null>(null);
   const [previousImagePrompt, setPreviousImagePrompt] = useState<string | null>(null);
+  // Regenerations remaining in this session (null = unknown / unlimited fallback)
+  const [regenerationsLeft, setRegenerationsLeft]     = useState<number | null>(null);
 
   const router = useRouter();
 
@@ -124,6 +126,24 @@ export default function PostPreviewPage() {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ id, ...updates }),
     });
+  };
+
+  /**
+   * Delete the regeneration session memory.
+   * Called when the post is finalized (saved as draft, scheduled, published)
+   * so the temporary trail doesn't linger in Firestore.
+   */
+  const cleanupRegenSession = async () => {
+    const sessionId = postData?.regenSessionId;
+    if (!sessionId) return;
+    try {
+      const tok = await getAuthToken();
+      if (!tok) return;
+      await fetch(`/api/regeneration-sessions/${encodeURIComponent(sessionId)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${tok}` },
+      }).catch(() => {});
+    } catch { /* best-effort */ }
   };
 
   useEffect(() => {
@@ -183,14 +203,46 @@ export default function PostPreviewPage() {
   /* ── Regenerate post ── */
   const handleRegeneratePost = async () => {
     if (!postData || isRegeneratingPost) return;
+    if (regenerationsLeft !== null && regenerationsLeft <= 0) {
+      setRegenError("Regeneration limit reached for this draft. Edit manually or save and start fresh.");
+      return;
+    }
     setRegenError(null);
     setIsRegeneratingPost(true);
     setPreviousContent(editedContent);
 
+    const sessionId: string | undefined = postData.regenSessionId;
+    const initialPost: string = postData.initialPost || postData.content;
+    const userComment = regenHint.trim();
+
     try {
       const imageStyleRegen = postData.clientProfile?.imageStyle ?? undefined;
-
       const regenToken = await getAuthToken();
+
+      // Fetch the existing trail (if any). 404 = first regen — empty trail, session
+      // will be created on the POST after generation succeeds.
+      let regenerationTrail: any[] = [];
+      if (sessionId && regenToken) {
+        try {
+          const sessRes = await fetch(`/api/regeneration-sessions/${encodeURIComponent(sessionId)}`, {
+            headers: { Authorization: `Bearer ${regenToken}` },
+          });
+          if (sessRes.ok) {
+            const sessData = await sessRes.json();
+            regenerationTrail = Array.isArray(sessData.turns) ? sessData.turns : [];
+            if (typeof sessData.regenerations_left === "number") {
+              setRegenerationsLeft(sessData.regenerations_left);
+              if (sessData.regenerations_left <= 0) {
+                throw new Error("Regeneration limit reached for this draft. Edit manually or save and start fresh.");
+              }
+            }
+          }
+        } catch (e: any) {
+          if (e?.message?.startsWith("Regeneration limit")) throw e;
+          // network error fetching session is non-fatal — fall back to single-prev-post behavior
+        }
+      }
+
       const res = await fetch("/api/ai/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(regenToken ? { Authorization: `Bearer ${regenToken}` } : {}) },
@@ -202,10 +254,8 @@ export default function PostPreviewPage() {
           segment:            postData.metadata.segment,
           research:           postData.research,
           intentType:         postData.intentType       ?? "professional",
-          // Original generation rules (kept separate from the regeneration direction)
           customInstructions: postData.metadata.customInstructions || undefined,
           imageStyle:         imageStyleRegen,
-          // Full context — same as initial generation (preserves brand/profile basics)
           model:              postData.metadata.model   ?? undefined,
           clientProfile:      postData.clientProfile    ?? undefined,
           systemPrompt:       postData.systemPrompt     ?? undefined,
@@ -215,7 +265,10 @@ export default function PostPreviewPage() {
           // Regeneration signal — forces stronger rewrite path in generate.ts
           isRegeneration:        true,
           previousPost:          editedContent          || undefined,
-          regenerateInstruction: regenHint.trim()       || undefined,
+          regenerateInstruction: userComment            || undefined,
+          // Temporary regen memory — anchor + full trail of prior turns
+          initialPost:           initialPost            || undefined,
+          regenerationTrail:     regenerationTrail.length > 0 ? regenerationTrail : undefined,
         }),
       });
       const data = await res.json();
@@ -223,11 +276,33 @@ export default function PostPreviewPage() {
 
       setEditedContent(data.post);
       setImagePrompt(data.imagePrompt);
-      // Do NOT clear imageUrl — image is independent of post text
       setShowRegenHint(false);
       setRegenHint("");
 
-      // Keep localStorage in sync
+      // Persist the new turn to the regen session (creates the session on first regen).
+      // Fire-and-forget — failure here only loses memory continuity, not the post itself.
+      if (sessionId && regenToken) {
+        fetch(`/api/regeneration-sessions/${encodeURIComponent(sessionId)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${regenToken}` },
+          body: JSON.stringify({
+            initial_post: initialPost,
+            segment: postData.metadata?.segment === "corporate" ? "corporate" : "individual",
+            initial_image_prompt: postData.imagePrompt ?? null,
+            user_comment: userComment,
+            post_text: data.post,
+            image_prompt: data.imagePrompt ?? null,
+            model_used: postData.metadata?.model ?? null,
+          }),
+        })
+          .then((r) => r.json().catch(() => ({})))
+          .then((j) => {
+            if (typeof j?.regenerations_left === "number") setRegenerationsLeft(j.regenerations_left);
+          })
+          .catch(() => {});
+      }
+
+      // Keep localStorage in sync — initialPost stays anchored to the original
       localStorage.setItem("latest_post", JSON.stringify({
         ...postData,
         content: data.post,
@@ -544,6 +619,7 @@ export default function PostPreviewPage() {
         image_hook: imageHook || undefined,
         created_at: null,
       });
+      cleanupRegenSession();
       router.push("/dashboard/drafts");
     } catch {
       alert("Failed to save draft.");
@@ -609,6 +685,7 @@ export default function PostPreviewPage() {
 
       setPublishStatus("success");
       setPublishMessage("Post published successfully to LinkedIn! 🎉");
+      cleanupRegenSession();
 
       // Save to Firestore after successful publish — fire and forget
       if (authToken) {
@@ -696,6 +773,7 @@ export default function PostPreviewPage() {
 
       // Show success
       setScheduleStatus("success");
+      cleanupRegenSession();
       const label = scheduledAt.toLocaleString("en-US", { timeZone: timezone, day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
       setScheduleMessage(`Scheduled for ${label} (${timezone})${scheduleImageUrl ? " · Image attached" : ""}`);
       setShowSchedulePicker(false);
@@ -939,6 +1017,9 @@ export default function PostPreviewPage() {
               <div className="px-5 py-3 border-b border-[var(--border-sub)] bg-[var(--card-hover)] space-y-2">
                 <p className="text-[11px] text-[var(--text-muted)]">
                   Give Cortex a direction hint (optional) — e.g. <span className="italic">"make it shorter"</span>, <span className="italic">"more storytelling"</span>, <span className="italic">"less salesy"</span>
+                  {regenerationsLeft !== null && (
+                    <span className="ml-2 text-[var(--text-muted)]">· {regenerationsLeft} regen{regenerationsLeft === 1 ? "" : "s"} left</span>
+                  )}
                 </p>
                 <div className="flex gap-2">
                   <input

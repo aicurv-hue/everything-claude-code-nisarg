@@ -250,6 +250,14 @@ export default function CreatePostPage() {
       if (!generateRes.ok) throw new Error(`Generation failed: ${await generateRes.text()}`);
       const { post: content, imagePrompt } = await generateRes.json();
 
+      // Fresh regeneration session id — used to key the temporary regen memory
+      // in Firestore (regeneration_sessions/{sessionId}). Created lazily on the
+      // first regenerate click; cleaned up on save/schedule/publish/delete.
+      const regenSessionId =
+        (typeof crypto !== "undefined" && (crypto as any).randomUUID)
+          ? (crypto as any).randomUUID()
+          : `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+
       localStorage.setItem("latest_post", JSON.stringify({
         content, imagePrompt, research,
         referenceImagePreview: sourceImage?.preview || null,
@@ -260,6 +268,8 @@ export default function CreatePostPage() {
         memoryContext: memoryContext.length > 0 ? memoryContext : null,
         writingSamples: writingSamples.length > 0 ? writingSamples : null,
         sourceContext: resolvedSourceContext || null,
+        regenSessionId,
+        initialPost: content,
       }));
       // Clear draft cache now that it's been used
       localStorage.removeItem("create_draft");
