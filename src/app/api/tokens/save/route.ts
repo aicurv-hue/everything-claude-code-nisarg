@@ -12,11 +12,14 @@ import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: NextRequest) {
-  // Internal-only endpoint. If INTERNAL_API_SECRET is configured, require it.
-  // If not configured (e.g. not yet set in Vercel), allow through so OAuth
-  // callback can still persist tokens for new users.
+  // Internal-only endpoint — require shared secret unconditionally.
+  // Without this gate, anyone could overwrite any user's LinkedIn token in Firestore.
   const internalSecret = process.env.INTERNAL_API_SECRET;
-  if (internalSecret && req.headers.get("x-internal-secret") !== internalSecret) {
+  if (!internalSecret) {
+    console.error("[tokens/save] INTERNAL_API_SECRET not configured — refusing all requests");
+    return NextResponse.json({ error: "Server misconfigured" }, { status: 503 });
+  }
+  if (req.headers.get("x-internal-secret") !== internalSecret) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

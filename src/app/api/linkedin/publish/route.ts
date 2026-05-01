@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { savePostMemory } from "@/lib/ai/save-memory";
+import { getUserPlan, canUseCorporate } from "@/lib/checkSubscription";
 
 const LI_VERSION = "202505"; // LinkedIn API version header (YYYYMM)
 const TIMEOUT_MS  = 15_000;
@@ -172,6 +173,17 @@ export async function POST(request: NextRequest) {
 
   if (!content?.trim()) {
     return NextResponse.json({ error: "Post content is empty." }, { status: 400 });
+  }
+
+  // Plan gate — corporate posting is Pro+ only
+  if (segment === "corporate" && firebaseUid) {
+    const plan = await getUserPlan(firebaseUid);
+    if (!canUseCorporate(plan)) {
+      return NextResponse.json(
+        { error: "Company page posting requires the Pro plan or higher.", code: "PLAN_UPGRADE_REQUIRED" },
+        { status: 403 }
+      );
+    }
   }
 
   let authorUrn: string;

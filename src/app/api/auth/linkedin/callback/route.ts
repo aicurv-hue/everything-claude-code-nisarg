@@ -4,21 +4,6 @@ import { cookies } from "next/headers";
 // Edge Runtime — no timeout limit on Vercel Hobby plan
 export const runtime = "edge";
 
-const COOKIE_OPTS_PRIVATE = (maxAge: number) => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  maxAge,
-  path: "/",
-  sameSite: "lax" as const,
-});
-
-const COOKIE_OPTS_PUBLIC = (maxAge: number) => ({
-  httpOnly: false,
-  maxAge,
-  path: "/",
-  sameSite: "lax" as const,
-});
-
 /**
  * Fetches LinkedIn userinfo with a hard timeout so network issues never crash the callback.
  */
@@ -119,23 +104,7 @@ export async function GET(request: NextRequest) {
   const linkedInEmail   = profile?.email    || "";
   const linkedInPicture = profile?.picture  || "";
 
-  // ── Step 3: Store all tokens in cookies ───────────────────────────────────
-  // Access token — 60 days
-  cookieStore.set("li_access_token", accessToken, COOKIE_OPTS_PRIVATE(expiresIn));
-  cookieStore.set("li_token_expiry", String(Date.now() + expiresIn * 1000), COOKIE_OPTS_PUBLIC(expiresIn));
-
-  // Refresh token — 365 days (permanent login)
-  if (refreshToken) {
-    cookieStore.set("li_refresh_token", refreshToken, COOKIE_OPTS_PRIVATE(refreshExpiresIn));
-  }
-
-  // User identity
-  cookieStore.set("li_user_sub",     linkedInSub,     COOKIE_OPTS_PRIVATE(refreshExpiresIn));
-  cookieStore.set("li_user_name",    linkedInName,    COOKIE_OPTS_PUBLIC(refreshExpiresIn));
-  cookieStore.set("li_user_picture", linkedInPicture, COOKIE_OPTS_PUBLIC(refreshExpiresIn));
-  cookieStore.set("li_user_email",   linkedInEmail,   COOKIE_OPTS_PUBLIC(refreshExpiresIn));
-
-  // ── Step 3b: Persist tokens to DB via internal Node.js route ─────────────────
+  // ── Step 3: Persist tokens to DB via internal Node.js route ─────────────────
   // Edge Runtime cannot use Firebase client SDK reliably — delegate to /api/tokens/save
   // (Node.js runtime + Admin SDK). MUST be awaited — Edge terminates on response,
   // so fire-and-forget gets killed before the Firestore write completes.

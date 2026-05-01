@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import { getUserPlan, canUseCorporate } from "@/lib/checkSubscription";
 
 const LI_VERSION = "202505";
 const TIMEOUT_MS = 20_000;
@@ -115,6 +116,17 @@ export async function POST(req: NextRequest) {
   if (post.user_id !== uid) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (post.status !== "scheduled" && post.status !== "failed" && post.status !== "published") {
     return NextResponse.json({ error: "Post is not in a publishable state" }, { status: 400 });
+  }
+
+  // Plan gate — corporate posting is Pro+ only
+  if (post.segment === "corporate") {
+    const plan = await getUserPlan(uid);
+    if (!canUseCorporate(plan)) {
+      return NextResponse.json(
+        { error: "Company page posting requires the Pro plan or higher.", code: "PLAN_UPGRADE_REQUIRED" },
+        { status: 403 }
+      );
+    }
   }
 
   // Get LinkedIn token
