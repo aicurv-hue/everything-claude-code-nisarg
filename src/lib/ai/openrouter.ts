@@ -19,5 +19,7 @@ export const openRouter = new OpenAI({
   }
 });
 
-export const DEFAULT_MODEL   = "moonshotai/kimi-k2.6";         // Kimi K2.6 via OpenRouter (primary)
-export const FALLBACK_MODEL  = "google/gemini-2.0-flash-001";  // Gemini 2.0 Flash fallback if Kimi fails
+// Single-model architecture: Gemini 2.5 Flash powers every text + vision call across Cridl.
+// FALLBACK_MODEL is kept equal so existing fallback chains retry the same model once on transient errors.
+export const DEFAULT_MODEL   = "google/gemini-2.5-flash";
+export const FALLBACK_MODEL  = "google/gemini-2.5-flash";

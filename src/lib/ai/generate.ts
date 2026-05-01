@@ -499,7 +499,7 @@ HARD CONSTRAINT — word count: The post MUST be ${lengthSpec.words}. Count your
 Start directly with the hook line. Output nothing else.`;
 
   // Per-call timeouts must add up to less than the Vercel edge function budget.
-  // Kimi capped at 12s, Gemini fallback capped at 10s -> 22s worst case for one call.
+  // Single model (Gemini 2.5 Flash) — primary capped at 12s, retry capped at 10s.
   const callWithTimeout = async (model: string, messages: any[], temperature: number, max_tokens: number, timeoutMs: number) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -514,8 +514,8 @@ Start directly with the hook line. Output nothing else.`;
   };
 
   const chatWithFallback = async (messages: any[], temperature: number, max_tokens: number = 1200) => {
-    // Force Kimi K2.6 as primary across post generation regardless of legacy
-    // user-profile `model` selection. Gemini 2.0 Flash remains silent fallback.
+    // Single-model architecture: always Gemini 2.5 Flash, ignoring any legacy
+    // model ID stored in user profiles. Same model used as retry on transient errors.
     try {
       return await callWithTimeout(DEFAULT_MODEL, messages, temperature, max_tokens, 12000);
     } catch (err: any) {

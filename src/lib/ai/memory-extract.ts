@@ -6,7 +6,7 @@
  *   - 5–10 concrete keywords for relevance scoring in future retrievals
  *
  * Design principles (backend-patterns skill):
- *   - Uses the cheapest capable model (gpt-4o-mini) — ~$0.0002 per call
+ *   - Uses Gemini 2.5 Flash (single-model architecture across Cridl)
  *   - Structured JSON output enforced by prompt — no parsing ambiguity
  *   - Fails silently — extraction failure must NEVER block post generation
  *   - Token budget: ~600 in / ~100 out — well within cost targets
@@ -20,7 +20,7 @@ export interface MemoryExtract {
   style_notes: string;  // 1 sentence: HOW this person writes — voice, rhythm, tone markers
 }
 
-const EXTRACT_MODEL = "openai/gpt-4o-mini"; // Always use cheapest model for extraction
+const EXTRACT_MODEL = "google/gemini-2.5-flash"; // Single-model architecture (Gemini 2.5 Flash everywhere)
 
 /**
  * Extract a compact memory record from a generated post.

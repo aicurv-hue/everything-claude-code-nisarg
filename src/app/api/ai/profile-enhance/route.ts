@@ -124,7 +124,7 @@ ${fieldPrompt}`;
     };
 
     let enhanced = "";
-    for (const model of ["moonshotai/kimi-k2.6", "google/gemini-2.0-flash-001"]) {
+    for (const model of ["google/gemini-2.5-flash", "google/gemini-2.5-flash"]) {
       try {
         const res = await callModel(model);
         if (!res.ok) {

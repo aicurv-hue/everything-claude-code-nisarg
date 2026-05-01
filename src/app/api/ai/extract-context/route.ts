@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
             "X-Title": "Cridl",
           },
           body: JSON.stringify({
-            model: "openai/gpt-4o-mini",
+            model: "google/gemini-2.5-flash",
             messages: [{
               role: "user",
               content: [

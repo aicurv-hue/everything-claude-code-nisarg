@@ -13,7 +13,7 @@ async function getUid(req: NextRequest): Promise<string | null> {
   } catch { return null; }
 }
 
-const CAMPAIGN_FALLBACK_MODEL = "google/gemini-2.0-flash-001";
+const CAMPAIGN_FALLBACK_MODEL = "google/gemini-2.5-flash";
 
 async function callOpenRouter(messages: any[], model: string): Promise<string> {
   for (const m of [model, CAMPAIGN_FALLBACK_MODEL]) {
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   }
 
-  const model = "moonshotai/kimi-k2.6";
+  const model = "google/gemini-2.5-flash";
 
   // Fetch user profile for brand context
   let clientProfile: string = "";

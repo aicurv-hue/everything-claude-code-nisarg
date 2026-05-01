@@ -110,12 +110,13 @@ Return ONLY valid JSON:
     // Retry once on transient errors (5xx, network failures, per-attempt timeout).
     // Each attempt is bounded by AbortController so a slow model can't run out the function's overall budget.
     // Total budget across both models must fit inside Vercel's edge function limit.
-    // Kimi K2.6 first (10s cap), then Gemini 2.0 Flash (12s cap) → 22s worst case.
+    // Single model (Gemini 2.5 Flash). Two attempts with hard timeouts so a slow
+    // call can never exceed the edge function budget.
     let data: any = null;
     let lastErr = "";
     const RESEARCH_MODELS: Array<{ model: string; timeoutMs: number }> = [
-      { model: "moonshotai/kimi-k2.6",         timeoutMs: 10000 },
-      { model: "google/gemini-2.0-flash-001",  timeoutMs: 12000 },
+      { model: "google/gemini-2.5-flash", timeoutMs: 12000 },
+      { model: "google/gemini-2.5-flash", timeoutMs: 10000 },
     ];
     for (const { model, timeoutMs } of RESEARCH_MODELS) {
       const controller = new AbortController();

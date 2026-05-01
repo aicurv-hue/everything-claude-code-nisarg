@@ -3,8 +3,8 @@ import { suggestionService } from "@/lib/db/schedule-suggestions";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL          = process.env.OPENROUTER_MODEL || "moonshotai/kimi-k2.6";
-const FALLBACK_MODEL = "google/gemini-2.0-flash-001";
+const MODEL          = process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash";
+const FALLBACK_MODEL = "google/gemini-2.5-flash";
 
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 

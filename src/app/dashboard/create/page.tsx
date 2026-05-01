@@ -185,7 +185,7 @@ export default function CreatePostPage() {
     setGenerateError(null);
 
     const activeProfile: ProfileSegment | undefined = userProfile ? userProfile[segment] : undefined;
-    const selectedModel = activeProfile?.model || "google/gemini-2.0-flash-001";
+    const selectedModel = activeProfile?.model || "google/gemini-2.5-flash";
 
     try {
       // ── Extract source material (URL / image) if provided ──────────────────
