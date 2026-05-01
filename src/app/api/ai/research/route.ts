@@ -109,43 +109,44 @@ Return ONLY valid JSON:
 
     // Retry once on transient errors (5xx, network failures, per-attempt timeout).
     // Each attempt is bounded by AbortController so a slow model can't run out the function's overall budget.
+    // Total budget across both models must fit inside Vercel's edge function limit.
+    // Kimi K2.6 first (10s cap), then Gemini 2.0 Flash (12s cap) → 22s worst case.
     let data: any = null;
     let lastErr = "";
-    const RESEARCH_MODELS = ["moonshotai/kimi-k2.6", "google/gemini-2.0-flash-001"];
-    outer: for (const model of RESEARCH_MODELS) {
-      for (let attempt = 0; attempt < 2; attempt++) {
-        if (attempt > 0) await new Promise((r) => setTimeout(r, 500));
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 18000); // 18s per attempt
-        try {
-          const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-              "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
-              "X-Title": "Cridl",
-            },
-            body: JSON.stringify({
-              model,
-              messages: [{ role: "user", content: prompt }],
-              temperature: 0.3,
-              max_tokens: 800,
-            }),
-            signal: controller.signal,
-          });
-          if (!res.ok) {
-            lastErr = `OpenRouter ${res.status} on ${model}: ${await res.text()}`;
-            if (res.status < 500) break; // don't retry 4xx; try next model
-            continue;
-          }
-          data = await res.json();
-          break outer;
-        } catch (fetchErr: any) {
-          lastErr = fetchErr?.name === "AbortError" ? `research timeout on ${model}` : (fetchErr?.message || "network error");
-        } finally {
-          clearTimeout(timeoutId);
+    const RESEARCH_MODELS: Array<{ model: string; timeoutMs: number }> = [
+      { model: "moonshotai/kimi-k2.6",         timeoutMs: 10000 },
+      { model: "google/gemini-2.0-flash-001",  timeoutMs: 12000 },
+    ];
+    for (const { model, timeoutMs } of RESEARCH_MODELS) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
+            "X-Title": "Cridl",
+          },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.3,
+            max_tokens: 800,
+          }),
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          lastErr = `OpenRouter ${res.status} on ${model}: ${await res.text()}`;
+          continue; // try next model
         }
+        data = await res.json();
+        break;
+      } catch (fetchErr: any) {
+        lastErr = fetchErr?.name === "AbortError" ? `research timeout on ${model}` : (fetchErr?.message || "network error");
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
 
