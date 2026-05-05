@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { savePostMemory } from "@/lib/ai/save-memory";
 import { getUserPlan, canUseCorporate } from "@/lib/checkSubscription";
+import { buildCarouselPdf } from "@/lib/linkedin/buildCarouselPdf";
 
 const LI_VERSION = "202505"; // LinkedIn API version header (YYYYMM)
 const TIMEOUT_MS  = 15_000;
@@ -130,12 +131,80 @@ async function uploadImage(
 }
 
 /**
+ * Upload a PDF to LinkedIn via the Documents API.
+ * Used for carousel posts — multi-image carousels on LinkedIn are PDF document shares.
+ *
+ *   1. POST /rest/documents?action=initializeUpload  → uploadUrl + document URN
+ *   2. PUT  {uploadUrl}                              → PDF binary
+ *   Returns the document URN (e.g. "urn:li:document:xxxx") or null on failure.
+ */
+async function uploadDocument(
+  accessToken: string,
+  authorUrn:   string,
+  pdfBytes:    Buffer
+): Promise<string | null> {
+  try {
+    const { signal: s1, clear: c1 } = withTimeout(TIMEOUT_MS);
+    const initRes = await fetch(
+      "https://api.linkedin.com/rest/documents?action=initializeUpload",
+      {
+        method: "POST",
+        signal: s1,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+          "LinkedIn-Version": LI_VERSION,
+          "X-Restli-Protocol-Version": "2.0.0",
+        },
+        body: JSON.stringify({ initializeUploadRequest: { owner: authorUrn } }),
+      }
+    );
+    c1();
+
+    if (!initRes.ok) {
+      console.error("[linkedin/document] initializeUpload failed:", await initRes.text());
+      return null;
+    }
+
+    const initData    = await initRes.json();
+    const uploadUrl   = initData?.value?.uploadUrl;
+    const documentUrn = initData?.value?.document;
+
+    if (!uploadUrl || !documentUrn) {
+      console.error("[linkedin/document] Missing uploadUrl or document URN", initData);
+      return null;
+    }
+
+    const { signal: s2, clear: c2 } = withTimeout(60_000); // larger window for PDF upload
+    const upRes = await fetch(uploadUrl, {
+      method: "PUT",
+      signal: s2,
+      headers: { "Content-Type": "application/pdf" },
+      body: new Uint8Array(pdfBytes),
+    });
+    c2();
+
+    if (!upRes.ok) {
+      console.error("[linkedin/document] Binary upload failed:", upRes.status, await upRes.text());
+      return null;
+    }
+
+    console.log(`[linkedin/document] Upload successful → ${documentUrn}`);
+    return documentUrn;
+  } catch (err: any) {
+    console.error("[linkedin/document] Exception:", err?.message || err);
+    return null;
+  }
+}
+
+/**
  * POST /api/linkedin/publish
  *
- * Body: { content, imageUrl?, segment? }
+ * Body: { content, imageUrl?, imageUrls?, carouselTitle?, segment? }
  *
- * Uses LinkedIn Posts API (/rest/posts) + Images API (/rest/images).
+ * Uses LinkedIn Posts API (/rest/posts) + Images API (/rest/images) + Documents API (/rest/documents).
  * Switches author URN between personal profile and company page based on segment.
+ * If imageUrls.length >= 2, builds a PDF carousel and posts as a document share.
  */
 export async function POST(request: NextRequest) {
   let accessToken: string | undefined;
@@ -169,7 +238,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { content, imageUrl, segment = "individual", organizationId, topic, audience, tone, postDbId } = await request.json();
+  const {
+    content,
+    imageUrl,
+    imageUrls,
+    carouselTitle,
+    segment = "individual",
+    organizationId,
+    topic,
+    audience,
+    tone,
+    postDbId,
+  } = await request.json();
 
   if (!content?.trim()) {
     return NextResponse.json({ error: "Post content is empty." }, { status: 400 });
@@ -195,18 +275,51 @@ export async function POST(request: NextRequest) {
 
   console.log(`[linkedin/publish] Posting as ${segment} → ${authorUrn}`);
 
-  // Upload image if provided
+  // Carousel takes precedence: 2+ images become a PDF document share.
+  // Single image (or imageUrls of length 1) goes through the normal Images API path.
+  const isCarousel = Array.isArray(imageUrls) && imageUrls.length >= 2;
   let imageUrn: string | null = null;
-  if (imageUrl) {
-    if (!isAllowedImageUrl(imageUrl)) {
-      console.warn("[linkedin/publish] Blocked SSRF attempt — imageUrl hostname not in allowlist:", imageUrl);
-    } else {
-      console.log("[linkedin/publish] Uploading image via new Images API...");
-      imageUrn = await uploadImage(accessToken, authorUrn, imageUrl);
-      if (!imageUrn) {
-        console.warn("[linkedin/publish] Image upload failed — posting text only.");
+  let documentUrn: string | null = null;
+
+  if (isCarousel) {
+    const safeUrls = (imageUrls as string[]).filter(isAllowedImageUrl).slice(0, 10);
+    if (safeUrls.length < 2) {
+      return NextResponse.json(
+        { error: "Carousel needs at least 2 valid images." },
+        { status: 400 }
+      );
+    }
+    try {
+      console.log(`[linkedin/publish] Building carousel PDF from ${safeUrls.length} images...`);
+      const pdfBytes = await buildCarouselPdf(safeUrls);
+      documentUrn = await uploadDocument(accessToken, authorUrn, pdfBytes);
+      if (!documentUrn) {
+        return NextResponse.json(
+          { error: "Carousel upload to LinkedIn failed. Try again." },
+          { status: 502 }
+        );
+      }
+      console.log(`[linkedin/publish] Carousel ready: ${documentUrn}`);
+    } catch (err: any) {
+      console.error("[linkedin/publish] Carousel build failed:", err?.message || err);
+      return NextResponse.json(
+        { error: "Could not build carousel PDF from the selected images." },
+        { status: 500 }
+      );
+    }
+  } else {
+    const singleUrl = imageUrl || (Array.isArray(imageUrls) && imageUrls[0]);
+    if (singleUrl) {
+      if (!isAllowedImageUrl(singleUrl)) {
+        console.warn("[linkedin/publish] Blocked SSRF attempt — imageUrl hostname not in allowlist:", singleUrl);
       } else {
-        console.log(`[linkedin/publish] Image ready: ${imageUrn}`);
+        console.log("[linkedin/publish] Uploading image via Images API...");
+        imageUrn = await uploadImage(accessToken, authorUrn, singleUrl);
+        if (!imageUrn) {
+          console.warn("[linkedin/publish] Image upload failed — posting text only.");
+        } else {
+          console.log(`[linkedin/publish] Image ready: ${imageUrn}`);
+        }
       }
     }
   }
@@ -225,8 +338,15 @@ export async function POST(request: NextRequest) {
     isReshareDisabledByAuthor: false,
   };
 
-  // Attach image if upload succeeded
-  if (imageUrn) {
+  // Attach image or carousel document if upload succeeded
+  if (documentUrn) {
+    postBody.content = {
+      media: {
+        title: (carouselTitle && String(carouselTitle).slice(0, 100)) || "Carousel",
+        id: documentUrn,
+      },
+    };
+  } else if (imageUrn) {
     postBody.content = {
       media: {
         title: "AI generated image by Cortex",
@@ -307,10 +427,11 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({
-    success: true,
+    success:    true,
     postId,
     segment,
     authorUrn,
-    withImage: !!imageUrn,
+    withImage:    !!imageUrn,
+    withCarousel: !!documentUrn,
   });
 }

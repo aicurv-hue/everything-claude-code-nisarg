@@ -9,7 +9,8 @@ import { useAuth } from "@/lib/context/auth";
 import {
   CheckCircle, AlertCircle, Linkedin, FileText, Send,
   ImageIcon, RefreshCw, Download, Sparkles, Upload, X,
-  ArrowLeft, CalendarDays, RotateCcw, Wand2, User
+  ArrowLeft, CalendarDays, RotateCcw, Wand2, User,
+  Layers, Plus, Trash2
 } from "lucide-react";
 import SchedulePicker from "@/components/schedule/SchedulePicker";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
@@ -20,7 +21,15 @@ import RewriteButton from "@/components/RewriteButton";
 // Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
 import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 
-type ImageMode = "ai" | "upload" | "reference" | "face" | "none";
+type ImageMode = "ai" | "upload" | "reference" | "face" | "carousel" | "none";
+
+interface CarouselSlide {
+  prompt: string;
+  url: string | null;
+  loading: boolean;
+  error: string | null;
+}
+const MAX_CAROUSEL_SLIDES = 10;
 
 export default function PostPreviewPage() {
   const { user } = useAuth();
@@ -64,6 +73,13 @@ export default function PostPreviewPage() {
   // ── Image hook state (Layer 2 — text overlay) ───────────────────────────────
   const [imageHook, setImageHook]               = useState<string>("");
   const [isGeneratingHook, setIsGeneratingHook] = useState(false);
+
+  // ── Carousel state (multi-image PDF document) ───────────────────────────────
+  const [carouselTitle, setCarouselTitle] = useState<string>("");
+  const [carouselSlides, setCarouselSlides] = useState<CarouselSlide[]>([
+    { prompt: "", url: null, loading: false, error: null },
+    { prompt: "", url: null, loading: false, error: null },
+  ]);
 
   // ── Regeneration state ──────────────────────────────────────────────────────
   const [isRegeneratingPost, setIsRegeneratingPost]   = useState(false);
@@ -446,6 +462,63 @@ export default function PostPreviewPage() {
     // AI mode: user clicks Generate Image button manually (no auto-generate)
   };
 
+  /** Generate one carousel slide image. Re-uses /api/image/generate + persistent upload. */
+  const generateSlideImage = async (index: number) => {
+    setCarouselSlides((prev) => prev.map((s, i) =>
+      i === index ? { ...s, loading: true, error: null } : s
+    ));
+    try {
+      const slide = carouselSlides[index];
+      const prompt = (slide?.prompt || "").trim();
+      if (!prompt) throw new Error("Add a prompt first.");
+      const token = await getAuthToken();
+      const res = await fetch("/api/image/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Image generation failed.");
+
+      let persistentUrl = data.url as string;
+      try {
+        const uploadRes = await fetch("/api/image/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify({ url: data.url, fileName: `post-images/${Date.now()}-slide-${index}.jpg` }),
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          if (uploadData.url) persistentUrl = uploadData.url;
+        }
+      } catch { /* fallback */ }
+
+      setCarouselSlides((prev) => prev.map((s, i) =>
+        i === index ? { ...s, url: persistentUrl, loading: false, error: null } : s
+      ));
+    } catch (err: any) {
+      setCarouselSlides((prev) => prev.map((s, i) =>
+        i === index ? { ...s, loading: false, error: err?.message || "Failed." } : s
+      ));
+    }
+  };
+
+  const addSlide = () => {
+    if (carouselSlides.length >= MAX_CAROUSEL_SLIDES) return;
+    setCarouselSlides((prev) => [...prev, { prompt: "", url: null, loading: false, error: null }]);
+  };
+
+  const removeSlide = (index: number) => {
+    if (carouselSlides.length <= 2) return;
+    setCarouselSlides((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateSlidePrompt = (index: number, prompt: string) => {
+    setCarouselSlides((prev) => prev.map((s, i) => i === index ? { ...s, prompt } : s));
+  };
+
+  const carouselUrls = carouselSlides.map((s) => s.url).filter((u): u is string => !!u);
+
   const generateFaceImage = async () => {
     if (!profilePhotoUrl || isFaceGenerating) return;
     setIsFaceGenerating(true);
@@ -604,6 +677,7 @@ export default function PostPreviewPage() {
     if (!postData || isSaving) return;
     setIsSaving(true);
     try {
+      const isCarouselPost = imageMode === "carousel" && carouselUrls.length >= 2;
       await createPost({
         user_id: user!.uid,
         account_id: "personal-account",
@@ -616,7 +690,12 @@ export default function PostPreviewPage() {
         custom_instructions: postData.metadata.customInstructions || undefined,
         segment: postData.metadata.segment || "individual",
         research_data: postData.research,
+        image_url: isCarouselPost ? undefined : (finalImageUrl || undefined),
         image_hook: imageHook || undefined,
+        image_mode: isCarouselPost ? "carousel" : undefined,
+        image_urls: isCarouselPost ? carouselUrls : undefined,
+        is_carousel: isCarouselPost ? true : undefined,
+        carousel_title: isCarouselPost ? (carouselTitle || "Carousel") : undefined,
         created_at: null,
       });
       cleanupRegenSession();
@@ -658,6 +737,7 @@ export default function PostPreviewPage() {
         }
       }
 
+      const isCarouselPost = imageMode === "carousel" && carouselUrls.length >= 2;
       const res = await fetch("/api/linkedin/publish", {
         method: "POST",
         headers: {
@@ -666,7 +746,9 @@ export default function PostPreviewPage() {
         },
         body: JSON.stringify({
           content: editedContent,
-          imageUrl: publishImageUrl || null,
+          imageUrl: isCarouselPost ? null : (publishImageUrl || null),
+          imageUrls: isCarouselPost ? carouselUrls : undefined,
+          carouselTitle: isCarouselPost ? (carouselTitle || "Carousel") : undefined,
           segment: postData.metadata.segment || "individual",
           organizationId: organizationId || undefined,
           topic:    postData.metadata.topic    || "",
@@ -698,8 +780,12 @@ export default function PostPreviewPage() {
           custom_instructions: postData.metadata.customInstructions || undefined,
           segment: postData.metadata.segment || "individual",
           research_data: postData.research,
-          image_url: publishImageUrl || finalImageUrl || undefined,
+          image_url: isCarouselPost ? undefined : (publishImageUrl || finalImageUrl || undefined),
           image_hook: imageHook || undefined,
+          image_mode: isCarouselPost ? "carousel" : undefined,
+          image_urls: isCarouselPost ? carouselUrls : undefined,
+          is_carousel: isCarouselPost ? true : undefined,
+          carousel_title: isCarouselPost ? (carouselTitle || "Carousel") : undefined,
           linkedin_post_id: (data as any).postId || undefined,
           published_at: new Date().toISOString(),
           created_at: null,
@@ -750,6 +836,7 @@ export default function PostPreviewPage() {
         }
       }
 
+      const isCarouselPost = imageMode === "carousel" && carouselUrls.length >= 2;
       const saved = await createPost({
         user_id: user!.uid,
         account_id: "personal-account",
@@ -763,8 +850,12 @@ export default function PostPreviewPage() {
         segment: postData.metadata.segment || "individual",
         organization_id: organizationId || undefined,
         research_data: postData.research,
-        image_url: scheduleImageUrl || undefined,
+        image_url: isCarouselPost ? undefined : (scheduleImageUrl || undefined),
         image_hook: imageHook || undefined,
+        image_mode: isCarouselPost ? "carousel" : undefined,
+        image_urls: isCarouselPost ? carouselUrls : undefined,
+        is_carousel: isCarouselPost ? true : undefined,
+        carousel_title: isCarouselPost ? (carouselTitle || "Carousel") : undefined,
         scheduled_at: scheduledAt.toISOString(),
         schedule_timezone: timezone,
         best_time_applied: bestTimeApplied,
@@ -1103,10 +1194,12 @@ export default function PostPreviewPage() {
               name={isCorp ? (profileName ?? 'Company Page') : (linkedInUser?.name ?? profileName ?? 'You')}
               avatarUrl={isCorp ? '' : (linkedInUser?.picture ?? profilePhotoUrl ?? '')}
               content={editedContent}
-              imageUrl={finalImageUrl ?? undefined}
-              imageHook={imageHook || undefined}
+              imageUrl={imageMode === "carousel" ? undefined : (finalImageUrl ?? undefined)}
+              imageHook={imageMode === "carousel" ? undefined : (imageHook || undefined)}
               isUploadedImage={imageMode === "upload" || imageMode === "reference"}
               isCompany={isCorp}
+              carouselUrls={imageMode === "carousel" ? carouselUrls : undefined}
+              carouselTitle={imageMode === "carousel" ? (carouselTitle || undefined) : undefined}
             />
           </div>
 
@@ -1253,6 +1346,21 @@ export default function PostPreviewPage() {
                   <div>
                     <p className={`text-xs font-semibold ${imageMode === "none" ? "text-[var(--foreground)]" : "text-[var(--text-muted)]"}`}>No Image</p>
                     <p className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-tight">Text-only post</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleModeChange("carousel")}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
+                    imageMode === "carousel" ? "border-[#0A66C2] bg-blue-500/10" : "border-[var(--border)] bg-[var(--card)] hover:border-slate-300 hover:bg-[var(--card-hover)]"
+                  }`}
+                >
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "carousel" ? "bg-[var(--primary)]" : "bg-[var(--toggle-bg)]"}`}>
+                    <Layers className={`w-4.5 h-4.5 ${imageMode === "carousel" ? "text-white" : "text-[var(--text-muted)]"}`} />
+                  </div>
+                  <div>
+                    <p className={`text-xs font-semibold ${imageMode === "carousel" ? "text-[var(--primary)]" : "text-[var(--foreground)]"}`}>Carousel</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-tight">Multi-slide PDF post (2–10)</p>
                   </div>
                 </button>
 
@@ -1523,6 +1631,97 @@ export default function PostPreviewPage() {
                 <div className="flex flex-col items-center gap-3 text-center text-[var(--text-muted)]">
                   <ImageIcon className="w-8 h-8 text-[var(--text-muted)]" />
                   <p className="text-xs">This post will be published as text only.</p>
+                </div>
+              )}
+
+              {imageMode === "carousel" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                      Carousel Title
+                    </label>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5 mb-2">
+                      Shown above the carousel in the LinkedIn feed (max 100 chars).
+                    </p>
+                    <input
+                      type="text"
+                      value={carouselTitle}
+                      maxLength={100}
+                      onChange={(e) => setCarouselTitle(e.target.value)}
+                      placeholder="e.g. 5 lessons from launching my first product"
+                      className="w-full px-3 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] text-sm text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)]"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                        Slides ({carouselSlides.length}/{MAX_CAROUSEL_SLIDES})
+                      </label>
+                      <span className="text-[10px] text-[var(--text-muted)]">
+                        {carouselUrls.length}/{carouselSlides.length} generated · need at least 2 to publish
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {carouselSlides.map((slide, i) => (
+                        <div key={i} className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-semibold text-[var(--foreground)]">Slide {i + 1}</span>
+                            {carouselSlides.length > 2 && (
+                              <button
+                                onClick={() => removeSlide(i)}
+                                className="flex items-center gap-1 text-[10px] text-red-400 hover:text-red-500 transition-colors"
+                                title="Remove this slide"
+                              >
+                                <Trash2 className="w-3 h-3" /> Remove
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex gap-3">
+                            <div className="w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-[var(--card-hover)] border border-[var(--border)] flex items-center justify-center">
+                              {slide.url ? (
+                                <img src={slide.url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
+                              ) : slide.loading ? (
+                                <div className="w-5 h-5 border-2 border-[var(--primary)]/30 border-t-[var(--primary)] rounded-full animate-spin" />
+                              ) : (
+                                <ImageIcon className="w-6 h-6 text-[var(--text-muted)]" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0 space-y-2">
+                              <textarea
+                                value={slide.prompt}
+                                onChange={(e) => updateSlidePrompt(i, e.target.value)}
+                                placeholder={`Prompt for slide ${i + 1}…`}
+                                rows={2}
+                                className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--card-hover)] border border-[var(--border)] text-xs text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)] resize-none"
+                              />
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => generateSlideImage(i)}
+                                  disabled={slide.loading || !slide.prompt.trim()}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white text-[11px] font-medium hover:opacity-90 transition-all disabled:opacity-40"
+                                >
+                                  <Sparkles className="w-3 h-3" />
+                                  {slide.loading ? "Generating…" : slide.url ? "Regenerate" : "Generate"}
+                                </button>
+                                {slide.error && (
+                                  <span className="text-[10px] text-red-400">{slide.error}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {carouselSlides.length < MAX_CAROUSEL_SLIDES && (
+                      <button
+                        onClick={addSlide}
+                        className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-[var(--border)] text-xs text-[var(--text-sub)] hover:bg-[var(--card-hover)] transition-all"
+                      >
+                        <Plus className="w-3 h-3" /> Add slide
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

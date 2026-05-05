@@ -36,8 +36,12 @@ export interface Post {
   comments_count?: number;
   engagement_synced_at?: number; // unix ms — when engagement was last fetched
   failed_reason?: string;        // set by cron worker when publishing fails
-  image_mode?: "ai" | "upload" | "none";
+  image_mode?: "ai" | "upload" | "none" | "carousel";
   image_hook?: string;        // Short text overlay shown on the image (7-word hook/question)
+  // Carousel (PDF document) posts — published via LinkedIn /rest/documents
+  image_urls?: string[];     // ordered slide image URLs (2–10), used when is_carousel=true
+  is_carousel?: boolean;
+  carousel_title?: string;   // shown above the PDF in the LinkedIn feed (required by LinkedIn)
   organization_id?: string;  // per-user org ID for corporate posts
   campaign_id?: string;      // parent campaign (if part of a campaign sequence)
   campaign_position?: number; // 1-based position in the campaign sequence

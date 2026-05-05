@@ -22,6 +22,7 @@ import { savePostMemory } from "@/lib/ai/save-memory";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { getUserPlan, canUseCorporate } from "@/lib/checkSubscription";
+import { buildCarouselPdf } from "@/lib/linkedin/buildCarouselPdf";
 
 const LI_VERSION  = "202505";
 const TIMEOUT_MS  = 20_000;
@@ -131,15 +132,67 @@ async function uploadImage(accessToken: string, authorUrn: string, imageUrl: str
   }
 }
 
+/** Upload PDF carousel to LinkedIn Documents API. Returns document URN or null. */
+async function uploadDocument(accessToken: string, authorUrn: string, pdfBytes: Buffer): Promise<string | null> {
+  try {
+    const { signal: s1, clear: c1 } = withTimeout(TIMEOUT_MS);
+    const initRes = await fetch("https://api.linkedin.com/rest/documents?action=initializeUpload", {
+      method: "POST", signal: s1,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "LinkedIn-Version": LI_VERSION,
+        "X-Restli-Protocol-Version": "2.0.0",
+      },
+      body: JSON.stringify({ initializeUploadRequest: { owner: authorUrn } }),
+    });
+    c1();
+    if (!initRes.ok) { console.warn("[cron/document] initializeUpload failed:", await initRes.text()); return null; }
+    const initData    = await initRes.json();
+    const uploadUrl   = initData?.value?.uploadUrl;
+    const documentUrn = initData?.value?.document;
+    if (!uploadUrl || !documentUrn) return null;
+
+    const { signal: s2, clear: c2 } = withTimeout(60_000);
+    const upRes = await fetch(uploadUrl, {
+      method: "PUT", signal: s2,
+      headers: { "Content-Type": "application/pdf" },
+      body: new Uint8Array(pdfBytes),
+    });
+    c2();
+    if (!upRes.ok) { console.warn("[cron/document] upload failed:", upRes.status); return null; }
+    return documentUrn;
+  } catch (err) {
+    console.warn("[cron/document] exception:", err);
+    return null;
+  }
+}
+
 /** Post to LinkedIn. Returns postId or throws. */
 async function postToLinkedIn(
-  accessToken: string,
-  authorUrn:   string,
-  content:     string,
-  imageUrl?:   string
+  accessToken:   string,
+  authorUrn:     string,
+  content:       string,
+  imageUrl?:     string,
+  imageUrls?:    string[],
+  carouselTitle?: string
 ): Promise<string> {
-  let imageUrn: string | null = null;
-  if (imageUrl && !imageUrl.startsWith("data:")) {
+  let imageUrn:    string | null = null;
+  let documentUrn: string | null = null;
+
+  const isCarousel = Array.isArray(imageUrls) && imageUrls.length >= 2;
+
+  if (isCarousel) {
+    const safeUrls = imageUrls!.filter((u) => !u.startsWith("data:") && isAllowedImageUrl(u)).slice(0, 10);
+    if (safeUrls.length < 2) {
+      throw new Error("Carousel needs at least 2 valid images. Post held — fix the slide images.");
+    }
+    const pdfBytes = await buildCarouselPdf(safeUrls);
+    documentUrn = await uploadDocument(accessToken, authorUrn, pdfBytes);
+    if (!documentUrn) {
+      throw new Error("Carousel upload to LinkedIn failed. Post held — try rescheduling.");
+    }
+  } else if (imageUrl && !imageUrl.startsWith("data:")) {
     if (!isAllowedImageUrl(imageUrl)) {
       console.warn("[cron/image] Blocked SSRF attempt — imageUrl hostname not in allowlist:", imageUrl);
     } else {
@@ -158,7 +211,11 @@ async function postToLinkedIn(
     lifecycleState:            "PUBLISHED",
     isReshareDisabledByAuthor: false,
   };
-  if (imageUrn) body.content = { media: { title: "Post image", id: imageUrn } };
+  if (documentUrn) {
+    body.content = { media: { title: (carouselTitle || "Carousel").slice(0, 100), id: documentUrn } };
+  } else if (imageUrn) {
+    body.content = { media: { title: "Post image", id: imageUrn } };
+  }
 
   const { signal, clear } = withTimeout(TIMEOUT_MS);
   const res = await fetch("https://api.linkedin.com/rest/posts", {
@@ -327,7 +384,14 @@ export async function POST(req: NextRequest) {
       if (content.startsWith("[Pending generation]")) content = post.topic || content;
       if (!content.trim()) throw new Error("Post content is empty.");
 
-      const postId = await postToLinkedIn(accessToken!, authorUrn, content, post.image_url || undefined);
+      const postId = await postToLinkedIn(
+        accessToken!,
+        authorUrn,
+        content,
+        post.image_url || undefined,
+        post.is_carousel ? post.image_urls : undefined,
+        post.is_carousel ? post.carousel_title : undefined,
+      );
       await postRef.update({
         status: "published",
         linkedin_post_id: postId,

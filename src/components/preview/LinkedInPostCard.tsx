@@ -10,6 +10,8 @@ interface LinkedInPostCardProps {
   imageHook?: string;
   isUploadedImage?: boolean;
   isCompany?: boolean;
+  carouselUrls?: string[];      // 2–10 image URLs for carousel preview
+  carouselTitle?: string;
 }
 
 export default function LinkedInPostCard({
@@ -20,7 +22,10 @@ export default function LinkedInPostCard({
   imageHook,
   isUploadedImage = false,
   isCompany = false,
+  carouselUrls,
+  carouselTitle,
 }: LinkedInPostCardProps) {
+  const isCarousel = Array.isArray(carouselUrls) && carouselUrls.length >= 2;
   const initials = name
     ? name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
     : '?';
@@ -60,7 +65,31 @@ export default function LinkedInPostCard({
           </p>
         </div>
 
-        {imageUrl && (
+        {isCarousel && (
+          <div className="w-full bg-[var(--card-hover)] border-y border-[var(--border)]">
+            {carouselTitle && (
+              <p className="px-4 py-2 text-xs font-semibold text-[var(--foreground)] truncate">
+                {carouselTitle}
+              </p>
+            )}
+            <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-thin">
+              {carouselUrls!.slice(0, 10).map((url, i) => (
+                <div key={i} className="relative w-full flex-shrink-0 snap-center aspect-square">
+                  <img
+                    src={url}
+                    alt={`Slide ${i + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-medium">
+                    {i + 1} / {carouselUrls!.length}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!isCarousel && imageUrl && (
           <div className={`w-full relative ${isUploadedImage ? "" : "aspect-square"}`}>
             <img
               src={imageUrl}

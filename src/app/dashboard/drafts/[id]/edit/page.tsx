@@ -105,12 +105,31 @@ export default function DraftEditPage() {
     setPubStatus("idle");
 
     try {
+      const token = auth.currentUser ? await getIdToken(auth.currentUser) : null;
+      if (!token) {
+        setPubStatus("error");
+        setPubMessage("You're signed out. Please sign in and try again.");
+        setPublishing(false);
+        return;
+      }
+
       const res = await fetch("/api/linkedin/publish", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           content,
           segment: draft?.segment || segment,
+          imageUrl: draft?.image_url || undefined,
+          imageUrls: draft?.image_urls || undefined,
+          carouselTitle: draft?.carousel_title || undefined,
+          organizationId: draft?.organization_id || undefined,
+          topic: draft?.topic,
+          audience: draft?.audience,
+          tone: draft?.tone,
+          postDbId: draft?.id,
         }),
       });
 
@@ -125,10 +144,9 @@ export default function DraftEditPage() {
 
         // Mark as published in DB via API
         if (draft?.id) {
-          const token = auth.currentUser ? await getIdToken(auth.currentUser) : null;
           await fetch("/api/posts", {
             method: "PATCH",
-            headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
             body: JSON.stringify({ id: draft.id, status: "published", linkedin_post_id: data.postId || "unknown" }),
           }).catch(() => {});
         }

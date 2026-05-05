@@ -102,7 +102,8 @@ export async function POST(req: NextRequest) {
     // Allowlist — only these fields can be set by clients on create
     const POST_ALLOWED = new Set(["content", "topic", "tone", "audience", "length", "custom_instructions",
       "image_url", "image_mode", "image_hook", "image_prompt", "scheduled_at", "schedule_timezone",
-      "best_time_applied", "status", "segment", "organization_id", "campaign_id", "research"]);
+      "best_time_applied", "status", "segment", "organization_id", "campaign_id", "research",
+      "image_urls", "is_carousel", "carousel_title"]);
     const sanitizedPost: Record<string, any> = {};
     if (post) {
       for (const [k, v] of Object.entries(post)) {
@@ -145,7 +146,8 @@ export async function PATCH(req: NextRequest) {
     // Allowlist — only these fields can be patched by clients
     const ALLOWED = new Set(["content", "topic", "tone", "audience", "length", "custom_instructions",
       "image_url", "image_mode", "image_hook", "image_prompt", "scheduled_at", "schedule_timezone",
-      "best_time_applied", "status", "failed_reason"]);
+      "best_time_applied", "status", "failed_reason",
+      "image_urls", "is_carousel", "carousel_title"]);
     const sanitized: Record<string, any> = {};
     for (const [k, v] of Object.entries(updates)) {
       if (ALLOWED.has(k)) sanitized[k] = v;
