@@ -21,7 +21,7 @@ import { postService, Post } from "@/lib/db/posts";
 import { savePostMemory } from "@/lib/ai/save-memory";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
-import { getUserPlan, canUseCorporate } from "@/lib/checkSubscription";
+import { getUserPlan, canUseCorporate, canUseCarousel } from "@/lib/checkSubscription";
 import { buildCarouselPdf } from "@/lib/linkedin/buildCarouselPdf";
 
 const LI_VERSION  = "202505";
@@ -183,7 +183,7 @@ async function postToLinkedIn(
   const isCarousel = Array.isArray(imageUrls) && imageUrls.length >= 2;
 
   if (isCarousel) {
-    const safeUrls = imageUrls!.filter((u) => !u.startsWith("data:") && isAllowedImageUrl(u)).slice(0, 10);
+    const safeUrls = imageUrls!.filter((u) => !u.startsWith("data:") && isAllowedImageUrl(u)).slice(0, 5);
     if (safeUrls.length < 2) {
       throw new Error("Carousel needs at least 2 valid images. Post held — fix the slide images.");
     }
@@ -328,14 +328,23 @@ export async function POST(req: NextRequest) {
         return { id: post.id, status: "failed" as const, reason: "already claimed" };
       }
 
-      // Plan check for corporate posts
-      if (post.segment === "corporate") {
+      // Plan check for corporate + carousel posts
+      if (post.segment === "corporate" || post.is_carousel) {
         const userPlan = await getUserPlan(post.user_id);
-        if (!canUseCorporate(userPlan)) {
+        if (post.segment === "corporate" && !canUseCorporate(userPlan)) {
           console.log(`[cron] Post ${post.id} blocked — user ${post.user_id} plan (${userPlan}) does not allow corporate.`);
           await postRef.update({
             status: "plan_blocked",
             failed_reason: "Company page posting requires Pro or Business plan.",
+            updated_at: FieldValue.serverTimestamp(),
+          });
+          return { id: post.id, status: "failed" as const, reason: "plan_blocked" };
+        }
+        if (post.is_carousel && !canUseCarousel(userPlan)) {
+          console.log(`[cron] Post ${post.id} blocked — user ${post.user_id} plan (${userPlan}) does not allow carousels.`);
+          await postRef.update({
+            status: "plan_blocked",
+            failed_reason: "Carousel posts require Pro or Business plan.",
             updated_at: FieldValue.serverTimestamp(),
           });
           return { id: post.id, status: "failed" as const, reason: "plan_blocked" };

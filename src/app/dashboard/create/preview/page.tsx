@@ -10,7 +10,7 @@ import {
   CheckCircle, AlertCircle, Linkedin, FileText, Send,
   ImageIcon, RefreshCw, Download, Sparkles, Upload, X,
   ArrowLeft, CalendarDays, RotateCcw, Wand2, User,
-  Layers, Plus, Trash2
+  Layers
 } from "lucide-react";
 import SchedulePicker from "@/components/schedule/SchedulePicker";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
@@ -24,12 +24,13 @@ import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
 type ImageMode = "ai" | "upload" | "reference" | "face" | "carousel" | "none";
 
 interface CarouselSlide {
-  prompt: string;
+  prompt: string;       // hidden from user; AI-generated, optionally refined via comment
   url: string | null;
   loading: boolean;
   error: string | null;
 }
-const MAX_CAROUSEL_SLIDES = 10;
+const CAROUSEL_SLIDE_OPTIONS = [2, 3, 4, 5] as const;
+const carouselUnlockedFor = (plan: string) => plan === "pro" || plan === "business";
 
 export default function PostPreviewPage() {
   const { user } = useAuth();
@@ -75,11 +76,15 @@ export default function PostPreviewPage() {
   const [isGeneratingHook, setIsGeneratingHook] = useState(false);
 
   // ── Carousel state (multi-image PDF document) ───────────────────────────────
-  const [carouselTitle, setCarouselTitle] = useState<string>("");
-  const [carouselSlides, setCarouselSlides] = useState<CarouselSlide[]>([
-    { prompt: "", url: null, loading: false, error: null },
-    { prompt: "", url: null, loading: false, error: null },
-  ]);
+  // Flow: pick slide count (2–5) → locked → AI writes N correlated prompts →
+  // we auto-generate all N images in parallel. Each slide can be refined via
+  // a per-slide comment that re-runs the prompt + regenerates that slide only.
+  const [carouselSlideCount, setCarouselSlideCount] = useState<number | null>(null);
+  const [carouselSlides, setCarouselSlides] = useState<CarouselSlide[]>([]);
+  const [isBuildingCarousel, setIsBuildingCarousel] = useState(false);
+  const [carouselError, setCarouselError] = useState<string | null>(null);
+  const [slideCommentOpen, setSlideCommentOpen] = useState<number | null>(null);
+  const [slideCommentText, setSlideCommentText] = useState<string>("");
 
   // ── Regeneration state ──────────────────────────────────────────────────────
   const [isRegeneratingPost, setIsRegeneratingPost]   = useState(false);
@@ -454,47 +459,138 @@ export default function PostPreviewPage() {
   };
 
   const handleModeChange = (mode: ImageMode) => {
+    // Hard plan gate — Free/Starter cannot enter carousel mode.
+    if (mode === "carousel" && !carouselUnlockedFor(userPlan)) {
+      router.push("/#pricing");
+      return;
+    }
     setImageMode(mode);
     setImageError(null);
     if (mode !== "ai") { setImageUrl(null); setIsGeneratingImage(false); }
     if (mode !== "upload") { setUploadedFile(null); setUploadedPreview(null); }
     if (mode !== "face") { setFaceGeneratedUrl(null); setFaceError(null); }
+    if (mode !== "carousel") {
+      setCarouselSlideCount(null);
+      setCarouselSlides([]);
+      setCarouselError(null);
+      setSlideCommentOpen(null);
+      setSlideCommentText("");
+    }
     // AI mode: user clicks Generate Image button manually (no auto-generate)
   };
 
-  /** Generate one carousel slide image. Re-uses /api/image/generate + persistent upload. */
-  const generateSlideImage = async (index: number) => {
+  /** Render a single image from a prompt (fal.ai → persistent storage). Returns the URL or null. */
+  const renderSlideImage = async (prompt: string, slideIndex: number, token: string | null): Promise<string | null> => {
+    const res = await fetch("/api/image/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ prompt }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.url) return null;
+
+    let persistentUrl = data.url as string;
+    try {
+      const uploadRes = await fetch("/api/image/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ url: data.url, fileName: `post-images/${Date.now()}-slide-${slideIndex}.jpg` }),
+      });
+      if (uploadRes.ok) {
+        const uploadData = await uploadRes.json();
+        if (uploadData.url) persistentUrl = uploadData.url;
+      }
+    } catch { /* keep fal.ai URL as fallback */ }
+    return persistentUrl;
+  };
+
+  /**
+   * Pick slide count → AI writes N correlated infographic prompts →
+   * generate all N images in parallel. Slides are stored prompt-hidden.
+   */
+  const buildCarousel = async (count: number) => {
+    if (!postData) return;
+    setCarouselSlideCount(count);
+    setCarouselError(null);
+    setIsBuildingCarousel(true);
+    setCarouselSlides(
+      Array.from({ length: count }, () => ({ prompt: "", url: null, loading: true, error: null }))
+    );
+
+    try {
+      const token = await getAuthToken();
+      // Step 1: ask the agent for N correlated prompts in one call.
+      const promptsRes = await fetch("/api/ai/carousel-prompts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          topic:    postData.metadata.topic,
+          audience: postData.metadata.audience,
+          tone:     postData.metadata.tone,
+          post:     editedContent,
+          slideCount: count,
+        }),
+      });
+      const promptsData = await promptsRes.json().catch(() => ({}));
+      if (!promptsRes.ok) {
+        throw new Error(promptsData?.error || "Couldn't write carousel prompts.");
+      }
+      const prompts: string[] = Array.isArray(promptsData.prompts) ? promptsData.prompts : [];
+      if (prompts.length < count) throw new Error("AI returned fewer prompts than requested.");
+
+      // Seed prompts immediately so refinement works even if rendering fails.
+      setCarouselSlides(
+        prompts.slice(0, count).map((p) => ({ prompt: p, url: null, loading: true, error: null }))
+      );
+
+      // Step 2: render all N images in parallel.
+      const results = await Promise.all(
+        prompts.slice(0, count).map((p, i) => renderSlideImage(p, i, token))
+      );
+      setCarouselSlides(
+        prompts.slice(0, count).map((p, i) => ({
+          prompt: p,
+          url: results[i],
+          loading: false,
+          error: results[i] ? null : "Image render failed. Try Regenerate.",
+        }))
+      );
+    } catch (err: any) {
+      setCarouselError(err?.message || "Carousel build failed.");
+      setCarouselSlides((prev) => prev.map((s) => ({ ...s, loading: false })));
+    } finally {
+      setIsBuildingCarousel(false);
+    }
+  };
+
+  /** Regenerate a single slide. If `comment` is given, refine the prompt first. */
+  const regenerateSlide = async (index: number, comment?: string) => {
+    const slide = carouselSlides[index];
+    if (!slide) return;
     setCarouselSlides((prev) => prev.map((s, i) =>
       i === index ? { ...s, loading: true, error: null } : s
     ));
     try {
-      const slide = carouselSlides[index];
-      const prompt = (slide?.prompt || "").trim();
-      if (!prompt) throw new Error("Add a prompt first.");
       const token = await getAuthToken();
-      const res = await fetch("/api/image/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ prompt }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Image generation failed.");
-
-      let persistentUrl = data.url as string;
-      try {
-        const uploadRes = await fetch("/api/image/upload-url", {
+      let prompt = slide.prompt;
+      if (comment && comment.trim()) {
+        const refineRes = await fetch("/api/ai/carousel-refine", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-          body: JSON.stringify({ url: data.url, fileName: `post-images/${Date.now()}-slide-${index}.jpg` }),
+          body: JSON.stringify({
+            originalPrompt: slide.prompt,
+            userComment: comment.trim(),
+            topic: postData?.metadata?.topic || "",
+          }),
         });
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          if (uploadData.url) persistentUrl = uploadData.url;
-        }
-      } catch { /* fallback */ }
+        const refineData = await refineRes.json().catch(() => ({}));
+        if (!refineRes.ok) throw new Error(refineData?.error || "Refinement failed.");
+        if (refineData?.prompt) prompt = refineData.prompt;
+      }
 
+      const url = await renderSlideImage(prompt, index, token);
       setCarouselSlides((prev) => prev.map((s, i) =>
-        i === index ? { ...s, url: persistentUrl, loading: false, error: null } : s
+        i === index ? { prompt, url, loading: false, error: url ? null : "Render failed. Try again." } : s
       ));
     } catch (err: any) {
       setCarouselSlides((prev) => prev.map((s, i) =>
@@ -503,18 +599,28 @@ export default function PostPreviewPage() {
     }
   };
 
-  const addSlide = () => {
-    if (carouselSlides.length >= MAX_CAROUSEL_SLIDES) return;
-    setCarouselSlides((prev) => [...prev, { prompt: "", url: null, loading: false, error: null }]);
+  /** Re-render every slide image using its existing prompt. Prompts are NOT rewritten. */
+  const regenerateAllSlides = async () => {
+    if (!carouselSlides.length) return;
+    setCarouselSlides((prev) => prev.map((s) => ({ ...s, loading: true, error: null })));
+    const token = await getAuthToken();
+    const results = await Promise.all(
+      carouselSlides.map((s, i) => renderSlideImage(s.prompt, i, token))
+    );
+    setCarouselSlides((prev) => prev.map((s, i) => ({
+      ...s,
+      url: results[i] ?? s.url,
+      loading: false,
+      error: results[i] ? null : "Render failed.",
+    })));
   };
 
-  const removeSlide = (index: number) => {
-    if (carouselSlides.length <= 2) return;
-    setCarouselSlides((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updateSlidePrompt = (index: number, prompt: string) => {
-    setCarouselSlides((prev) => prev.map((s, i) => i === index ? { ...s, prompt } : s));
+  const resetCarousel = () => {
+    setCarouselSlideCount(null);
+    setCarouselSlides([]);
+    setCarouselError(null);
+    setSlideCommentOpen(null);
+    setSlideCommentText("");
   };
 
   const carouselUrls = carouselSlides.map((s) => s.url).filter((u): u is string => !!u);
@@ -695,7 +801,6 @@ export default function PostPreviewPage() {
         image_mode: isCarouselPost ? "carousel" : undefined,
         image_urls: isCarouselPost ? carouselUrls : undefined,
         is_carousel: isCarouselPost ? true : undefined,
-        carousel_title: isCarouselPost ? (carouselTitle || "Carousel") : undefined,
         created_at: null,
       });
       cleanupRegenSession();
@@ -748,7 +853,6 @@ export default function PostPreviewPage() {
           content: editedContent,
           imageUrl: isCarouselPost ? null : (publishImageUrl || null),
           imageUrls: isCarouselPost ? carouselUrls : undefined,
-          carouselTitle: isCarouselPost ? (carouselTitle || "Carousel") : undefined,
           segment: postData.metadata.segment || "individual",
           organizationId: organizationId || undefined,
           topic:    postData.metadata.topic    || "",
@@ -785,8 +889,7 @@ export default function PostPreviewPage() {
           image_mode: isCarouselPost ? "carousel" : undefined,
           image_urls: isCarouselPost ? carouselUrls : undefined,
           is_carousel: isCarouselPost ? true : undefined,
-          carousel_title: isCarouselPost ? (carouselTitle || "Carousel") : undefined,
-          linkedin_post_id: (data as any).postId || undefined,
+            linkedin_post_id: (data as any).postId || undefined,
           published_at: new Date().toISOString(),
           created_at: null,
         }).catch(() => {});
@@ -855,7 +958,6 @@ export default function PostPreviewPage() {
         image_mode: isCarouselPost ? "carousel" : undefined,
         image_urls: isCarouselPost ? carouselUrls : undefined,
         is_carousel: isCarouselPost ? true : undefined,
-        carousel_title: isCarouselPost ? (carouselTitle || "Carousel") : undefined,
         scheduled_at: scheduledAt.toISOString(),
         schedule_timezone: timezone,
         best_time_applied: bestTimeApplied,
@@ -1199,7 +1301,6 @@ export default function PostPreviewPage() {
               isUploadedImage={imageMode === "upload" || imageMode === "reference"}
               isCompany={isCorp}
               carouselUrls={imageMode === "carousel" ? carouselUrls : undefined}
-              carouselTitle={imageMode === "carousel" ? (carouselTitle || undefined) : undefined}
             />
           </div>
 
@@ -1349,20 +1450,36 @@ export default function PostPreviewPage() {
                   </div>
                 </button>
 
-                <button
-                  onClick={() => handleModeChange("carousel")}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
-                    imageMode === "carousel" ? "border-[#0A66C2] bg-blue-500/10" : "border-[var(--border)] bg-[var(--card)] hover:border-slate-300 hover:bg-[var(--card-hover)]"
-                  }`}
-                >
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "carousel" ? "bg-[var(--primary)]" : "bg-[var(--toggle-bg)]"}`}>
-                    <Layers className={`w-4.5 h-4.5 ${imageMode === "carousel" ? "text-white" : "text-[var(--text-muted)]"}`} />
-                  </div>
-                  <div>
-                    <p className={`text-xs font-semibold ${imageMode === "carousel" ? "text-[var(--primary)]" : "text-[var(--foreground)]"}`}>Carousel</p>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-tight">Multi-slide PDF post (2–10)</p>
-                  </div>
-                </button>
+                {carouselUnlockedFor(userPlan) ? (
+                  <button
+                    onClick={() => handleModeChange("carousel")}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center ${
+                      imageMode === "carousel" ? "border-[#0A66C2] bg-blue-500/10" : "border-[var(--border)] bg-[var(--card)] hover:border-slate-300 hover:bg-[var(--card-hover)]"
+                    }`}
+                  >
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${imageMode === "carousel" ? "bg-[var(--primary)]" : "bg-[var(--toggle-bg)]"}`}>
+                      <Layers className={`w-4.5 h-4.5 ${imageMode === "carousel" ? "text-white" : "text-[var(--text-muted)]"}`} />
+                    </div>
+                    <div>
+                      <p className={`text-xs font-semibold ${imageMode === "carousel" ? "text-[var(--primary)]" : "text-[var(--foreground)]"}`}>Carousel</p>
+                      <p className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-tight">2–5 infographic slides</p>
+                    </div>
+                  </button>
+                ) : (
+                  <a
+                    href="/#pricing"
+                    title="Upgrade to Pro to unlock carousels"
+                    className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-[var(--border)] bg-[var(--card-hover)] text-center opacity-80 hover:opacity-100 transition-opacity"
+                  >
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--toggle-bg)]">
+                      <Layers className="w-4.5 h-4.5 text-[var(--text-muted)]" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-[var(--foreground)]">Carousel</p>
+                      <p className="text-[10px] text-[var(--primary)] mt-0.5 leading-tight font-medium">Upgrade to Pro</p>
+                    </div>
+                  </a>
+                )}
 
                 {/* Use My Face — Individual only */}
                 {postData?.metadata?.segment !== "corporate" && (
@@ -1636,92 +1753,150 @@ export default function PostPreviewPage() {
 
               {imageMode === "carousel" && (
                 <div className="space-y-4">
-                  <div>
-                    <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-                      Carousel Title
-                    </label>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5 mb-2">
-                      Shown above the carousel in the LinkedIn feed (max 100 chars).
-                    </p>
-                    <input
-                      type="text"
-                      value={carouselTitle}
-                      maxLength={100}
-                      onChange={(e) => setCarouselTitle(e.target.value)}
-                      placeholder="e.g. 5 lessons from launching my first product"
-                      className="w-full px-3 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)] text-sm text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)]"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-                        Slides ({carouselSlides.length}/{MAX_CAROUSEL_SLIDES})
-                      </label>
-                      <span className="text-[10px] text-[var(--text-muted)]">
-                        {carouselUrls.length}/{carouselSlides.length} generated · need at least 2 to publish
-                      </span>
+                  {carouselSlideCount === null ? (
+                    /* Step 1 — pick slide count. Locked once chosen. */
+                    <div className="text-center py-2">
+                      <p className="text-sm font-semibold text-[var(--foreground)] mb-1">How many slides?</p>
+                      <p className="text-[11px] text-[var(--text-muted)] mb-4">
+                        Cortex will write a connected story across your slides — infographic style, blue & white.
+                      </p>
+                      <div className="flex items-center justify-center gap-2">
+                        {CAROUSEL_SLIDE_OPTIONS.map((n) => (
+                          <button
+                            key={n}
+                            onClick={() => buildCarousel(n)}
+                            disabled={isBuildingCarousel || !editedContent.trim()}
+                            className="w-14 h-14 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)] text-lg font-semibold text-[var(--foreground)] transition-all disabled:opacity-40"
+                            title={`Generate a ${n}-slide carousel`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                      {!editedContent.trim() && (
+                        <p className="text-[11px] text-amber-400 mt-3">Write the post first — it's the source of the carousel story.</p>
+                      )}
+                      {carouselError && (
+                        <p className="text-[11px] text-red-400 mt-3">{carouselError}</p>
+                      )}
                     </div>
+                  ) : (
+                    /* Step 2 — slides grid + per-slide controls */
                     <div className="space-y-3">
-                      {carouselSlides.map((slide, i) => (
-                        <div key={i} className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-[11px] font-semibold text-[var(--foreground)]">Slide {i + 1}</span>
-                            {carouselSlides.length > 2 && (
-                              <button
-                                onClick={() => removeSlide(i)}
-                                className="flex items-center gap-1 text-[10px] text-red-400 hover:text-red-500 transition-colors"
-                                title="Remove this slide"
-                              >
-                                <Trash2 className="w-3 h-3" /> Remove
-                              </button>
-                            )}
-                          </div>
-                          <div className="flex gap-3">
-                            <div className="w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-[var(--card-hover)] border border-[var(--border)] flex items-center justify-center">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-semibold text-[var(--foreground)]">
+                            {carouselSlideCount}-slide carousel
+                          </p>
+                          <p className="text-[10px] text-[var(--text-muted)]">
+                            {carouselUrls.length}/{carouselSlides.length} ready · infographic · LinkedIn blue & white
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={regenerateAllSlides}
+                            disabled={isBuildingCarousel || carouselSlides.some((s) => s.loading)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--card-hover)] text-[11px] text-[var(--text-sub)] transition-all disabled:opacity-40"
+                          >
+                            <RefreshCw className="w-3 h-3" /> Regenerate all
+                          </button>
+                          <button
+                            onClick={resetCarousel}
+                            disabled={isBuildingCarousel}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--card-hover)] text-[11px] text-[var(--text-sub)] transition-all disabled:opacity-40"
+                            title="Pick a different slide count"
+                          >
+                            <X className="w-3 h-3" /> Reset
+                          </button>
+                        </div>
+                      </div>
+
+                      {carouselError && (
+                        <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-200 flex items-center gap-2">
+                          <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />
+                          <p className="text-[11px] text-red-400">{carouselError}</p>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-3">
+                        {carouselSlides.map((slide, i) => (
+                          <div key={i} className="rounded-xl border border-[var(--border)] bg-[var(--card)] overflow-hidden">
+                            <div className="relative aspect-square bg-[var(--card-hover)] flex items-center justify-center">
                               {slide.url ? (
                                 <img src={slide.url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
                               ) : slide.loading ? (
-                                <div className="w-5 h-5 border-2 border-[var(--primary)]/30 border-t-[var(--primary)] rounded-full animate-spin" />
+                                <div className="flex flex-col items-center gap-2">
+                                  <div className="w-5 h-5 border-2 border-[var(--primary)]/30 border-t-[var(--primary)] rounded-full animate-spin" />
+                                  <span className="text-[10px] text-[var(--text-muted)]">Designing…</span>
+                                </div>
                               ) : (
                                 <ImageIcon className="w-6 h-6 text-[var(--text-muted)]" />
                               )}
+                              <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-medium">
+                                {i + 1} / {carouselSlides.length}
+                              </span>
                             </div>
-                            <div className="flex-1 min-w-0 space-y-2">
-                              <textarea
-                                value={slide.prompt}
-                                onChange={(e) => updateSlidePrompt(i, e.target.value)}
-                                placeholder={`Prompt for slide ${i + 1}…`}
-                                rows={2}
-                                className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--card-hover)] border border-[var(--border)] text-xs text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)] resize-none"
-                              />
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => generateSlideImage(i)}
-                                  disabled={slide.loading || !slide.prompt.trim()}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white text-[11px] font-medium hover:opacity-90 transition-all disabled:opacity-40"
-                                >
-                                  <Sparkles className="w-3 h-3" />
-                                  {slide.loading ? "Generating…" : slide.url ? "Regenerate" : "Generate"}
-                                </button>
-                                {slide.error && (
-                                  <span className="text-[10px] text-red-400">{slide.error}</span>
-                                )}
-                              </div>
+                            <div className="p-2.5 space-y-2">
+                              {slide.error && (
+                                <p className="text-[10px] text-red-400 leading-tight">{slide.error}</p>
+                              )}
+                              {slideCommentOpen === i ? (
+                                <div className="space-y-1.5">
+                                  <input
+                                    type="text"
+                                    autoFocus
+                                    value={slideCommentText}
+                                    onChange={(e) => setSlideCommentText(e.target.value)}
+                                    placeholder="e.g. brighter, fewer icons, add chart"
+                                    className="w-full px-2 py-1 rounded-md bg-[var(--card-hover)] border border-[var(--border)] text-[11px] text-[var(--foreground)] focus:outline-none focus:border-[var(--primary)]"
+                                  />
+                                  <div className="flex gap-1.5">
+                                    <button
+                                      onClick={() => {
+                                        const c = slideCommentText;
+                                        setSlideCommentOpen(null);
+                                        setSlideCommentText("");
+                                        regenerateSlide(i, c);
+                                      }}
+                                      disabled={!slideCommentText.trim() || slide.loading}
+                                      className="flex-1 px-2 py-1 rounded-md bg-[var(--primary)] text-white text-[10px] font-medium hover:opacity-90 transition-all disabled:opacity-40"
+                                    >
+                                      Apply & regenerate
+                                    </button>
+                                    <button
+                                      onClick={() => { setSlideCommentOpen(null); setSlideCommentText(""); }}
+                                      className="px-2 py-1 rounded-md bg-[var(--card-hover)] border border-[var(--border)] text-[10px] text-[var(--text-sub)] hover:bg-[var(--card)] transition-all"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex gap-1.5">
+                                  <button
+                                    onClick={() => regenerateSlide(i)}
+                                    disabled={slide.loading}
+                                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-md bg-[var(--card-hover)] border border-[var(--border)] hover:bg-[var(--card)] text-[10px] text-[var(--text-sub)] transition-all disabled:opacity-40"
+                                    title="Regenerate this slide with the same prompt"
+                                  >
+                                    <RefreshCw className="w-2.5 h-2.5" /> Regenerate
+                                  </button>
+                                  <button
+                                    onClick={() => { setSlideCommentOpen(i); setSlideCommentText(""); }}
+                                    disabled={slide.loading}
+                                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-md bg-[var(--card-hover)] border border-[var(--border)] hover:bg-[var(--card)] text-[10px] text-[var(--text-sub)] transition-all disabled:opacity-40"
+                                    title="Tell Cortex what to change"
+                                  >
+                                    <Wand2 className="w-2.5 h-2.5" /> Refine
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                    {carouselSlides.length < MAX_CAROUSEL_SLIDES && (
-                      <button
-                        onClick={addSlide}
-                        className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-[var(--border)] text-xs text-[var(--text-sub)] hover:bg-[var(--card-hover)] transition-all"
-                      >
-                        <Plus className="w-3 h-3" /> Add slide
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
               )}
             </div>

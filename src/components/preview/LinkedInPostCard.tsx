@@ -73,7 +73,7 @@ export default function LinkedInPostCard({
               </p>
             )}
             <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-thin">
-              {carouselUrls!.slice(0, 10).map((url, i) => (
+              {carouselUrls!.slice(0, 5).map((url, i) => (
                 <div key={i} className="relative w-full flex-shrink-0 snap-center aspect-square">
                   <img
                     src={url}

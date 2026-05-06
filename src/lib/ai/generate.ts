@@ -604,6 +604,119 @@ export async function generateImagePrompt(topic: string, segment: string, post: 
 }
 
 /**
+ * Generate N correlated image prompts for a LinkedIn carousel post.
+ *
+ * Style is locked to LinkedIn-friendly infographic + illustration:
+ *   blue (#0A66C2) and white primary, black/gray accents only.
+ * Returns exactly `slideCount` prompts (2–5), each one slide of a coherent
+ * narrative. Slide 1 = bold hook, middle = body/data, last = takeaway/CTA.
+ *
+ * If a `userComment` is passed alongside `existingPrompt`, the model rewrites
+ * one slide's prompt to incorporate the user's feedback (e.g. "make it brighter").
+ */
+export async function generateCarouselPrompts(args: {
+  topic: string;
+  audience: string;
+  tone: string;
+  post: string;
+  slideCount: number;
+}): Promise<string[]> {
+  const { topic, audience, tone, post, slideCount } = args;
+  const n = Math.max(2, Math.min(5, slideCount | 0));
+
+  const system = [
+    "You design LinkedIn carousel slides as image-generation prompts.",
+    "Each prompt MUST describe a single 1024x1024 infographic-style illustration.",
+    "Visual style is locked: flat infographic + minimalist illustration. LinkedIn brand colors only — primary blue (#0A66C2), white, with subtle black/gray accents. No other colors. Clean whitespace, geometric shapes, simple icons, sans-serif typography. Professional, modern, business-friendly.",
+    "Slide 1 is the hook (big headline, attention-grabbing). Middle slides develop the narrative with data/icons/diagrams. The last slide is the takeaway or CTA.",
+    "Each prompt is one slide of ONE coherent story — they must connect, build on each other, and together cover the full message of the LinkedIn post.",
+    "Each prompt: 2–4 sentences, concrete visual details (composition, focal subject, what text appears on the slide if any). Do NOT mention which slide number it is in the prompt text. Do NOT use the words 'slide', 'page', or 'carousel' inside the prompt.",
+    `Output STRICT JSON only — an array of exactly ${n} strings. No prose, no markdown fences. Example: ["prompt 1...","prompt 2..."]`,
+  ].join(" ");
+
+  const user = [
+    `Topic: ${topic}`,
+    `Audience: ${audience}`,
+    `Tone: ${tone}`,
+    `Slide count: ${n}`,
+    `Post body:\n${post.slice(0, 1400)}`,
+    "",
+    `Return a JSON array of exactly ${n} image prompts, telling the post's story across ${n} infographic slides.`,
+  ].join("\n");
+
+  const completion = await openRouter.chat.completions.create({
+    model: DEFAULT_MODEL,
+    messages: [
+      { role: "system", content: system },
+      { role: "user",   content: user },
+    ],
+    temperature: 0.75,
+    max_tokens: 1100,
+  });
+
+  const raw = (completion.choices[0]?.message?.content || "").trim();
+
+  // Try to parse the JSON. Models sometimes return {"prompts":[...]} instead of [...].
+  let arr: any;
+  try { arr = JSON.parse(raw); } catch {
+    const m = raw.match(/\[[\s\S]*\]/);
+    if (m) arr = JSON.parse(m[0]);
+  }
+  if (!Array.isArray(arr)) {
+    if (arr && Array.isArray(arr.prompts)) arr = arr.prompts;
+    else if (arr && Array.isArray(arr.slides)) arr = arr.slides;
+  }
+  if (!Array.isArray(arr)) throw new Error("AI did not return an array of prompts.");
+
+  const cleaned = arr
+    .map((s: any) => (typeof s === "string" ? s : s?.prompt || ""))
+    .map((s: string) => s.trim())
+    .filter(Boolean)
+    .slice(0, n);
+
+  if (cleaned.length < n) {
+    while (cleaned.length < n) cleaned.push(cleaned[cleaned.length - 1] || "");
+  }
+  return cleaned;
+}
+
+/**
+ * Refine a single carousel slide prompt based on user feedback.
+ * Keeps the LinkedIn-friendly style locked.
+ */
+export async function refineCarouselPrompt(args: {
+  originalPrompt: string;
+  userComment: string;
+  topic: string;
+}): Promise<string> {
+  const system =
+    "You refine a single LinkedIn carousel slide image prompt. " +
+    "Style is locked: flat infographic + minimalist illustration, LinkedIn primary blue (#0A66C2) + white, with black/gray accents only. No other colors. " +
+    "Apply the user's feedback while preserving the locked style and the slide's role in the story. " +
+    "Output ONLY the new prompt text — no preamble, no JSON, no quotes.";
+
+  const user = [
+    `Topic: ${args.topic}`,
+    `Original prompt:\n${args.originalPrompt}`,
+    `User feedback: ${args.userComment}`,
+    "",
+    "Rewrite the prompt incorporating the feedback.",
+  ].join("\n");
+
+  const completion = await openRouter.chat.completions.create({
+    model: DEFAULT_MODEL,
+    messages: [
+      { role: "system", content: system },
+      { role: "user",   content: user },
+    ],
+    temperature: 0.7,
+    max_tokens: 280,
+  });
+
+  return (completion.choices[0]?.message?.content || "").trim().replace(/^["']|["']$/g, "");
+}
+
+/**
  * Layer 2: Generate a 7-word-max hook/question for image text overlay.
  * On-demand — called when user clicks "Generate Hook" on the preview page.
  */

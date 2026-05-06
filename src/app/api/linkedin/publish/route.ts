@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { savePostMemory } from "@/lib/ai/save-memory";
-import { getUserPlan, canUseCorporate } from "@/lib/checkSubscription";
+import { getUserPlan, canUseCorporate, canUseCarousel } from "@/lib/checkSubscription";
 import { buildCarouselPdf } from "@/lib/linkedin/buildCarouselPdf";
 
 const LI_VERSION = "202505"; // LinkedIn API version header (YYYYMM)
@@ -282,7 +282,16 @@ export async function POST(request: NextRequest) {
   let documentUrn: string | null = null;
 
   if (isCarousel) {
-    const safeUrls = (imageUrls as string[]).filter(isAllowedImageUrl).slice(0, 10);
+    if (firebaseUid) {
+      const plan = await getUserPlan(firebaseUid);
+      if (!canUseCarousel(plan)) {
+        return NextResponse.json(
+          { error: "Carousel posts require the Pro plan or higher.", code: "PLAN_UPGRADE_REQUIRED" },
+          { status: 403 }
+        );
+      }
+    }
+    const safeUrls = (imageUrls as string[]).filter(isAllowedImageUrl).slice(0, 5);
     if (safeUrls.length < 2) {
       return NextResponse.json(
         { error: "Carousel needs at least 2 valid images." },

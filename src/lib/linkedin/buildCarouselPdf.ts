@@ -1,6 +1,6 @@
 import { PDFDocument } from "pdf-lib";
 
-const MAX_SLIDES   = 10;
+const MAX_SLIDES   = 5;
 const FETCH_TIMEOUT = 15_000;
 
 async function fetchImage(url: string): Promise<{ bytes: Uint8Array; mime: string }> {

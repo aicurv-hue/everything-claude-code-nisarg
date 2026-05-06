@@ -31,7 +31,7 @@ const PAID_PLANS = [
     yearlyPrice: 9990,
     monthlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_PRO || "").trim(),
     yearlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_PRO_YEARLY || "").trim(),
-    features: ["100 posts/month", "50 AI images/month", "20 Face images/month", "Scheduling", "Campaigns", "Company page", LIMIT_NOTE],
+    features: ["100 posts/month", "50 AI images/month", "20 Face images/month", "Scheduling", "Campaigns", "Company page", "Carousel posts (2–5 slides)", LIMIT_NOTE],
     popular: true,
   },
   {
@@ -40,7 +40,7 @@ const PAID_PLANS = [
     yearlyPrice: 19990,
     monthlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_BUSINESS || "").trim(),
     yearlyPlanId: (process.env.NEXT_PUBLIC_RAZORPAY_PLAN_BUSINESS_YEARLY || "").trim(),
-    features: ["Unlimited posts", "Unlimited AI images", "Unlimited Face images", "Scheduling", "Campaigns", "Company page", LIMIT_NOTE],
+    features: ["Unlimited posts", "Unlimited AI images", "Unlimited Face images", "Scheduling", "Campaigns", "Company page", "Carousel posts (2–5 slides)", LIMIT_NOTE],
     popular: false,
   },
 ];
