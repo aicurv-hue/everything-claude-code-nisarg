@@ -10,6 +10,7 @@ import {
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import { usePlanStatus } from "@/lib/context/planStatus";
+import Logo from "@/components/ui/Logo";
 
 const NAV_GROUPS = [
   {
@@ -85,12 +86,7 @@ export default function MobileMenu({ open, onClose }: { open: boolean; onClose: 
       >
         {/* Header — logo + close */}
         <div className="px-4 h-14 flex items-center justify-between border-b border-white/[0.06] safe-area-top shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#2563eb] to-[oklch(55%_0.22_300)] flex items-center justify-center">
-              <Zap className="w-3.5 h-3.5 text-white" strokeWidth={2} />
-            </div>
-            <span className="text-[var(--foreground)] font-bold text-[15px] tracking-[-0.02em]">Cridl</span>
-          </div>
+          <Logo size="md" />
           <button
             onClick={onClose}
             className="w-8 h-8 -mr-1 flex items-center justify-center text-[var(--text-muted)] active:text-white"

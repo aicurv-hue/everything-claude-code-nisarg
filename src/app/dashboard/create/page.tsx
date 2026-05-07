@@ -247,7 +247,10 @@ export default function CreatePostPage() {
           sourceContext: resolvedSourceContext || undefined,
         }),
       });
-      if (!generateRes.ok) throw new Error(`Generation failed: ${await generateRes.text()}`);
+      if (!generateRes.ok) {
+        const errBody = await generateRes.json().catch(() => ({} as any));
+        throw new Error(errBody?.error || `Generation failed (HTTP ${generateRes.status})`);
+      }
       const { post: content, imagePrompt } = await generateRes.json();
 
       // Fresh regeneration session id — used to key the temporary regen memory

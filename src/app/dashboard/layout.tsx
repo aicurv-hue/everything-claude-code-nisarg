@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/context/auth";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
 import OnboardingModal from "@/components/ui/OnboardingModal";
 import QuickAddIdea from "@/components/ui/QuickAddIdea";
+import Logo from "@/components/ui/Logo";
 import BottomNav from "@/components/mobile/BottomNav";
 import MobileHeader from "@/components/mobile/MobileHeader";
 import { PlanStatusProvider, usePlanStatus } from "@/lib/context/planStatus";
@@ -103,11 +104,8 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
   return (
     <aside className="w-[220px] bg-[var(--sidebar)] flex flex-col shrink-0 h-screen sticky top-0">
       {/* Logo */}
-      <div className="px-4 py-[18px] flex items-center gap-2.5">
-        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#2563eb] to-[oklch(55%_0.22_300)] flex items-center justify-center shrink-0">
-          <Zap className="w-3.5 h-3.5 text-white" strokeWidth={2} />
-        </div>
-        <span className="text-[var(--foreground)] font-bold text-[15px] tracking-[-0.02em]">Cridl</span>
+      <div className="px-4 py-[18px] flex items-center">
+        <Logo size="md" />
       </div>
 
       {/* Segment Toggle */}

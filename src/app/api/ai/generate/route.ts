@@ -25,7 +25,12 @@ export async function POST(req: NextRequest) {
     const result = await generatePost(body);
     return NextResponse.json(result);
   } catch (err: any) {
-    console.error("[api/ai/generate] Error:", err?.message || err);
-    return NextResponse.json({ error: "Generation failed" }, { status: 500 });
+    const message = typeof err?.message === "string" && err.message.trim().length > 0
+      ? err.message
+      : "Generation failed";
+    console.error("[api/ai/generate] Error:", message, err);
+    // Surface the real cause to the UI so users (and we) can tell whether it's a
+    // truncated completion, OpenRouter quota, profile/research issue, etc.
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

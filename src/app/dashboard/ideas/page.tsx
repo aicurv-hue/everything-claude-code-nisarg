@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Lightbulb, Sparkles, Trash2, PenSquare, Archive, Wand2, MessageSquareText, X } from "lucide-react";
+import { Lightbulb, Sparkles, Trash2, PenSquare, Archive, ArchiveRestore, Wand2, MessageSquareText, X } from "lucide-react";
 import { useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
@@ -34,7 +34,7 @@ export default function IdeaBankPage() {
   const [generating, setGenerating] = useState(false);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "active" | "ai_suggested" | "manual" | "used">("active");
+  const [filter, setFilter] = useState<"all" | "active" | "ai_suggested" | "manual" | "used" | "archived">("active");
   const [addTitle, setAddTitle] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -153,6 +153,16 @@ export default function IdeaBankPage() {
     await fetchIdeas();
   }
 
+  async function handleRestore(id: string) {
+    const token = await getAuthToken();
+    await fetch("/api/ideas", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id, status: "active" }),
+    });
+    await fetchIdeas();
+  }
+
   async function handleDelete(id: string) {
     const token = await getAuthToken();
     await fetch(`/api/ideas?id=${id}`, {
@@ -163,13 +173,15 @@ export default function IdeaBankPage() {
   }
 
   const filtered = ideas.filter((i) => {
-    if (filter === "all") return true;
+    if (filter === "all") return i.status !== "archived";
     if (filter === "active") return i.status === "active";
     if (filter === "used") return i.status === "used";
+    if (filter === "archived") return i.status === "archived";
     if (filter === "ai_suggested") return i.source === "ai_suggested" && i.status === "active";
     if (filter === "manual") return i.source === "manual" && i.status === "active";
     return true;
   });
+  const archivedCount = ideas.filter((i) => i.status === "archived").length;
 
   return (
     <div className="max-w-4xl mx-auto animate-fade-in">
@@ -339,16 +351,19 @@ export default function IdeaBankPage() {
       )}
 
       {/* Filters */}
-      <div className="flex gap-1 mb-4">
-        {(["active", "all", "ai_suggested", "manual", "used"] as const).map((f) => (
+      <div className="flex gap-1 mb-4 flex-wrap">
+        {(["active", "all", "ai_suggested", "manual", "used", "archived"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors flex items-center gap-1 ${
               filter === f ? "bg-[var(--primary)] text-white" : "bg-[var(--card)] text-[var(--text-sub)] border border-[var(--border)] hover:bg-[var(--card-hover)]"
             }`}
           >
-            {f === "active" ? "Active" : f === "all" ? "All" : f === "ai_suggested" ? "AI" : f === "manual" ? "Manual" : "Used"}
+            {f === "active" ? "Active" : f === "all" ? "All" : f === "ai_suggested" ? "AI" : f === "manual" ? "Manual" : f === "used" ? "Used" : "Archived"}
+            {f === "archived" && archivedCount > 0 && (
+              <span className={`text-[10px] px-1.5 rounded-full ${filter === f ? "bg-white/20" : "bg-[var(--border)]"}`}>{archivedCount}</span>
+            )}
           </button>
         ))}
       </div>
@@ -367,7 +382,7 @@ export default function IdeaBankPage() {
             <div
               key={idea.id}
               className={`card p-4 transition-colors ${
-                idea.status === "used" ? "opacity-50" : "hover:bg-[var(--card-hover)]"
+                idea.status === "used" ? "opacity-50" : idea.status === "archived" ? "opacity-70 hover:opacity-100 hover:bg-[var(--card-hover)]" : "hover:bg-[var(--card-hover)]"
               }`}
             >
               <div className="flex items-start justify-between gap-2">
@@ -440,6 +455,30 @@ export default function IdeaBankPage() {
               {idea.status === "used" && (
                 <div className="mt-3 pt-3 border-t border-[var(--border)]">
                   <span className="text-[10px] text-[var(--text-muted)]">Used</span>
+                </div>
+              )}
+
+              {idea.status === "archived" && (
+                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-[var(--border)]">
+                  <span className="flex-1 text-[10px] text-[var(--text-muted)] flex items-center gap-1">
+                    <Archive className="w-3 h-3" />
+                    Archived
+                  </span>
+                  <button
+                    onClick={() => idea.id && handleRestore(idea.id)}
+                    className="px-2 py-1 text-[11px] font-medium text-[var(--text-sub)] hover:text-[var(--foreground)] rounded-lg hover:bg-[var(--border)]/50 transition-colors flex items-center gap-1"
+                    title="Restore to Active"
+                  >
+                    <ArchiveRestore className="w-3 h-3" />
+                    Restore
+                  </button>
+                  <button
+                    onClick={() => idea.id && handleDelete(idea.id)}
+                    className="p-1.5 text-[var(--text-muted)] hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
+                    title="Delete permanently"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               )}
             </div>

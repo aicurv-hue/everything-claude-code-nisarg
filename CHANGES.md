@@ -1,5 +1,8 @@
 # Changes
 
+2026-05-07 — feat(ideas): archived filter tab + Restore action on archived cards. Archive no longer makes ideas disappear with no way back; "All" hides archived (use the Archived tab to surface them).
+2026-05-07 — refactor(brand): replaced gradient Zap+text logo with `Logo` wordmark component ("crid" in foreground + "l" in #2563eb). Theme-aware via `var(--foreground)` — works in light + dark without per-theme assets.
+2026-05-07 — fix(generate): surface real upstream error message from `/api/ai/generate` instead of opaque "Generation failed". Create page parses JSON error body. Users now see the actual cause (truncation / safety filter / quota) and we can diagnose without server logs.
 2026-05-07 — feat(images): switch image generation to gpt-image-2 (medium, 1024×1024). New SaaS-infographic prompt for single + carousel (text rendered inside image). Removed image-style picker (settings tab + per-segment field). Face-gen still uses prior fal model.
 2026-05-07 — fix(images): single-image prompt actually switched to SaaS-infographic. The 2026-05-07 entry above only updated the carousel prompt — IMAGE_PROMPT_SYSTEM still emitted "cinematic photography" prompts, so single-image generation kept producing moody silhouette photos. Replaced with infographic spec: bold quoted headline, 2–4 flat-icon blocks, accent callout, CTA pill, dark/light mode lock, banned cinematic/photoreal keywords.
 2026-05-07 — refactor(images): extracted submit+poll loop to `src/lib/ai/clientImage.ts` (was duplicated in 4 places). Added `refundUsage` + `/api/usage/refund` so the image-poll route auto-refunds quota when fal.ai returns FAILED — users no longer charged for jobs that never produced an image.
