@@ -88,14 +88,28 @@ export default function CampaignPostDrawer({ post, segment, onClose, onSaved }: 
     setImageUrl(null);
     try {
       const token = await getAuthToken();
-      const res = await fetch("/api/image/generate", {
+      const auth = token ? { Authorization: `Bearer ${token}` } : {};
+      const submitRes = await fetch("/api/image/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json", ...auth },
         body: JSON.stringify({ prompt: imagePrompt }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Image generation failed.");
-      setImageUrl(data.url);
+      const submitData = await submitRes.json().catch(() => ({}));
+      if (!submitRes.ok) throw new Error(submitData.error || "Image generation failed.");
+      const reqId = submitData.request_id;
+      if (!reqId) throw new Error("Missing request_id from image service.");
+
+      let url: string | null = null;
+      const deadline = Date.now() + 90_000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const pr = await fetch(`/api/image/generate?id=${encodeURIComponent(reqId)}`, { headers: { ...auth } });
+        const pd = await pr.json().catch(() => ({}));
+        if (pd?.status === "COMPLETED" && pd.url) { url = pd.url; break; }
+        if (pd?.status === "FAILED") throw new Error(pd.error || "Image generation failed.");
+      }
+      if (!url) throw new Error("Image generation timed out.");
+      setImageUrl(url);
     } catch (err: any) {
       setImageError(err.message || "Failed to generate image.");
     } finally {

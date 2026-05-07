@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateImageFromPrompt } from "@/lib/ai/image";
+import { submitImageJob, pollImageJob } from "@/lib/ai/image";
 import { verifyTokenEdge } from "@/lib/utils/verifyTokenEdge";
 
-// Node runtime — gpt-image-2 medium can take 20-40s, exceeding Edge's hard limit.
-// maxDuration=60s on Hobby is enough headroom; Edge's "An error occurred…" plain-text
-// timeout page was breaking client JSON parsing.
-export const runtime = "nodejs";
-export const maxDuration = 60;
+// Edge — both submit and poll calls are short (<2s), so no timeout concerns.
+export const runtime = "edge";
 
+// POST: submit a new image job. Counts against quota immediately.
+// Body: { prompt: string }
+// Returns: { request_id }
 export async function POST(req: NextRequest) {
   const uid = await verifyTokenEdge(req.headers.get("authorization"));
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Check and increment image generation quota (pre-flight to Node.js route)
   const checkRes = await fetch(new URL("/api/usage/check", req.url), {
     method: "POST",
     headers: {
@@ -28,11 +27,27 @@ export async function POST(req: NextRequest) {
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json({ error: "Missing image prompt." }, { status: 400 });
     }
-
-    const result = await generateImageFromPrompt(prompt);
-    return NextResponse.json({ url: result.url, prompt: result.prompt });
+    const requestId = await submitImageJob(prompt);
+    return NextResponse.json({ request_id: requestId });
   } catch (error: any) {
-    console.error("Image generation error:", error);
-    return NextResponse.json({ error: error.message || "Image generation failed." }, { status: 500 });
+    console.error("Image submit error:", error);
+    return NextResponse.json({ error: error.message || "Image submit failed." }, { status: 500 });
+  }
+}
+
+// GET: poll an existing job. ?id=<request_id>
+// Returns: { status: "IN_QUEUE"|"IN_PROGRESS"|"COMPLETED"|"FAILED", url?, error? }
+export async function GET(req: NextRequest) {
+  const uid = await verifyTokenEdge(req.headers.get("authorization"));
+  if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Missing id." }, { status: 400 });
+
+  try {
+    const s = await pollImageJob(id);
+    return NextResponse.json(s);
+  } catch (error: any) {
+    return NextResponse.json({ status: "FAILED", error: error.message || "Poll failed." }, { status: 500 });
   }
 }
