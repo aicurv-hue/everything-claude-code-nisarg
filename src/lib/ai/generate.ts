@@ -500,15 +500,33 @@ Start directly with the hook line. Output nothing else.`;
     }
   };
 
-  const chatWithFallback = async (messages: any[], temperature: number, max_tokens: number = 1200) => {
+  const isUsableCompletion = (c: any, minChars: number) => {
+    const txt = (c?.choices?.[0]?.message?.content || "").trim();
+    const finish = c?.choices?.[0]?.finish_reason;
+    // A "stop" finish with enough text is good. Anything else (length, content_filter,
+    // safety, error) or a suspiciously short body means the model truncated mid-generation.
+    return finish === "stop" && txt.length >= minChars;
+  };
+
+  const chatWithFallback = async (messages: any[], temperature: number, max_tokens: number = 1200, minChars: number = 200) => {
     // Single-model architecture: always Gemini 2.5 Flash, ignoring any legacy
     // model ID stored in user profiles. Same model used as retry on transient errors.
     try {
-      return await callWithTimeout(DEFAULT_MODEL, messages, temperature, max_tokens, 12000);
+      const c = await callWithTimeout(DEFAULT_MODEL, messages, temperature, max_tokens, 12000);
+      if (!isUsableCompletion(c, minChars)) {
+        const finish = c?.choices?.[0]?.finish_reason;
+        const len = (c?.choices?.[0]?.message?.content || "").length;
+        console.warn(`[Cortex] ${DEFAULT_MODEL} returned unusable completion (finish=${finish}, len=${len}) — retrying`);
+        throw new Error(`unusable_completion:${finish}:${len}`);
+      }
+      return c;
     } catch (err: any) {
       const reason = err?.name === "AbortError" ? "timeout" : (err?.status || err?.code || err?.message);
       console.warn(`[Cortex] ${DEFAULT_MODEL} failed (${reason}) — retrying with ${FALLBACK_MODEL}`);
-      return await callWithTimeout(FALLBACK_MODEL, messages, temperature, max_tokens, 10000);
+      const c2 = await callWithTimeout(FALLBACK_MODEL, messages, temperature, max_tokens, 10000);
+      // Final attempt — return whatever we got (even if short) so caller can decide.
+      // The route handler still throws if post is empty, surfacing a clear error to UI.
+      return c2;
     }
   };
 
@@ -519,11 +537,19 @@ Start directly with the hook line. Output nothing else.`;
         { role: "system", content: systemInstructions },
         { role: "user",   content: userPrompt },
       ],
-      isRegeneration ? 0.95 : 0.72  // bump variance for regenerations to push a meaningfully different output
+      isRegeneration ? 0.95 : 0.72,  // bump variance for regenerations to push a meaningfully different output
+      1200,
+      200  // post must be at least ~200 chars or we retry
     );
 
     const raw = completion.choices[0].message.content || "";
     const post = sanitizePost(raw) || raw.trim();
+    // Final guard — if even the fallback came back too short, fail loudly so the
+    // UI shows an error instead of saving a 16-word stub as a "post".
+    if (post.trim().length < 100) {
+      const finish = completion.choices[0]?.finish_reason;
+      throw new Error(`Post generation returned a truncated response (finish=${finish}, length=${post.length}). The model may have hit a safety filter or timeout. Try rewording the topic or regenerating.`);
+    }
 
     // Stage 2: Generate image prompt — always generate so user can switch modes on preview page
     const imageSystemPrompt = section("IMAGE_PROMPT_SYSTEM");
