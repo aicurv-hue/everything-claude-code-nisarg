@@ -6,7 +6,6 @@ import { getAuthToken } from "@/lib/utils/getAuthToken";
 import {
   AlertTriangle,
   Save,
-  RotateCcw,
   User,
   Users,
   Target,
@@ -368,7 +367,6 @@ export default function SettingsPage() {
     { id: "audience", label: "Audience", icon: Users },
     { id: "branding", label: "Branding", icon: Palette },
     { id: "voice",    label: "Voice",    icon: MessageSquare },
-    { id: "ai",       label: "AI",       icon: ShieldCheck },
   ];
 
   return (
@@ -871,70 +869,6 @@ export default function SettingsPage() {
                 </label>
                 <input value={currentProfile.wordsToAvoid} onChange={e => handleFieldChange("wordsToAvoid", e.target.value)} placeholder="e.g. synergy, leverage, disruptive, unlock, paradigm..." className={inputClass} />
                 <FieldHint>Hard ban — these words will never appear in any post from this profile.</FieldHint>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab 5: AI Config */}
-        {activeTab === "ai" && (
-          <div className="space-y-6">
-            <div className="p-3 bg-amber-500/10 border border-amber-100 rounded-lg text-[12px] text-amber-400 leading-relaxed">
-              <strong>Advanced settings.</strong> The defaults work well for most users. Only change the model or system prompt if you have a specific reason — incorrect changes here will affect every future post.
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className={`${labelClass} flex items-center gap-1.5`}>
-                  AI Model
-                  <HelpTooltip
-                    text="All three models produce high-quality posts. Gemini Flash is fastest and cheapest. Claude Sonnet produces the most natural human writing. GPT-4o is best at structured data-heavy posts."
-                    example="Recommended: Gemini Flash for speed, Claude Sonnet for voice quality"
-                    width="w-72"
-                  />
-                </label>
-                <span className="text-[11px] px-2 py-0.5 rounded-md bg-blue-500/10 text-[var(--primary)] border border-blue-800/40 font-medium">Per-profile setting</span>
-              </div>
-              <select
-                value={currentProfile.model}
-                onChange={(e) => handleFieldChange("model", e.target.value)}
-                className={inputClass}
-              >
-                <option value="google/gemini-2.5-flash">Gemini 2.5 Flash — fast, smart, reliable</option>
-              </select>
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <label className={`${labelClass} flex items-center gap-1.5`}>
-                  Profile System Prompt
-                  <HelpTooltip
-                    text="This is appended to Cortex's built-in rules for every post in this profile. Use it to add industry-specific rules, recurring narrative themes, or persistent dos and don'ts that apply to ALL your posts."
-                    example="e.g. 'Always reference Indian market data when available. Never mention competitor brand names. End every post with a question to the reader.'"
-                    width="w-80"
-                    position="left"
-                  />
-                </label>
-                <button
-                  onClick={() => handleFieldChange("systemPrompt", DEFAULT_SYSTEM_PROMPT)}
-                  className="flex items-center gap-1 text-[11px] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
-                >
-                  <RotateCcw className="w-3 h-3" /> Reset to default
-                </button>
-              </div>
-              <FieldHint>⚠️ Modifying this affects every future post in this profile. The default is already optimised — only edit if you need persistent custom rules.</FieldHint>
-              <div className="relative">
-                <textarea
-                  value={currentProfile.systemPrompt}
-                  onChange={(e) => handleFieldChange("systemPrompt", e.target.value)}
-                  rows={12}
-                  className={`${textareaClass} font-mono`}
-                />
-                {currentProfile.systemPrompt !== DEFAULT_SYSTEM_PROMPT && (
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-amber-500/10 border border-amber-800/40 px-2.5 py-1 rounded-md">
-                    <AlertTriangle className="w-3 h-3 text-amber-500" />
-                    <span className="text-[11px] font-medium text-amber-400">Custom prompt active</span>
-                  </div>
-                )}
               </div>
             </div>
           </div>

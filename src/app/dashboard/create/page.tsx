@@ -186,7 +186,6 @@ export default function CreatePostPage() {
     setGenerateError(null);
 
     const activeProfile: ProfileSegment | undefined = userProfile ? userProfile[segment] : undefined;
-    const selectedModel = activeProfile?.model || "google/gemini-2.5-flash";
 
     try {
       // ── Extract source material (URL / image) if provided ──────────────────
@@ -208,7 +207,7 @@ export default function CreatePostPage() {
       const researchRes = await fetch("/api/ai/research", {
         method: "POST",
         headers: authHeaders,
-        body: JSON.stringify({ topic, options: { segment, model: selectedModel, tone, audience, length, clientProfile: activeProfile }, sourceContext: resolvedSourceContext || undefined }),
+        body: JSON.stringify({ topic, options: { segment, tone, audience, length, clientProfile: activeProfile }, sourceContext: resolvedSourceContext || undefined }),
       });
       if (!researchRes.ok) throw new Error(`Research failed: ${await researchRes.text()}`);
       const research = await researchRes.json();
@@ -238,8 +237,6 @@ export default function CreatePostPage() {
         body: JSON.stringify({
           topic, tone, audience, length, segment, research,
           intentType,
-          model: selectedModel,
-          systemPrompt: activeProfile?.systemPrompt || undefined,
           clientProfile: activeProfile,
           customInstructions: customInstructions.trim() || undefined,
           memoryContext:   memoryContext.length > 0   ? memoryContext   : undefined,
@@ -265,9 +262,8 @@ export default function CreatePostPage() {
         content, imagePrompt, research,
         referenceImagePreview: sourceImage?.preview || null,
         intentType,
-        metadata: { topic, tone, audience, length, segment, customInstructions: customInstructions.trim() || null, memoryUsed: memoryContext.length, model: selectedModel },
+        metadata: { topic, tone, audience, length, segment, customInstructions: customInstructions.trim() || null, memoryUsed: memoryContext.length },
         clientProfile: activeProfile || null,
-        systemPrompt: activeProfile?.systemPrompt || null,
         memoryContext: memoryContext.length > 0 ? memoryContext : null,
         writingSamples: writingSamples.length > 0 ? writingSamples : null,
         sourceContext: resolvedSourceContext || null,
@@ -296,9 +292,8 @@ export default function CreatePostPage() {
       research: { insights: [], references: [], summary: "" },
       referenceImagePreview: null,
       intentType: "professional",
-      metadata: { topic: manualContent.trim().slice(0, 80), tone, audience, length, segment, customInstructions: null, memoryUsed: 0, model: null },
+      metadata: { topic: manualContent.trim().slice(0, 80), tone, audience, length, segment, customInstructions: null, memoryUsed: 0 },
       clientProfile: activeProfile || null,
-      systemPrompt: null,
       memoryContext: null,
       writingSamples: null,
       sourceContext: null,
@@ -856,12 +851,6 @@ export default function CreatePostPage() {
                 <div>
                   <p className="text-[11px] text-[var(--text-muted)] font-medium uppercase tracking-wide mb-1">Mode</p>
                   <p className="text-sm font-semibold text-[var(--foreground)] capitalize">{segment}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-[var(--text-muted)] font-medium uppercase tracking-wide mb-1">AI Writer</p>
-                  <p className="text-sm font-semibold text-[var(--foreground)]">
-                    {userProfile?.[segment]?.model?.split('/').pop()?.replace(/-/g, ' ') || "Gemini 2.0 Flash"}
-                  </p>
                 </div>
                 <div>
                   <p className="text-[11px] text-[var(--text-muted)] font-medium uppercase tracking-wide mb-1">Niche</p>

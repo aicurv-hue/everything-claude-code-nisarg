@@ -321,7 +321,7 @@ function sanitizePost(raw: string): string {
  *   - marketing-skills-all: social-content (LinkedIn-specific structure, CTA, tone mapping)
  */
 export async function generatePost(request: PostRequest): Promise<GenerateResult> {
-  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, writingSamples, sourceContext, previousPost, isRegeneration, regenerateInstruction, intentType, initialPost, regenerationTrail } = request;
+  const { tone, audience, length, research, segment, topic, clientProfile, customInstructions, memoryContext, writingSamples, sourceContext, previousPost, isRegeneration, regenerateInstruction, intentType, initialPost, regenerationTrail } = request;
 
   const lengthSpec = LENGTH_SPEC[length] || LENGTH_SPEC.medium;
   const isProfessional = (intentType ?? "professional") === "professional";
@@ -410,15 +410,6 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
     `BRAND CONTEXT`,
     `══════════════════════════════════════════`,
     clientBranding,
-    systemPrompt
-      ? [
-          "",
-          `══════════════════════════════════════════`,
-          `PROFILE SYSTEM PROMPT — additional voice guidance`,
-          `══════════════════════════════════════════`,
-          systemPrompt,
-        ].join("\n")
-      : "",
     writingSamples && writingSamples.length > 0
       ? `\n\n${buildWritingSamplesBlock(writingSamples)}`
       : "",

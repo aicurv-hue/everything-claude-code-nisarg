@@ -1,5 +1,6 @@
 # Changes
 
+2026-05-07 — refactor(settings): hide AI tab from Profile (model + system prompt). Single backend model (Gemini 2.5 Flash) and base Cortex prompt are final — users can't change them. Per-user `systemPrompt` no longer applied to generation; "AI Writer" row removed from Create page sidebar. Schema fields kept (no Firestore migration), just inert.
 2026-05-07 — feat(ideas): archived filter tab + Restore action on archived cards. Archive no longer makes ideas disappear with no way back; "All" hides archived (use the Archived tab to surface them).
 2026-05-07 — refactor(brand): replaced gradient Zap+text logo with `Logo` wordmark component ("crid" in foreground + "l" in #2563eb). Theme-aware via `var(--foreground)` — works in light + dark without per-theme assets.
 2026-05-07 — fix(generate): surface real upstream error message from `/api/ai/generate` instead of opaque "Generation failed". Create page parses JSON error body. Users now see the actual cause (truncation / safety filter / quota) and we can diagnose without server logs.
