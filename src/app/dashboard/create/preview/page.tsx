@@ -1004,7 +1004,7 @@ export default function PostPreviewPage() {
       if (imageMode === "ai" && !finalImageUrl && imagePrompt && saved?.id) {
         setScheduleMessage(`Scheduled for ${label} (${timezone}) · Generating image…`);
         getAuthToken().then(async (bgToken) => {
-          const auth = bgToken ? { Authorization: `Bearer ${bgToken}` } : {};
+          const auth: Record<string, string> = bgToken ? { Authorization: `Bearer ${bgToken}` } : {};
           const submitRes = await fetch("/api/image/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json", ...auth },

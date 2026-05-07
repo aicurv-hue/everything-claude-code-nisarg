@@ -88,7 +88,7 @@ export default function CampaignPostDrawer({ post, segment, onClose, onSaved }: 
     setImageUrl(null);
     try {
       const token = await getAuthToken();
-      const auth = token ? { Authorization: `Bearer ${token}` } : {};
+      const auth: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
       const submitRes = await fetch("/api/image/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...auth },

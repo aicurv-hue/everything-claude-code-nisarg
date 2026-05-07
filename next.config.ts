@@ -38,13 +38,16 @@ const nextConfig: NextConfig = {
 
 export default withPWA({
   dest: "public",
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
+  cacheOnFrontEndNav: false,
+  aggressiveFrontEndNavCaching: false,
   reloadOnOnline: true,
+  register: true,
   disable: process.env.NODE_ENV === "development",
   workboxOptions: {
     disableDevLogs: true,
-    // Cache static assets aggressively
+    clientsClaim: true,
+    skipWaiting: true,
+    cleanupOutdatedCaches: true,
     runtimeCaching: [
       {
         urlPattern: /^https:\/\/fonts\.(?:gstatic|googleapis)\.com\/.*/i,
@@ -69,6 +72,23 @@ export default withPWA({
           cacheName: "dashboard-api",
           expiration: { maxEntries: 10, maxAgeSeconds: 60 },
           networkTimeoutSeconds: 5,
+        },
+      },
+      {
+        urlPattern: ({ request }: { request: Request }) => request.mode === "navigate",
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "pages",
+          expiration: { maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 },
+          networkTimeoutSeconds: 5,
+        },
+      },
+      {
+        urlPattern: /\/_next\/static\/.*/i,
+        handler: "StaleWhileRevalidate",
+        options: {
+          cacheName: "next-static",
+          expiration: { maxEntries: 200, maxAgeSeconds: 7 * 24 * 60 * 60 },
         },
       },
     ],
