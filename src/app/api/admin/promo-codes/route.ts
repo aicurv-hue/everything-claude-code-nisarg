@@ -17,10 +17,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { trialDays, maxUses, expiresAt, label, plan } = body;
+    const { trialDays, maxUses, expiresAt, label } = body;
 
-    const validPlans = ["starter", "pro", "business"];
-    const resolvedPlan = validPlans.includes(plan) ? plan : "starter";
+    const resolvedPlan = "business";
 
     const code = `CRIDL-${randomCode(8)}`;
 

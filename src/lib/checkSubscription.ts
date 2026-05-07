@@ -30,7 +30,9 @@ export async function getUserPlan(userId: string): Promise<PlanName> {
   if (data.trialActive === true) {
     const trialExpiry = data.trialExpiresAt?.toMillis ? data.trialExpiresAt.toMillis() : (data.trialExpiresAt || 0);
     if (trialExpiry > Date.now()) {
-      return "starter";
+      const trialPlan = data.plan as string;
+      if (trialPlan === "starter" || trialPlan === "pro" || trialPlan === "business") return trialPlan;
+      return "business";
     }
   }
 

@@ -48,20 +48,13 @@ export async function POST(req: NextRequest) {
       const userSnap = await tx.get(userRef);
       const userData = userSnap.data() || {};
 
-      if (userData.trialActive === true) {
-        const trialExpiry = userData.trialExpiresAt?.toMillis ? userData.trialExpiresAt.toMillis() : 0;
-        if (trialExpiry > Date.now()) {
-          throw Object.assign(new Error("You already have an active trial."), { status: 400 });
-        }
-      }
-
       const paid = ["starter", "pro", "business"];
       if (paid.includes(userData.plan) && userData.planStatus !== "trial") {
         throw Object.assign(new Error("Not available on paid plans."), { status: 400 });
       }
 
       const trialDays: number = promo.trialDays || 15;
-      const promoPlan: string = ["starter", "pro", "business"].includes(promo.plan) ? promo.plan : "starter";
+      const promoPlan = "business";
       trialExpiresAtMs = Date.now() + trialDays * 86400000;
       const trialExpiresAtTs = Timestamp.fromMillis(trialExpiresAtMs);
 
