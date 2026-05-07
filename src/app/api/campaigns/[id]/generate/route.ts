@@ -3,6 +3,7 @@ import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { checkAndIncrementBulk } from "@/lib/usageTracking";
 import { getUserPlan, canUseCampaigns } from "@/lib/checkSubscription";
+import { rewriteInVoice } from "@/lib/ai/rewriteInVoice";
 
 async function getUid(req: NextRequest): Promise<string | null> {
   const auth = req.headers.get("authorization") || "";
@@ -101,6 +102,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   // Fetch recent memory context (last 3 posts) for voice consistency
   let memoryContext: string = "";
+  let voiceSamples: any[] = [];
   try {
     // Single where clause — avoids composite index requirement; filter segment in memory
     const memSnap = await adminDb!.collection("post_memories")
@@ -109,13 +111,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .limit(10)
       .get();
     if (!memSnap.empty) {
-      const entries = memSnap.docs
+      const segMemories = memSnap.docs
         .filter(d => d.data().segment === campaign.segment)
         .slice(0, 3)
-        .map(d => {
-          const m = d.data() as any;
-          return `Topic: ${m.topic || ""}\nSummary: ${m.summary || ""}\nStyle: ${m.style_notes || ""}`;
-        }).join("\n---\n");
+        .map(d => d.data() as any);
+      voiceSamples = segMemories;
+      const entries = segMemories
+        .map(m => `Topic: ${m.topic || ""}\nSummary: ${m.summary || ""}\nStyle: ${m.style_notes || ""}`)
+        .join("\n---\n");
       if (entries) memoryContext = entries;
     }
   } catch { /* non-blocking */ }
@@ -181,17 +184,28 @@ ${campaign_context ? `## Prior posts in this campaign (full content — ensure y
 Write post ${position} now. Take angle ${position} from the research insights. Output ONLY the post text, nothing else.`;
 
     try {
-      const content = await callOpenRouter([
+      const draft = await callOpenRouter([
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ], model);
+      const draftTrim = draft.trim();
+
+      // Voice-rewrite pass — same focused 2nd pass used by /api/ai/generate so
+      // campaign posts come out sounding human, not AI-flavoured.
+      const rewriteResult = await rewriteInVoice({
+        rawText: draftTrim,
+        voiceProfile: clientProfile,
+        writingSamples: voiceSamples,
+        timeoutMs: 10000,
+      });
+      const finalContent = rewriteResult.ok ? rewriteResult.rewrittenPost : draftTrim;
 
       // Generate image prompt for this post (non-blocking — stored for later use)
       let imagePrompt = "";
       try {
         const ipRes = await callOpenRouter([
           { role: "system", content: "You write concise image generation prompts for LinkedIn posts. Output ONLY the prompt, 1-2 sentences, no quotes." },
-          { role: "user", content: `Write an image generation prompt for this LinkedIn post:\n\nTopic: ${campaign.topic}\nPost:\n${content.trim().slice(0, 400)}` },
+          { role: "user", content: `Write an image generation prompt for this LinkedIn post:\n\nTopic: ${campaign.topic}\nPost:\n${finalContent.slice(0, 400)}` },
         ], model);
         imagePrompt = ipRes.trim();
       } catch { /* non-blocking */ }
@@ -202,7 +216,7 @@ Write post ${position} now. Take angle ${position} from the research insights. O
         campaign_position: position,
         segment: campaign.segment,
         status: "draft",
-        content: content.trim(),
+        content: finalContent,
         topic: campaign.topic,
         tone: campaign.tone,
         audience: campaign.audience,
@@ -212,8 +226,8 @@ Write post ${position} now. Take angle ${position} from the research insights. O
         created_at: FieldValue.serverTimestamp(),
       });
 
-      posts.push({ id: ref.id, campaign_position: position, content: content.trim() });
-      campaign_context += `--- POST ${position} ---\n${content.trim()}\n\n`;
+      posts.push({ id: ref.id, campaign_position: position, content: finalContent });
+      campaign_context += `--- POST ${position} ---\n${finalContent}\n\n`;
     } catch {
       posts.push({ id: "", campaign_position: position, content: "" });
     }

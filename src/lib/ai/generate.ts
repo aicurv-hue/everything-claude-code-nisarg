@@ -4,6 +4,7 @@ import type { PostMemory } from "../db/memory";
 import { openRouter, DEFAULT_MODEL, FALLBACK_MODEL } from "./openrouter";
 import { NEEL_SECTIONS } from "./neel-prompt-sections";
 import { sanitizePromptInput } from "./sanitize";
+import { rewriteInVoice } from "./rewriteInVoice";
 
 export interface GenerateResult {
   post: string;
@@ -534,13 +535,25 @@ Start directly with the hook line. Output nothing else.`;
     );
 
     const raw = completion.choices[0].message.content || "";
-    const post = sanitizePost(raw) || raw.trim();
+    const draftPost = sanitizePost(raw) || raw.trim();
     // Final guard — if even the fallback came back too short, fail loudly so the
     // UI shows an error instead of saving a 16-word stub as a "post".
-    if (post.trim().length < 100) {
+    if (draftPost.trim().length < 100) {
       const finish = completion.choices[0]?.finish_reason;
-      throw new Error(`Post generation returned a truncated response (finish=${finish}, length=${post.length}). The model may have hit a safety filter or timeout. Try rewording the topic or regenerating.`);
+      throw new Error(`Post generation returned a truncated response (finish=${finish}, length=${draftPost.length}). The model may have hit a safety filter or timeout. Try rewording the topic or regenerating.`);
     }
+
+    // Stage 1.5: Voice-rewrite pass — runs on every generation to deliver the same
+    // human-sounding output the standalone "Rewrite in my voice" feature produces.
+    // Uses the structured client profile + writing samples already in scope.
+    // Falls back silently to draftPost if the rewrite call fails or returns junk.
+    const rewriteResult = await rewriteInVoice({
+      rawText: draftPost,
+      voiceProfile: clientProfile,
+      writingSamples,
+      timeoutMs: 10000,
+    });
+    const post = rewriteResult.ok ? rewriteResult.rewrittenPost : draftPost;
 
     // Stage 2: Generate image prompt — always generate so user can switch modes on preview page
     const imageSystemPrompt = section("IMAGE_PROMPT_SYSTEM");
