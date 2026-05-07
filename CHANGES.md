@@ -1,6 +1,7 @@
 # Changes
 
 2026-05-07 — feat(images): switch image generation to gpt-image-2 (medium, 1024×1024). New SaaS-infographic prompt for single + carousel (text rendered inside image). Removed image-style picker (settings tab + per-segment field). Face-gen still uses prior fal model.
+2026-05-07 — fix(images): single-image prompt actually switched to SaaS-infographic. The 2026-05-07 entry above only updated the carousel prompt — IMAGE_PROMPT_SYSTEM still emitted "cinematic photography" prompts, so single-image generation kept producing moody silhouette photos. Replaced with infographic spec: bold quoted headline, 2–4 flat-icon blocks, accent callout, CTA pill, dark/light mode lock, banned cinematic/photoreal keywords.
 
 2026-04-26 — Merged 5 agents into 2 (Builder, Strategist).
 2026-04-26 — Renamed `Master_Neel_Prompt.md` → `NEEL_RUNTIME.md`, `NEEL.md` → `NEEL_DOCS.md`. Updated all refs.
