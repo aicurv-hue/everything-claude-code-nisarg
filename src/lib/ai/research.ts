@@ -4,14 +4,15 @@ import { db, isMock } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { openRouter, DEFAULT_MODEL } from "./openrouter";
 import type { ProfileSegment } from "../db/profiles";
+import { detectIntent, type IntentType } from "./intent";
+
+export type { IntentType };
 
 export interface ResearchInsight {
   title: string;
   content: string;
   source?: string;
 }
-
-export type IntentType = "personal" | "professional";
 
 export interface ResearchResult {
   topic: string;
@@ -28,23 +29,6 @@ export interface ResearchOptions {
   audience?: string;
   length?: string;
   clientProfile?: ProfileSegment;
-}
-
-// ── Intent detection — keyword-based, zero latency, zero API cost ────────────
-
-const PERSONAL_SIGNALS = [
-  /\bwatched\b/, /\bsaw\b/, /\bfilm\b/, /\bmovie\b/, /\bbook\b/,
-  /\bpodcast\b/, /\blistened\b/, /\bread\b/,
-  /\bsharing my thoughts?\b/, /\bjust (thinking|reflecting)\b/,
-  /\bmy (opinion|view|take)\b/, /\bi (realized|noticed|felt)\b/,
-  /\bpersonal(ly)?\b/, /\blife lesson\b/, /\bunpopular opinion\b/,
-  /\brecently i\b/,
-];
-
-function detectIntent(topic: string): IntentType {
-  const lower = topic.toLowerCase();
-  const hits = PERSONAL_SIGNALS.filter((re) => re.test(lower)).length;
-  return hits >= 1 ? "personal" : "professional";
 }
 
 /**

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyTokenEdge } from "@/lib/utils/verifyTokenEdge";
 import { sanitizePromptInput } from "@/lib/ai/sanitize";
+import { detectIntent } from "@/lib/ai/intent";
 
 // Edge Runtime — no timeout on Vercel Hobby plan (unlike serverless 10s limit)
 export const runtime = "edge";
@@ -18,21 +19,6 @@ function extractJSON(text: string): any {
     if (match) { try { return JSON.parse(match[0]); } catch { return null; } }
     return null;
   }
-}
-
-// ── Intent detection — matches research.ts server action logic ────────────
-const PERSONAL_SIGNALS = [
-  /\bwatched\b/, /\bsaw\b/, /\bfilm\b/, /\bmovie\b/, /\bbook\b/,
-  /\bpodcast\b/, /\blistened\b/, /\bread\b/,
-  /\bsharing my thoughts?\b/, /\bjust (thinking|reflecting)\b/,
-  /\bmy (opinion|view|take)\b/, /\bi (realized|noticed|felt)\b/,
-  /\bpersonal(ly)?\b/, /\blife lesson\b/, /\bunpopular opinion\b/,
-  /\brecently i\b/,
-];
-
-function detectIntent(topic: string): "personal" | "professional" {
-  const lower = topic.toLowerCase();
-  return PERSONAL_SIGNALS.some((re) => re.test(lower)) ? "personal" : "professional";
 }
 
 export async function POST(req: NextRequest) {
