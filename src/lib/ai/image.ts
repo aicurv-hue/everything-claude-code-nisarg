@@ -7,7 +7,7 @@ export async function generateImageFromPrompt(prompt: string): Promise<ImageResu
   const apiKey = process.env.FAL_API_KEY;
   if (!apiKey) throw new Error("FAL_API_KEY is not set in environment variables.");
 
-  const response = await fetch("https://fal.run/openai/gpt-image-2", {
+  const response = await fetch("https://fal.run/fal-ai/gpt-image-2", {
     method: "POST",
     headers: {
       "Authorization": `Key ${apiKey}`,
