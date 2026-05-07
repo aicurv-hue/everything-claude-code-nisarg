@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateImageFromPrompt } from "@/lib/ai/image";
 import { verifyTokenEdge } from "@/lib/utils/verifyTokenEdge";
 
-// Edge Runtime — no 10s timeout on Vercel Hobby (fal.ai can take >10s)
-export const runtime = "edge";
+// Node runtime — gpt-image-2 medium can take 20-40s, exceeding Edge's hard limit.
+// maxDuration=60s on Hobby is enough headroom; Edge's "An error occurred…" plain-text
+// timeout page was breaking client JSON parsing.
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   const uid = await verifyTokenEdge(req.headers.get("authorization"));

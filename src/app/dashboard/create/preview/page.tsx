@@ -426,8 +426,12 @@ export default function PostPreviewPage() {
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ prompt }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Image generation failed.");
+      const raw = await res.text();
+      let data: any = {};
+      try { data = JSON.parse(raw); } catch {
+        throw new Error(res.ok ? "Image service returned invalid response." : (raw.slice(0, 200) || `HTTP ${res.status}`));
+      }
+      if (!res.ok) throw new Error(data.error || `Image generation failed (HTTP ${res.status}).`);
       // Upload fal.ai URL server-side to avoid CORS — fal.ai CDN blocks browser fetches
       let persistentUrl = data.url;
       try {
