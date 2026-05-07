@@ -268,7 +268,7 @@ export default function BillingPage() {
                       {trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""} remaining
                     </p>
                     <p className="text-xs text-violet-400 mt-0.5">
-                      Full Starter access.{" "}
+                      Full Business access.{" "}
                       {ctxTrialEndsAt && <>Expires {formatDate(new Date(ctxTrialEndsAt))}.</>}
                     </p>
                   </div>
@@ -363,7 +363,7 @@ export default function BillingPage() {
                 <Gift className="w-4 h-4 text-violet-500" />
                 <p className="text-sm font-semibold text-[var(--foreground)]">Have a promo code?</p>
               </div>
-              <p className="text-xs text-[var(--text-muted)]">Enter your code below to activate a free trial with Starter plan access.</p>
+              <p className="text-xs text-[var(--text-muted)]">Enter your code below to activate a free trial with Business plan access.</p>
 
               {redeemSuccess ? (
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-800/40">
@@ -371,7 +371,7 @@ export default function BillingPage() {
                   <div>
                     <p className="text-sm font-semibold text-green-900">Promo code activated!</p>
                     <p className="text-xs text-emerald-400 mt-0.5">
-                      Your Starter plan trial is active for {redeemSuccess.daysRemaining} more day{redeemSuccess.daysRemaining !== 1 ? "s" : ""}.
+                      Your Business plan trial is active for {redeemSuccess.daysRemaining} more day{redeemSuccess.daysRemaining !== 1 ? "s" : ""}.
                     </p>
                   </div>
                 </div>

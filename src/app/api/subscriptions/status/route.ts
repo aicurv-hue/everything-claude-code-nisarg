@@ -34,8 +34,9 @@ export async function GET(req: NextRequest) {
         ? userData.trialExpiresAt.toMillis()
         : (userData.trialExpiresAt || 0);
       if (trialExpiry > Date.now()) {
+        const trialPlan = (plan === "starter" || plan === "pro" || plan === "business") ? plan : "business";
         return NextResponse.json({
-          plan: "starter",
+          plan: trialPlan,
           status: "trial",
           trialEndsAt: new Date(trialExpiry).toISOString(),
         }, { headers: { "Cache-Control": "no-store" } });
