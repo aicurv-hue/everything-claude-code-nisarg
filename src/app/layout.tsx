@@ -37,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={dmSans.variable}>
+    <html lang="en" className={dmSans.variable} translate="no">
       <head>
         {/* DNS + TLS pre-warmed before any API calls fire */}
         <link rel="preconnect" href="https://openrouter.ai" />

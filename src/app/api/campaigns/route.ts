@@ -18,10 +18,15 @@ export async function GET(req: NextRequest) {
   const segment = req.nextUrl.searchParams.get("segment") || "individual";
   const snap = await adminDb!.collection("campaigns")
     .where("user_id", "==", uid)
-    .where("segment", "==", segment)
-    .orderBy("created_at", "desc")
     .get();
-  const campaigns = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const campaigns = snap.docs
+    .map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) }))
+    .filter(c => (c as { segment?: string }).segment === segment)
+    .sort((a, b) => {
+      const ta = (a as { created_at?: { toMillis?: () => number } }).created_at?.toMillis?.() ?? 0;
+      const tb = (b as { created_at?: { toMillis?: () => number } }).created_at?.toMillis?.() ?? 0;
+      return tb - ta;
+    });
   return NextResponse.json({ campaigns });
 }
 
