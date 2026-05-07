@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
 
 // GET: poll an existing job. ?id=<request_id>
 // Returns: { status: "IN_QUEUE"|"IN_PROGRESS"|"COMPLETED"|"FAILED", url?, error? }
+// On FAILED, refunds the image quota that was charged on submit.
 export async function GET(req: NextRequest) {
   const uid = await verifyTokenEdge(req.headers.get("authorization"));
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -46,6 +47,17 @@ export async function GET(req: NextRequest) {
 
   try {
     const s = await pollImageJob(id);
+    if (s.status === "FAILED") {
+      // Best-effort refund — don't block the response if it fails.
+      fetch(new URL("/api/usage/refund", req.url), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: req.headers.get("authorization") || "",
+        },
+        body: JSON.stringify({ action: "image" }),
+      }).catch(() => {});
+    }
     return NextResponse.json(s);
   } catch (error: any) {
     return NextResponse.json({ status: "FAILED", error: error.message || "Poll failed." }, { status: 500 });

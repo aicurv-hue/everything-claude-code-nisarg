@@ -20,6 +20,7 @@ import PostQualityScore from "@/components/PostQualityScore";
 import RewriteButton from "@/components/RewriteButton";
 // Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
 import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
+import { generateImageClient } from "@/lib/ai/clientImage";
 
 type ImageMode = "ai" | "upload" | "reference" | "face" | "carousel" | "none";
 
@@ -420,37 +421,9 @@ export default function PostPreviewPage() {
     setImageUrl(null);
     try {
       const token = await getAuthToken();
-
-      const submitRes = await fetch("/api/image/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ prompt }),
-      });
-      const submitRaw = await submitRes.text();
-      let submitData: any = {};
-      try { submitData = JSON.parse(submitRaw); } catch {
-        throw new Error(submitRes.ok ? "Image service returned invalid response." : (submitRaw.slice(0, 200) || `HTTP ${submitRes.status}`));
-      }
-      if (!submitRes.ok) throw new Error(submitData.error || `Image submit failed (HTTP ${submitRes.status}).`);
-      const reqId = submitData.request_id;
-      if (!reqId) throw new Error("Missing request_id from image service.");
-
-      // Poll until COMPLETED or FAILED (max ~90s)
-      let imageUrlFromFal: string | null = null;
-      const deadline = Date.now() + 90_000;
-      while (Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 2000));
-        const pollRes = await fetch(`/api/image/generate?id=${encodeURIComponent(reqId)}`, {
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        });
-        const pollData = await pollRes.json().catch(() => ({}));
-        if (pollData?.status === "COMPLETED" && pollData.url) { imageUrlFromFal = pollData.url; break; }
-        if (pollData?.status === "FAILED") throw new Error(pollData.error || "Image generation failed.");
-      }
-      if (!imageUrlFromFal) throw new Error("Image generation timed out.");
-      const data = { url: imageUrlFromFal };
+      const falUrl = await generateImageClient({ prompt, token });
       // Upload fal.ai URL server-side to avoid CORS — fal.ai CDN blocks browser fetches
-      let persistentUrl = data.url;
+      let persistentUrl = falUrl;
       try {
         const uploadRes = await fetch("/api/image/upload-url", {
           method: "POST",
@@ -458,7 +431,7 @@ export default function PostPreviewPage() {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify({ url: data.url, fileName: `post-images/${Date.now()}-ai.jpg` }),
+          body: JSON.stringify({ url: falUrl, fileName: `post-images/${Date.now()}-ai.jpg` }),
         });
         if (uploadRes.ok) {
           const uploadData = await uploadRes.json();
@@ -496,34 +469,19 @@ export default function PostPreviewPage() {
 
   /** Render a single image from a prompt (fal.ai → persistent storage). Returns the URL or null. */
   const renderSlideImage = async (prompt: string, slideIndex: number, token: string | null): Promise<string | null> => {
-    const submitRes = await fetch("/api/image/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ prompt }),
-    });
-    const submitData = await submitRes.json().catch(() => ({}));
-    if (!submitRes.ok || !submitData?.request_id) return null;
-
-    let falUrl: string | null = null;
-    const deadline = Date.now() + 90_000;
-    while (Date.now() < deadline) {
-      await new Promise((r) => setTimeout(r, 2000));
-      const pollRes = await fetch(`/api/image/generate?id=${encodeURIComponent(submitData.request_id)}`, {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      });
-      const pollData = await pollRes.json().catch(() => ({}));
-      if (pollData?.status === "COMPLETED" && pollData.url) { falUrl = pollData.url; break; }
-      if (pollData?.status === "FAILED") return null;
+    let falUrl: string;
+    try {
+      falUrl = await generateImageClient({ prompt, token });
+    } catch {
+      return null;
     }
-    if (!falUrl) return null;
-    const data = { url: falUrl };
 
-    let persistentUrl = data.url as string;
+    let persistentUrl = falUrl;
     try {
       const uploadRes = await fetch("/api/image/upload-url", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ url: data.url, fileName: `post-images/${Date.now()}-slide-${slideIndex}.jpg` }),
+        body: JSON.stringify({ url: falUrl, fileName: `post-images/${Date.now()}-slide-${slideIndex}.jpg` }),
       });
       if (uploadRes.ok) {
         const uploadData = await uploadRes.json();
@@ -1004,26 +962,10 @@ export default function PostPreviewPage() {
       if (imageMode === "ai" && !finalImageUrl && imagePrompt && saved?.id) {
         setScheduleMessage(`Scheduled for ${label} (${timezone}) · Generating image…`);
         getAuthToken().then(async (bgToken) => {
-          const auth: Record<string, string> = bgToken ? { Authorization: `Bearer ${bgToken}` } : {};
-          const submitRes = await fetch("/api/image/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", ...auth },
-            body: JSON.stringify({ prompt: imagePrompt }),
-          });
-          if (!submitRes.ok) return;
-          const sd = await submitRes.json().catch(() => ({}));
-          if (!sd?.request_id) return;
-          const dl = Date.now() + 90_000;
-          while (Date.now() < dl) {
-            await new Promise((r) => setTimeout(r, 2500));
-            const pr = await fetch(`/api/image/generate?id=${encodeURIComponent(sd.request_id)}`, { headers: { ...auth } });
-            const pd = await pr.json().catch(() => ({}));
-            if (pd?.status === "COMPLETED" && pd.url && saved.id) {
-              updatePost(saved.id, { image_url: pd.url }).catch(() => {});
-              setScheduleMessage(`Scheduled for ${label} (${timezone}) · AI image attached`);
-              return;
-            }
-            if (pd?.status === "FAILED") return;
+          const url = await generateImageClient({ prompt: imagePrompt, token: bgToken, pollIntervalMs: 2500 });
+          if (saved.id) {
+            updatePost(saved.id, { image_url: url }).catch(() => {});
+            setScheduleMessage(`Scheduled for ${label} (${timezone}) · AI image attached`);
           }
         }).catch(() => {});
       }

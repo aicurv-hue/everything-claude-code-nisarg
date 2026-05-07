@@ -87,6 +87,26 @@ export async function checkAndIncrementUsage(
   return checkAndIncrementBulk(userId, action, 1);
 }
 
+/**
+ * Decrement a usage counter by 1, floored at 0. Used when an image job that was
+ * pre-counted on submit ends up FAILED on the fal side — we don't want to charge
+ * users for jobs that never produced an image.
+ */
+export async function refundUsage(userId: string, action: UsageAction): Promise<void> {
+  const plan = await getUserPlan(userId);
+  const { field } = getFieldAndLimit(plan, action);
+  const { key } = await getBillingCycleKey(userId);
+  const docRef = adminDb.collection("usage").doc(usageDocId(userId, key));
+
+  await adminDb.runTransaction(async (tx) => {
+    const snap = await tx.get(docRef);
+    if (!snap.exists) return;
+    const current: number = (snap.data()![field] as number) ?? 0;
+    if (current <= 0) return;
+    tx.update(docRef, { [field]: current - 1 });
+  });
+}
+
 export async function checkAndIncrementBulk(
   userId: string,
   action: UsageAction,
