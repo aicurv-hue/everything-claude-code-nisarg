@@ -122,49 +122,102 @@ D — CONTRARIAN/OPINION: bold opinion, counterintuitive take. Signals: "unpopul
 
 CORE RULE: write the post the user INTENDED, not the post that best promotes their brand. Brand profile = VOICE and STYLE, not subject matter. Never fabricate a professional connection that isn't in the topic. Never end a personal story with "this is why you need [product]."`,
 
-  IMAGE_PROMPT_SYSTEM: `You design ONE square LinkedIn SaaS infographic as a gpt-image-2 prompt. The renderer DRAWS TEXT inside the image — quote every piece of text in double quotes so the model renders it exactly. The output is a structured infographic, NOT a photograph, NOT cinematic, NOT an illustration of a person.
+  IMAGE_PROMPT_SYSTEM: `You design ONE square LinkedIn dark-mode infographic as a fal-ai/gpt-image-2 prompt. The renderer DRAWS TEXT inside the image — quote every piece of text in double quotes so the model renders it exactly. The output is a structured editorial infographic with 5 stacked zones, NOT a photograph, NOT cinematic, NOT a single hero illustration.
 
-STYLE LOCK (highest priority — never contradict):
-modern minimal SaaS infographic, premium editorial feel (Apple / Stripe / Linear). Square 1:1. Sans-serif typography only. High contrast. Generous whitespace. Clean grid. One strong focal point. NO photography. NO cinematic lighting. NO silhouettes. NO stock photos. NO people as the hero. NO 3D renders. NO watercolor / oil / sketch.
+GOAL
+A dense, scroll-stopping square one-pager that retells the post in 5 zones — like a slide from a premium SaaS deck (Stripe Atlas / Linear changelog / Notion launch). The reader should be able to consume the entire argument from the image alone.
 
-MODE + PALETTE (pick ONE, state exact hex in the prompt):
-- DARK MODE: background #0B1220 (deep navy) or #0A0A0A (near-black). Primary text #FFFFFF or #E6E9EF. ONE accent: electric-blue #0A66C2, or warm-orange #FF7A29, or emerald #10B981. Use the accent for ONE callout/stat/CTA only.
-- LIGHT MODE: background #F7F8FA (off-white). Primary text #0B1220 (near-black). ONE accent (same options as above) used for ONE callout/stat/CTA.
-Same accent appears at most 2 times. Everything else is mono.
+EXTRACT FROM THE POST (silently, before writing the prompt)
+1. HEADLINE — rewrite the post's core claim as 6–10 words. Pick ONE word/phrase to render in #0A66C2 blue.
+2. SUBHEAD — 4–7 words of emotional context for the headline.
+3. SECTION LABEL — a 2–3 word all-caps blue header that introduces the pattern strip (e.g. "THE PATTERN:", "WHAT BREAKS:", "THE COST:", "WHY IT HURTS:").
+4. PATTERN — 3 short labels (2–4 words each) showing a sequence, escalation, or cause-effect chain from the post. Each gets a 1-word gray sublabel under it (e.g. "Time", "Cost", "Risk", "Output").
+5. QUOTE — one pulled or distilled sentence from the post (≤14 words). Pick 2–4 charged words to render in blue.
+6. REACTION — a 3–5 word caption that pairs with the quote (e.g. "He felt stuck in a loop.").
+7. STAT — the single sharpest number / named fact from the post, with unit/currency (e.g. "₹5–7 LAKHS+", "72%", "6 hrs/week", "3 weeks → 3 hours").
+8. STAT CONTEXT — a 4–6 word line that frames the stat above the bordered box.
+9. STAT TAKEAWAY — a 5–8 word implication that lives to the right of the stat.
+10. QUESTION — a 9–14 word engagement question for the bottom. Specific, not generic. Pick a 2–3 word phrase to render in blue.
 
-LAYOUT (specify in the prompt, anchor by zone):
-- TOP — dominant HEADLINE, 5–10 words, bold sans-serif, quoted exactly. The headline is the post's hook restated as a single line. Optional one-line subhead under it (≤8 words, lighter weight, quoted).
-- MIDDLE — 2 to 4 supporting blocks arranged either as a horizontal flow (steps with arrows between), a 2x2 grid, or a vertical list. Each block = one minimal flat outline icon + one short label (2–5 words, quoted). The icons are line-art only: briefcase, line chart, person silhouette outline, gear-in-circle, document, arrow, clock, rupee/dollar symbol, exit door, checkmark, alert triangle. Single line weight. NO drop-shadows. NO gradients. NO emoji.
-- ONE ACCENT CALLOUT (optional, max one) — a stat or punch number in a colored pill/box using the accent color. Quoted exactly. Example: "₹5–7 Lakhs+", "73% churn", "3 weeks → 3 hours".
-- BOTTOM — short takeaway, question, or CTA pill (3–7 words, quoted exactly). If a CTA, render it as a rounded pill in the accent color.
+If the post has no usable stat (Type B personal story, Type D contrarian opinion), replace the STAT zone with a second pulled QUOTE rendered in the same card style. NEVER fabricate numbers or named clients to fill a zone.
 
-TEXT BUDGET: total in-image text ≤ 30 words across the whole image. Every piece of text quoted exactly. No paragraphs. No long sentences. No hashtags. No emoji inside the image. No watermark, no logo, no URL.
+PALETTE (LOCKED — never substitute, never add a second accent)
+- Background: flat deep navy near-black #0B1220. No gradient, no texture, no glow.
+- Primary text: pure white #FFFFFF.
+- Secondary text / sublabels: cool light gray #9CA3AF.
+- Accent (single, used everywhere): LinkedIn blue #0A66C2. Use it for the highlighted word in the headline and question, the all-caps section label, filled icon circles, dividers between zones, the big stat number, arrows, and the "?" circle.
+- Subtle card borders: dark blue-gray #1F2A3A at 1px.
+- BANNED COLORS: orange, red, yellow, green, purple, magenta, cyan, gradients, glows, neon. Mono navy + white + gray + one LinkedIn blue, period.
 
-ABSOLUTE:
-- Output ONLY the final image prompt. No preamble, no label, no alternatives.
-- One image. Under 150 words.
-- Always begin the prompt with: "Modern minimal SaaS infographic, square 1:1, [dark|light] mode, sans-serif typography, high contrast — "
+LAYOUT (square 1:1, top → bottom, mobile-first; describe each zone explicitly)
 
-BANNED (instant rejection):
-❌ Cinematic photography, silhouettes, atmospheric / moody / raking lighting, "4K cinematic", "ultra-detailed photography"
-❌ Photoreal humans, faces, full-body people as the hero. Hands or a tiny outline person inside an icon are fine.
-❌ Person at a desk / staring at monitors / in a dark office / with a coffee cup / overhead flatlay
-❌ Gears, cogs, clockwork, circuit boards, microchips, PCB traces
-❌ Glowing blue holograms, HUD overlays, energy orbs, neon glows
-❌ Robot hands, humanoid robots, AI-brain motifs, neuron clusters
-❌ Earth from space with network lines, suited professionals shaking hands
-❌ 3D renders, isometric video-game illustrations, watercolor, oil paint, pencil sketch
-❌ Full-bleed photography, decorative blurred backgrounds, vignettes
-❌ Stock-photo aesthetic of any kind
+ZONE 1 — HEADLINE (top ~22%)
+- Bold white sans-serif headline, 2–3 lines, dominant size on the canvas. ONE word/phrase rendered in #0A66C2.
+- Smaller subhead beneath in #9CA3AF, regular weight.
 
-REFERENCE — match this quality bar:
-✅ "Modern minimal SaaS infographic, square 1:1, dark mode, sans-serif typography, high contrast — background #0B1220, primary text #FFFFFF, single accent electric-blue #0A66C2. Bold headline top center: \"Another back-office hire just left.\" with subhead beneath: \"It's always a nightmare.\". Three-step horizontal flow mid-frame, each step a flat outline icon (magnifying glass, person, alert triangle) connected by thin arrows, labels under each: \"Weeks finding\", \"Months training\", \"Errors creep in\". Accent callout box lower-mid in #0A66C2 with white text: \"₹5–7 Lakhs+ to replace one person\". Bottom CTA pill in #0A66C2: \"What if AI handled it?\". Clean grid, generous whitespace, no people, no stock photos, no gradients, premium editorial."
-✅ "Modern minimal SaaS infographic, square 1:1, light mode, sans-serif typography, high contrast — background #F7F8FA, primary text #0B1220, single accent emerald #10B981. Bold headline top: \"Your funnel leaks where nobody looks.\". 2x2 grid below, each cell a flat outline icon (document, line chart, clock, alert) with a 3-word label: \"Stale leads\", \"Slow follow-ups\", \"Missed renewals\", \"Silent churn\". One accent stat pill mid-right in #10B981 with white text: \"73% lost here\". Bottom takeaway, near-black: \"Fix the boring middle.\". Clean grid, generous whitespace, no people, no photography, premium editorial."
-❌ "A silhouetted person standing in front of a giant blank screen, cinematic photography, moody lighting, 4K"
-❌ "A person sitting at a desk looking at three monitors in a dark office"
-❌ "Glowing circuit board with digital network connections in blue holographic light"
+ZONE 2 — PATTERN STRIP (~14%)
+- Small all-caps #0A66C2 section label, left-aligned or centered (e.g. "THE PATTERN:").
+- 3 filled #0A66C2 circles in a row, each containing a simple white line-icon (search glass, person silhouette, alert triangle, clock, line chart, document, shield, exit door, rupee/dollar, downward arrow, broken chain, gear-in-circle — pick the 3 that fit the post).
+- Thin #0A66C2 or white arrows (→) connecting the circles.
+- Under each circle: a 2–4 word white caption, and a 1-word #9CA3AF sublabel below it.
 
-Final prompt under 150 words. One image. No alternatives.`,
+ZONE 3 — QUOTE CARD (~22%)
+- Rounded rectangle card (16–20px corners), 1px #1F2A3A border, no shadow, slightly inset from canvas edges.
+- Top-left of the card: #0A66C2 speech-bubble icon.
+- Pulled sentence in white inside the card, with 2–4 charged words rendered in #0A66C2.
+- Right side of the card (separated by an optional thin #1F2A3A vertical divider): a small circular #0A66C2 outline icon (loop, broken chain, downward arrow, hourglass) with a 3–5 word white reaction caption next to it.
+
+ZONE 4 — STAT CALLOUT BAND (~22%)
+- Left third: a tight icon cluster in #0A66C2 (e.g. stacked coins, calendar + clock, line chart, exit door — pick what fits).
+- Middle third: a 4–6 word white context line above a bordered rectangle (1px #0A66C2 border, transparent fill) containing the stat in massive bold #0A66C2 text with the unit/currency inline.
+- Right third: a thick #0A66C2 arrow (→) pointing to a 5–8 word white takeaway sentence.
+
+ZONE 5 — ENGAGEMENT QUESTION (bottom ~20%)
+- Thin #1F2A3A horizontal divider line above this zone.
+- Filled #0A66C2 circle on the left with a white "?" icon inside.
+- Question text in white to the right, 1–2 lines, with a 2–3 word phrase rendered in #0A66C2.
+
+TYPOGRAPHY
+- One sans-serif family throughout (Inter / Geist / SF Pro / Helvetica Neue feel). NEVER mix fonts.
+- 4 distinct sizes visible: huge headline → medium zone label / stat → small body / captions → tiny gray sublabels.
+- Bold for headline, stat, and section label. Regular for body. Light for sublabels.
+- All caps reserved for the section label and at most 1 phrase elsewhere.
+
+ICONS
+- Simple, geometric, line-style INSIDE filled blue circles — white strokes, ~2px line weight. Or outline-only in #0A66C2 on cards.
+- No 3D, no gradients, no shadows, no isometric, no skeuomorphism, no detail beyond the silhouette.
+
+TEXT BUDGET
+- ~60–75 words total across the whole image (denser than a stat-card, lighter than a paragraph). Quote every word in double quotes in the prompt.
+- No paragraphs. No long sentences. No hashtags. No URLs. No emojis as content (geometric icon shapes are fine).
+
+HARD BANS (instant rejection)
+❌ Photography of any kind, cinematic lighting, "4K", "ultra-detailed photo", silhouettes, depth of field.
+❌ Human characters, mascots, robots, faces, hands, photographs of people. (A tiny outline-person inside a small icon is fine.)
+❌ Logos, watermarks, brand marks, "Cridl", website URLs, signatures, captions like "by [name]".
+❌ Any color besides white, dark navy #0B1220, gray #9CA3AF, dark border #1F2A3A, and #0A66C2 blue.
+❌ Glassmorphism, holograms, energy orbs, neural-net patterns, circuit boards, gears, cogs, lightbulbs, brains, DNA helices.
+❌ 3D renders, isometric video-game illustrations, watercolor, oil paint, pencil sketch, hand-drawn aesthetic.
+❌ Asterisks (*), markdown symbols, decorative ornaments, lorem ipsum, placeholder text.
+❌ Stock-photo aesthetic. Person-at-desk, hands-on-keyboard, overhead flatlay, coffee cup.
+❌ More than one accent color. More than 75 words of total in-image text. Empty zones.
+
+OUTPUT FORMAT
+Write ONE prompt, 240–340 words. Quote every text string that should appear in the image. Begin the prompt with this EXACT phrase:
+
+"Modern minimal SaaS infographic, square 1:1, dark mode, sans-serif typography, high contrast, dense 5-zone editorial layout — "
+
+Then describe in this order, naming each zone:
+[BACKGROUND] — flat #0B1220 dark navy, no gradient, no texture.
+[ZONE 1 HEADLINE] — quote the headline, name which word is in #0A66C2, quote the subhead beneath, give position (top, centered).
+[ZONE 2 PATTERN] — quote the all-caps blue section label, name the 3 specific line-icons, quote the 3 captions and 3 gray sublabels, describe the connecting arrows.
+[ZONE 3 QUOTE CARD] — describe the rounded card with #1F2A3A border, quote the pulled sentence, name which 2–4 words are blue, describe the right-side icon and quote the reaction caption.
+[ZONE 4 STAT BAND] — describe the left icon cluster, quote the context line, quote the stat (with unit) inside the bordered #0A66C2 box, describe the arrow, quote the takeaway.
+[ZONE 5 QUESTION] — describe the divider and filled #0A66C2 "?" circle, quote the question, name which 2–3 words are blue.
+[TYPOGRAPHY] — single sans-serif family, 4 weight steps, white + #9CA3AF gray + #0A66C2 blue text only.
+[FINISH] — clean, sharp, premium SaaS editorial infographic, high contrast, no people, no logos, no watermark, no orange, no red, no green, no gradients.
+
+Output ONLY the final image prompt — no preamble, no headers, no markdown, no commentary, no alternatives.`,
 
   IMAGE_PROMPT_USER: `Post topic: "{{TOPIC}}"
 Segment: {{SEGMENT}}
@@ -172,14 +225,21 @@ Segment: {{SEGMENT}}
 Full post:
 {{POST}}
 
-Silently extract:
-— The post's core insight (one sentence).
-— The strongest stat, contrast, or punch number (if any).
-— The single takeaway / question / CTA the reader should walk away with.
+Silently extract these from the post (every value below is required — if any is missing, paraphrase from the post's nearest content; never fabricate stats or names):
+— HEADLINE (6–10 words; pick ONE word/phrase to render in #0A66C2)
+— SUBHEAD (4–7 words of emotional context)
+— SECTION LABEL (2–3 words, all-caps; e.g. "THE PATTERN:", "WHAT BREAKS:", "THE COST:")
+— PATTERN (3 labels of 2–4 words each in escalating order, each with a 1-word gray sublabel)
+— QUOTE (one sentence ≤14 words; pick 2–4 charged words to render blue)
+— REACTION (3–5 word caption pairing with the quote)
+— STAT (single sharpest number / named fact with unit/currency)
+— STAT CONTEXT (4–6 word framing line above the stat)
+— STAT TAKEAWAY (5–8 word implication after the stat)
+— QUESTION (9–14 word engagement question; pick a 2–3 word phrase blue)
 
-Then write a single gpt-image-2 prompt that visualises those as ONE square SaaS infographic — bold quoted headline at top, 2–4 labelled flat-icon blocks in the middle, optional one accent callout for the stat, short quoted takeaway or CTA pill at the bottom. Lock either dark or light mode and ONE accent color. Quote every piece of text in double quotes. No people as the hero. No photography. No cinematic.
+If the post has no real stat (Type B personal story, Type D contrarian opinion), replace the STAT zone with a second pulled quote in the same card treatment.
 
-Output only the image prompt. Nothing else.`,
+Now write ONE gpt-image-2 prompt that follows IMAGE_PROMPT_SYSTEM exactly: square 1:1 dark-mode infographic, 5 stacked zones, palette locked to #0B1220 background + #FFFFFF white + #9CA3AF gray + #0A66C2 LinkedIn blue (no other colors), no people, no logos, no watermark. Quote every text string in double quotes. Output only the image prompt — no preamble, no labels, no commentary.`,
 };
 
 export const POST_QUALITY_SCORE_PROMPT = `Score this LinkedIn post from 1-100 based on these criteria:

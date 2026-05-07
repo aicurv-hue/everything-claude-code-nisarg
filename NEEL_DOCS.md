@@ -351,71 +351,65 @@ This is Cortex's persistent persona layer for this segment. The default contains
 
 ---
 
-## Layer G — Image Generation System *(v1.5 — full rewrite)*
+## Layer G — Image Generation System *(v2.0 — dense 5-zone infographic)*
 
 ### How Image Prompts Are Built
 
-The image is NOT a literal illustration of the topic. It is a **cinematic translation of the emotional core of the post.**
+The image is NOT a photograph and NOT a single-hero illustration. It is a **dense editorial infographic** — a square one-pager that retells the post in 5 stacked zones, like a slide from a premium SaaS deck (Stripe Atlas / Linear changelog / Notion launch). The reader should be able to consume the full argument from the image alone.
 
-**Three-step decode (runs silently inside the AI):**
-1. **Hero archetype** — who is the reader identifying with? (Founder / Operator / Builder / Executive…)
-2. **Core emotion** — what feeling does the post create? (Pride of mastery / Relief after struggle / Quiet confidence / Weight of responsibility…)
-3. **Narrative tension** — what is the before/after? (Chaos → control / Invisible work → visible result / Doubt → conviction)
+The renderer is `fal-ai/gpt-image-2`, which DRAWS TEXT inside the image — so every word that appears in the final image is quoted in the prompt.
 
-**The image prompt structure:**
-```
-[SCENE OR HERO]   — person by posture/energy OR physical object that carries the emotion
-[ENVIRONMENT]     — exact setting with 2–3 tactile details (not "industrial setting" — "factory floor with rusted iron pillars and fluorescent strips")
-[MOMENT]          — decisive action, texture, stillness, or contrast
-[LIGHTING]        — one specific source + quality (golden-hour raking / pre-dawn blue hour / single overhead pendant)
-[PALETTE]         — 2 dominant colors + 1 accent
-[LENS/FRAME]      — square 1:1 format. Subject center-right or lower-right. Top-left clean/dark for text overlay.
-[QUALITY TAG]     — ultra-detailed, cinematic photography, 4K, LinkedIn editorial style
-```
+### What Cortex Extracts From The Post (silently)
 
-### Visual Diversity by Post Type
+| # | Field | Spec |
+|---|---|---|
+| 1 | HEADLINE | 6–10 words. Pick ONE word/phrase to render in `#0A66C2` blue. |
+| 2 | SUBHEAD | 4–7 words of emotional context. Gray. |
+| 3 | SECTION LABEL | 2–3 words, all-caps, blue. e.g. "THE PATTERN:", "THE COST:", "WHAT BREAKS:" |
+| 4 | PATTERN | 3 labels (2–4 words each) showing sequence/escalation/cause-effect. Each gets a 1-word gray sublabel ("Time", "Cost", "Risk"). |
+| 5 | QUOTE | One pulled or distilled sentence ≤14 words. Pick 2–4 charged words to render blue. |
+| 6 | REACTION | 3–5 word caption pairing with the quote. |
+| 7 | STAT | Single sharpest number / named fact with unit/currency. e.g. "₹5–7 LAKHS+", "72%", "6 hrs/week". |
+| 8 | STAT CONTEXT | 4–6 word framing line above the stat. |
+| 9 | STAT TAKEAWAY | 5–8 word implication after the stat. |
+| 10 | QUESTION | 9–14 word engagement question. Specific, not generic. Pick 2–3 word phrase blue. |
 
-The AI chooses the visual approach based on the post type — NOT a generic default:
+If the post has no usable stat (Type B story, Type D contrarian), the STAT zone is replaced with a second pulled QUOTE in the same card style. **NEVER** fabricate numbers or named clients to fill a zone.
 
-| Post Type | Visual Approach |
-|-----------|----------------|
-| **Personal story** | Scene without people (cinema seat, book spine, train window) OR two-person candid caught from the side |
-| **Business/insight** | Environmental scale (factory floor, warehouse, trading floor) — human in context, not isolated |
-| **Contrarian/opinion** | Unexpected angle (shot from below, wide shot with person tiny against architecture, tension before decision) |
-| **All types** | Real textures (worn leather, raw concrete, steam, rain) / Spatial drama / Muted palette with one accent |
+### The 5-Zone Layout (square 1:1, top → bottom)
 
-### Art Style Layer (Image Style Prefix)
+| Zone | Height | Contents |
+|---|---|---|
+| **1 — HEADLINE** | ~22% | Bold white headline (one word in blue) + gray subhead beneath. |
+| **2 — PATTERN STRIP** | ~14% | All-caps blue section label + 3 filled blue circles (white line-icons inside) + arrows + caption + gray sublabel under each. |
+| **3 — QUOTE CARD** | ~22% | Rounded card, 1px `#1F2A3A` border. Blue speech-bubble icon top-left + pulled quote (2–4 words blue) + small reaction icon + 3–5 word reaction caption right side. |
+| **4 — STAT CALLOUT BAND** | ~22% | Left: blue icon cluster. Middle: white context line above bordered box containing massive blue stat. Right: blue arrow → white takeaway. |
+| **5 — ENGAGEMENT QUESTION** | ~20% | Thin divider + filled blue "?" circle + question (2–3 words blue). |
 
-**Where set:** Settings → Image Style tab  
-**Where applied:** `src/lib/ai/generate.ts` — `IMAGE_STYLE_PREFIXES` prepended to every image prompt
+**Total in-image text budget:** ~60–75 words. Beyond that, gpt-image-2 reliability degrades.
 
-| Style | Prefix effect |
-|-------|--------------|
-| 📷 Photo | Cinematic editorial photography, ultra-realistic, natural lighting, shallow DOF |
-| 🎨 Illustration | Soft editorial illustration, warm linework, hand-crafted texture, muted ink palette |
-| 🔷 Abstract | Abstract conceptual art, geometric shapes, emotion-driven composition, premium editorial |
-| 🧊 3D Render | Photorealistic 3D render, volumetric lighting, depth, cinematic quality |
-| ✏️ Line Art | Minimal black ink line art on white, clean strokes, no fill, sketch style |
-| ⬛ B&W Photo | Cinematic black and white photography, high contrast, film grain, editorial style |
+### Locked Palette (no substitution allowed)
 
-The style prefix is the **highest-priority visual directive** — it defines the rendering medium. Cortex's emotional/compositional prompt defines WHAT is shown. Both combine at generation time.
+| Role | Hex | Use |
+|---|---|---|
+| Background | `#0B1220` | Flat. No gradient, no texture, no glow. |
+| Primary text | `#FFFFFF` | Headline, body, captions. |
+| Secondary text | `#9CA3AF` | Sublabels, subhead. |
+| **Accent (single)** | `#0A66C2` (LinkedIn blue) | Highlight words, filled icon circles, section label, dividers, stat, arrows, "?" circle. |
+| Card border | `#1F2A3A` | 1px subtle dark blue-gray. |
 
-### Fixed Frame Rules (Always Applied)
+**Banned colors:** orange, red, yellow, green, purple, magenta, cyan, gradients, glows, neon.
 
-- No full faces — partial/profile/chest-down/from behind only (prevents LinkedIn uncanny valley)
-- Always **square 1:1** (`square_hd` 1024×1024) — fills full width on mobile LinkedIn feed
-- **TEXT ZONE RULE:** Top-left quadrant (top 45%, left 50%) must be dark/clean — reserved for hook text overlay. Subject always in center-right or lower-right.
+### Hard Bans (instant rejection)
 
-### What Is Banned
-
-**Instant rejection (AI-bot aesthetics):**
-- Gears, circuit boards, holograms, robot hands, orbs, ascending arrows, handshakes, floating icons
-
-**Overused defaults (must be actively avoided):**
-- Person sitting at desk staring at monitors
-- Person alone in dark office with glowing screens  
-- Laptop + coffee on a white desk
-- Overhead desk flatlay with notebook and phone
+- Photography, cinematic lighting, "4K", "ultra-detailed photo", silhouettes, depth of field
+- Human characters, mascots, robots, faces, hands, photographs of people *(tiny outline-person inside an icon = OK)*
+- Logos, watermarks, brand marks, "Cridl", URLs, signatures
+- Glassmorphism, holograms, energy orbs, neural-net patterns, circuit boards, gears, cogs, lightbulbs, brains, DNA helices
+- 3D renders, isometric video-game illustrations, watercolor, oil paint, pencil sketch
+- Asterisks (`*`), markdown symbols, decorative ornaments, lorem ipsum
+- Stock-photo aesthetic — person-at-desk, hands-on-keyboard, overhead flatlay, coffee cup
+- More than one accent color, more than 75 words of in-image text, empty zones
 
 ### Image Generation Flow
 
@@ -423,23 +417,25 @@ The style prefix is the **highest-priority visual directive** — it defines the
 generatePost() completes
         │
         ▼
-IMAGE_PROMPT_SYSTEM (from neel-prompt-sections.ts)
-+ IMAGE_PROMPT_USER template (topic, segment, full post)
+IMAGE_PROMPT_SYSTEM + IMAGE_PROMPT_USER (neel-prompt-sections.ts)
+[topic, segment, full post] filled in
         │
         ▼
 OpenRouter call (Gemini 2.0 Flash, temp 0.9)
         │
         ▼
-Raw image prompt
+240–340 word gpt-image-2 prompt with all 10 quoted strings
         │
         ▼
-IMAGE_STYLE_PREFIXES[imageStyle] prepended
+Stored on post + sent to fal-ai/gpt-image-2 on preview page
         │
         ▼
-Final image prompt stored in post + sent to fal.ai on preview page
+1024×1024 PNG returned, displayed in editable preview
 ```
 
-**Standalone regeneration:** Preview page → "Regenerate Image" button → `POST /api/ai/image-prompt` → same system, reads `imageStyle` from `localStorage.client_profile`
+**No more `IMAGE_STYLE_PREFIXES`.** The Settings → Image Style picker was removed (May 2026). The infographic spec is now the single rendering style — there is no per-user override.
+
+**Standalone regeneration:** Preview page → "Regenerate Image" button → `POST /api/ai/image-prompt` → re-runs the same system against the current post.
 
 ---
 
