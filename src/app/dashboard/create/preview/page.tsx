@@ -237,7 +237,6 @@ export default function PostPreviewPage() {
     const userComment = regenHint.trim();
 
     try {
-      const imageStyleRegen = postData.clientProfile?.imageStyle ?? undefined;
       const regenToken = await getAuthToken();
 
       // Fetch the existing trail (if any). 404 = first regen — empty trail, session
@@ -276,7 +275,6 @@ export default function PostPreviewPage() {
           research:           postData.research,
           intentType:         postData.intentType       ?? "professional",
           customInstructions: postData.metadata.customInstructions || undefined,
-          imageStyle:         imageStyleRegen,
           model:              postData.metadata.model   ?? undefined,
           clientProfile:      postData.clientProfile    ?? undefined,
           systemPrompt:       postData.systemPrompt     ?? undefined,
@@ -345,9 +343,6 @@ export default function PostPreviewPage() {
     setPreviousImagePrompt(imagePrompt);
 
     try {
-      const storedProfile = localStorage.getItem("client_profile");
-      const imageStyle = storedProfile ? JSON.parse(storedProfile).imageStyle : undefined;
-
       const imagePromptToken = await getAuthToken();
       const res = await fetch("/api/ai/image-prompt", {
         method: "POST",
@@ -356,7 +351,6 @@ export default function PostPreviewPage() {
           topic:      postData.metadata.topic,
           segment:    postData.metadata.segment,
           post:       editedContent,
-          imageStyle,
         }),
       });
       const data = await res.json();

@@ -1,5 +1,7 @@
 # Changes
 
+2026-05-07 — feat(images): switch image generation to gpt-image-2 (medium, 1024×1024). New SaaS-infographic prompt for single + carousel (text rendered inside image). Removed image-style picker (settings tab + per-segment field). Face-gen still uses prior fal model.
+
 2026-04-26 — Merged 5 agents into 2 (Builder, Strategist).
 2026-04-26 — Renamed `Master_Neel_Prompt.md` → `NEEL_RUNTIME.md`, `NEEL.md` → `NEEL_DOCS.md`. Updated all refs.
 2026-04-26 — Tightened `CLAUDE.md` to operational memory.
@@ -8,6 +10,9 @@
 2026-04-26 — Added Read deny rules for `NEEL_DOCS.md` + `CHANGES.md` (human-only files).
 
 2026-04-28: feat(quality): Post Quality Score (gauge + suggestions + apply-hook).
+
+2026-05-07: fix(create): Idea Bank topic no longer overwritten by stale localStorage draft on Generate.
+2026-05-07: fix(pwa): disable aggressive precaching, NetworkFirst for navigations, cleanupOutdatedCaches + skipWaiting — fixes stale UI for returning users.
 
 2026-04-30: fix(dashboard): show LinkedIn/profile photo in Personal + Company banner & System Status (fallback chain, onError hide).
 2026-04-30: feat(ai): add `moonshotai/kimi-k2.6` to AI model picker.

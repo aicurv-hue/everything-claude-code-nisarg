@@ -23,7 +23,6 @@ export interface PostRequest {
   customInstructions?: string;    // Free-form dos/don'ts from the UI prompt panel
   memoryContext?: PostMemory[];   // Top-N relevant auto-saved past posts — injected by create page
   writingSamples?: PostMemory[];  // User-uploaded writing samples — style/voice ground truth
-  imageStyle?: string;            // Layer 1: art style key (photo|illustration|abstract|3d|lineart|bw_photo)
   sourceContext?: string;         // Extracted text from user-provided URL + image description
   previousPost?: string;          // Current post content when regenerating — Cortex iterates on this, not a blank slate
   isRegeneration?: boolean;       // True when user clicked Regenerate — triggers stronger rewrite directive + higher temperature
@@ -37,18 +36,6 @@ export interface PostRequest {
     user_comment: string | null;
   }>;
 }
-
-// ─── Image style prefix map (Layer 1 — Brand Consistency) ─────────────────────
-// Each style prefix is prepended to every AI-generated image prompt.
-// This locks the visual language across all posts for a given user/segment.
-const IMAGE_STYLE_PREFIXES: Record<string, string> = {
-  photo:        "Cinematic editorial photography, ultra-realistic, natural lighting, shallow depth of field —",
-  illustration: "Soft editorial illustration, warm linework, hand-crafted texture, muted ink palette —",
-  abstract:     "Abstract conceptual art, geometric shapes, emotion-driven composition, premium editorial —",
-  "3d":         "Photorealistic 3D render, volumetric lighting, depth, cinematic quality, editorial style —",
-  lineart:      "Minimal black ink line art on white, clean strokes, no fill, sketch style —",
-  bw_photo:     "Cinematic black and white photography, high contrast, film grain, editorial style, desaturated —",
-};
 
 // Maps length label to explicit word-count range and paragraph guidance
 const LENGTH_SPEC: Record<string, { words: string; paragraphs: string }> = {
@@ -334,7 +321,7 @@ function sanitizePost(raw: string): string {
  *   - marketing-skills-all: social-content (LinkedIn-specific structure, CTA, tone mapping)
  */
 export async function generatePost(request: PostRequest): Promise<GenerateResult> {
-  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, writingSamples, imageStyle, sourceContext, previousPost, isRegeneration, regenerateInstruction, intentType, initialPost, regenerationTrail } = request;
+  const { tone, audience, length, research, segment, topic, model, clientProfile, customInstructions, systemPrompt, memoryContext, writingSamples, sourceContext, previousPost, isRegeneration, regenerateInstruction, intentType, initialPost, regenerationTrail } = request;
 
   const lengthSpec = LENGTH_SPEC[length] || LENGTH_SPEC.medium;
   const isProfessional = (intentType ?? "professional") === "professional";
@@ -557,11 +544,9 @@ Start directly with the hook line. Output nothing else.`;
           { role: "user",   content: imageUserPrompt },
         ],
         0.7,
-        220
+        500
       );
-      const rawImagePrompt = (imagePromptCompletion.choices[0].message.content || "").trim();
-      const stylePrefix = imageStyle ? (IMAGE_STYLE_PREFIXES[imageStyle] ?? "") : "";
-      imagePrompt = stylePrefix ? `${stylePrefix} ${rawImagePrompt}` : rawImagePrompt;
+      imagePrompt = (imagePromptCompletion.choices[0].message.content || "").trim();
     } catch (e: any) {
       console.warn("[Cortex] image prompt generation failed, returning empty:", e?.message || e);
     }
@@ -579,7 +564,7 @@ Start directly with the hook line. Output nothing else.`;
  * Standalone image prompt regeneration — skips post generation entirely.
  * Used when the user wants a new image prompt without rewriting the post.
  */
-export async function generateImagePrompt(topic: string, segment: string, post: string, imageStyle?: string): Promise<string> {
+export async function generateImagePrompt(topic: string, segment: string, post: string): Promise<string> {
   const imageSystemPrompt = section("IMAGE_PROMPT_SYSTEM");
   const imageUserPrompt = section("IMAGE_PROMPT_USER", {
     TOPIC:   topic,
@@ -587,7 +572,6 @@ export async function generateImagePrompt(topic: string, segment: string, post: 
     POST:    post,
   });
 
-  // Use the centralized OpenRouter client — consistent auth, error handling, and future logging
   const completion = await openRouter.chat.completions.create({
     model: DEFAULT_MODEL,
     messages: [
@@ -595,12 +579,10 @@ export async function generateImagePrompt(topic: string, segment: string, post: 
       { role: "user",   content: imageUserPrompt },
     ],
     temperature: 0.7,
-    max_tokens: 200,
+    max_tokens: 500,
   });
 
-  const rawPrompt = (completion.choices[0]?.message?.content || "").trim();
-  const stylePrefix = imageStyle ? (IMAGE_STYLE_PREFIXES[imageStyle] ?? "") : "";
-  return stylePrefix ? `${stylePrefix} ${rawPrompt}` : rawPrompt;
+  return (completion.choices[0]?.message?.content || "").trim();
 }
 
 /**
@@ -625,23 +607,45 @@ export async function generateCarouselPrompts(args: {
   const n = Math.max(2, Math.min(5, slideCount | 0));
 
   const system = [
-    "You design LinkedIn carousel slides as image-generation prompts.",
-    "Each prompt MUST describe a single 1024x1024 infographic-style illustration.",
-    "Visual style is locked: flat infographic + minimalist illustration. LinkedIn brand colors only — primary blue (#0A66C2), white, with subtle black/gray accents. No other colors. Clean whitespace, geometric shapes, simple icons, sans-serif typography. Professional, modern, business-friendly.",
-    "Slide 1 is the hook (big headline, attention-grabbing). Middle slides develop the narrative with data/icons/diagrams. The last slide is the takeaway or CTA.",
-    "Each prompt is one slide of ONE coherent story — they must connect, build on each other, and together cover the full message of the LinkedIn post.",
-    "Each prompt: 2–4 sentences, concrete visual details (composition, focal subject, what text appears on the slide if any). Do NOT mention which slide number it is in the prompt text. Do NOT use the words 'slide', 'page', or 'carousel' inside the prompt.",
+    `You design a ${n}-image LinkedIn carousel as gpt-image-2 prompts. The renderer draws TEXT inside the image — quote exact text in each prompt.`,
+    "",
+    "FORMAT (every image): square 1:1, modern minimal SaaS infographic, premium editorial feel (Apple / Stripe / Linear). High contrast, sans-serif typography only, plenty of whitespace, one strong focal point, no clutter, no stock photos, no AI-brain clichés, no emojis, no decorative icons.",
+    "",
+    `STORY ARC across ${n} images:`,
+    "- Image 1 = HOOK. Big bold headline (6–10 words) that creates curiosity or states the contrarian idea. Single supporting visual metaphor. Optional one-line subhead. Designed to stop the scroll.",
+    "- Middle images = SUPPORTING POINTS. Each one delivers ONE clear point from the post — a stat, a contrast, a step, a reason. Headline (4–8 words) + 1–2 supporting micro-lines + a single visual metaphor or simple diagram.",
+    `- Image ${n} = TAKEAWAY / CTA. The conclusion the reader should walk away with. Short punchy line (4–8 words) + optional CTA pill text (2–4 words).`,
+    "",
+    "CONTINUITY (locked across all images):",
+    "- ONE color system shared by every image: pick either DARK MODE (deep navy or near-black background, white text, ONE accent color) or LIGHT MODE (off-white background, near-black text, ONE accent color). Same accent on every image. State the exact colors in every prompt.",
+    "- Same typography family vibe (bold sans-serif headlines, lighter sans-serif support). Same composition rhythm (headline dominant, single hero element, support text smaller).",
+    "- Each image is self-contained but visually a sibling of the others.",
+    "",
+    "TEXT RULES (per image):",
+    "- Quote the EXACT headline and supporting text in the prompt, in quotes.",
+    "- Maximum per image: 1 headline + 2 short supporting lines (or 1 line + a stat). Last image may add a CTA pill.",
+    "- No paragraphs. No long sentences. No emojis. No hashtags inside the image.",
+    "",
+    "PROMPT STRUCTURE (per image):",
+    "[STYLE & MODE] modern minimal SaaS infographic, premium editorial, square 1:1, [dark|light] mode, sans-serif typography, high contrast",
+    "[HEADLINE] exact text in quotes + position (top/center) + bold dominant",
+    "[HERO VISUAL] one concept, 1–2 sentences",
+    "[SUPPORTING TEXT] exact text in quotes + position",
+    "[COLOR] background, primary text, ONE accent — exact colors named",
+    "[FINISH] clean, sharp, premium, scroll-stopping, Apple/Stripe/Linear quality",
+    "",
+    "Each prompt: 80–160 words. Do NOT use the words 'slide', 'page', or 'carousel' inside the prompt. Do NOT mention image numbers in the prompt.",
     `Output STRICT JSON only — an array of exactly ${n} strings. No prose, no markdown fences. Example: ["prompt 1...","prompt 2..."]`,
-  ].join(" ");
+  ].join("\n");
 
   const user = [
     `Topic: ${topic}`,
     `Audience: ${audience}`,
     `Tone: ${tone}`,
-    `Slide count: ${n}`,
+    `Image count: ${n}`,
     `Post body:\n${post.slice(0, 1400)}`,
     "",
-    `Return a JSON array of exactly ${n} image prompts, telling the post's story across ${n} infographic slides.`,
+    `Return a JSON array of exactly ${n} gpt-image-2 prompts. Image 1 = hook, middle = supporting points (one per image), image ${n} = takeaway/CTA. Lock ONE color mode (dark or light) and ONE accent across all ${n} prompts.`,
   ].join("\n");
 
   const completion = await openRouter.chat.completions.create({
@@ -690,10 +694,10 @@ export async function refineCarouselPrompt(args: {
   topic: string;
 }): Promise<string> {
   const system =
-    "You refine a single LinkedIn carousel slide image prompt. " +
-    "Style is locked: flat infographic + minimalist illustration, LinkedIn primary blue (#0A66C2) + white, with black/gray accents only. No other colors. " +
-    "Apply the user's feedback while preserving the locked style and the slide's role in the story. " +
-    "Output ONLY the new prompt text — no preamble, no JSON, no quotes.";
+    "You refine a single LinkedIn carousel image prompt for gpt-image-2. " +
+    "Style is locked: modern minimal SaaS infographic, premium editorial (Apple/Stripe/Linear), square 1:1, sans-serif typography, high contrast, ONE accent color, plenty of whitespace, no stock photos, no AI-brain clichés, no emojis. The renderer draws text inside the image — keep exact text in quotes. " +
+    "Apply the user's feedback while preserving the locked style, the chosen color mode (dark/light), the accent color, and the image's role in the story. " +
+    "Output ONLY the new prompt text — no preamble, no JSON, no quotes around the whole thing.";
 
   const user = [
     `Topic: ${args.topic}`,

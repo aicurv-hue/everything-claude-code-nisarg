@@ -71,8 +71,9 @@ export default function CreatePostPage() {
     if (ideaAudience) setAudience(ideaAudience);
   }, [searchParams]);
 
-  // B1: Restore draft inputs from localStorage on mount
+  // B1: Restore draft inputs from localStorage on mount — skip if Idea Bank passed a topic via URL
   useEffect(() => {
+    if (searchParams.get("title")) return;
     try {
       const saved = localStorage.getItem("create_draft");
       if (saved) {
@@ -243,7 +244,6 @@ export default function CreatePostPage() {
           customInstructions: customInstructions.trim() || undefined,
           memoryContext:   memoryContext.length > 0   ? memoryContext   : undefined,
           writingSamples:  writingSamples.length > 0  ? writingSamples  : undefined,
-          imageStyle: activeProfile?.imageStyle || undefined,
           sourceContext: resolvedSourceContext || undefined,
         }),
       });
@@ -872,15 +872,6 @@ export default function CreatePostPage() {
                     {userProfile?.[segment]?.personality || "Not set — add in Settings"}
                   </p>
                 </div>
-                <div>
-                  <p className="text-[11px] text-[var(--text-muted)] font-medium uppercase tracking-wide mb-1">Image Style</p>
-                  <p className="text-sm font-semibold text-[var(--foreground)] capitalize">
-                    {userProfile?.[segment]?.imageStyle
-                      ? { photo: "📷 Photo", illustration: "🎨 Illustration", abstract: "🔷 Abstract", "3d": "🧊 3D Render", lineart: "✏️ Line Art", bw_photo: "⬛ B&W Photo" }[userProfile[segment].imageStyle!] || userProfile[segment].imageStyle
-                      : "Not set — choose in Settings → Image Style"}
-                  </p>
-                </div>
-
                 <div className="pt-3 border-t border-[var(--border-sub)]">
                   <div className="flex items-center gap-2 mb-1">
                     <Brain className={`w-3.5 h-3.5 ${accentColor}`} />

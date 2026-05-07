@@ -10,13 +10,12 @@ export async function POST(req: NextRequest) {
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { topic, segment, post, imageStyle } = await req.json();
+    const { topic, segment, post } = await req.json();
     if (!post) return NextResponse.json({ error: "post required" }, { status: 400 });
     const imagePrompt = await generateImagePrompt(
       topic || "LinkedIn post",
       segment || "individual",
       post,
-      imageStyle,
     );
     return NextResponse.json({ imagePrompt });
   } catch (err: any) {

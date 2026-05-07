@@ -17,7 +17,6 @@ import {
   RefreshCw,
   CheckCircle2,
   LogOut,
-  Image as ImageIcon,
   Camera,
   Upload,
   Sun,
@@ -26,7 +25,7 @@ import {
   ExternalLink,
   Sparkles,
 } from "lucide-react";
-import { UserProfile, ProfileSegment, ImageStyle } from "@/lib/db/profiles";
+import { UserProfile, ProfileSegment } from "@/lib/db/profiles";
 import { useAuth } from "@/lib/context/auth";
 import { useTheme } from "@/lib/context/theme";
 import { HelpTooltip, FieldHint } from "@/components/ui/HelpTooltip";
@@ -370,16 +369,6 @@ export default function SettingsPage() {
     { id: "branding", label: "Branding", icon: Palette },
     { id: "voice",    label: "Voice",    icon: MessageSquare },
     { id: "ai",       label: "AI",       icon: ShieldCheck },
-    { id: "image",    label: "Image",    icon: ImageIcon },
-  ];
-
-  const IMAGE_STYLES: Array<{ id: ImageStyle; label: string; description: string; emoji: string }> = [
-    { id: "photo",        label: "Photo",        description: "Cinematic editorial photography, natural light", emoji: "📷" },
-    { id: "illustration", label: "Illustration",  description: "Soft editorial illustration, warm linework",    emoji: "🎨" },
-    { id: "abstract",     label: "Abstract",      description: "Geometric shapes, emotion-driven composition",  emoji: "🔷" },
-    { id: "3d",           label: "3D Render",     description: "Volumetric lighting, cinematic quality",        emoji: "🧊" },
-    { id: "lineart",      label: "Line Art",      description: "Minimal black ink, clean strokes, no fill",     emoji: "✏️" },
-    { id: "bw_photo",     label: "B&W Photo",     description: "High contrast, film grain, desaturated",        emoji: "⬛" },
   ];
 
   return (
@@ -948,59 +937,6 @@ export default function SettingsPage() {
                 )}
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Tab 6: Image Style */}
-        {activeTab === "image" && (
-          <div className="space-y-5">
-            <div className="p-3 bg-blue-500/10 border border-blue-100 rounded-lg text-[12px] text-blue-400 leading-relaxed">
-              <strong>Image Art Style</strong> — choose the visual language for all AI-generated post images. This style is saved per profile (Individual / Corporate) and auto-applied to every new post. You can always change it per-post on the preview page.
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              {IMAGE_STYLES.map((style) => (
-                <button
-                  key={style.id}
-                  onClick={() => handleFieldChange("imageStyle", style.id)}
-                  className={`flex flex-col items-start gap-2 p-4 rounded-xl border-2 text-left transition-all ${
-                    currentProfile.imageStyle === style.id
-                      ? "border-[#0A66C2] bg-blue-500/10"
-                      : "border-[var(--border)] bg-[var(--card)] hover:border-slate-300 hover:bg-[var(--card-hover)]"
-                  }`}
-                >
-                  <span className="text-2xl">{style.emoji}</span>
-                  <div className="flex-1">
-                    <p className={`text-xs font-semibold ${currentProfile.imageStyle === style.id ? "text-[var(--primary)]" : "text-[var(--foreground)]"}`}>
-                      {style.label}
-                    </p>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5 leading-tight">{style.description}</p>
-                  </div>
-                  {currentProfile.imageStyle === style.id && (
-                    <span className="text-[10px] font-semibold text-[var(--primary)] bg-blue-500/20 px-2 py-0.5 rounded-full">
-                      ✓ Active
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {!currentProfile.imageStyle && (
-              <p className="text-[11px] text-[var(--text-muted)]">
-                No style selected — Cortex will generate images without a style constraint. Select one above and save to lock your visual brand.
-              </p>
-            )}
-
-            {currentProfile.imageStyle && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-green-100">
-                <span className="text-sm">
-                  {IMAGE_STYLES.find(s => s.id === currentProfile.imageStyle)?.emoji}
-                </span>
-                <p className="text-[12px] text-emerald-400">
-                  <strong>{IMAGE_STYLES.find(s => s.id === currentProfile.imageStyle)?.label}</strong> style will be applied to all future AI-generated images for your {profileType} profile.
-                </p>
-              </div>
-            )}
           </div>
         )}
 

@@ -317,7 +317,6 @@ export default function DashboardHomePage() {
           has("pillars") && has("usp"),
           has("personality") && has("verbatimLanguage"),
           true, // AI Config has defaults
-          has("imageStyle"),
         ];
         const doneCount = sectionsDone.filter(Boolean).length;
         const pct = Math.round((doneCount / sectionsDone.length) * 100);
