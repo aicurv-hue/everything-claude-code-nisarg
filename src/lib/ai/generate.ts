@@ -343,11 +343,18 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
         isProfessional && clientProfile.icp            ? `- Ideal Customer Profile (ICP): ${clientProfile.icp}` : null,
         isProfessional && clientProfile.jtbd           ? `- Jobs-to-be-Done for customer: ${clientProfile.jtbd}` : null,
         isProfessional && clientProfile.pillars        ? `- Content Pillars: ${clientProfile.pillars}` : null,
-        clientProfile.personality    ? `- Brand Personality: ${clientProfile.personality}` : null,
+        // personality + verbatimLanguage are stripped on personal intent — these
+        // fields routinely contain product-flavored phrasing (e.g. a LinkedIn
+        // automation founder's verbatimLanguage often includes "I never get
+        // time to post", which Cortex will then weave into a personal Citadel
+        // post, ruining it). On personal intent the only voice signal that
+        // survives is wordsToAvoid (negative-only constraint, can't bleed in
+        // as content) plus the writing samples' style_notes.
+        isProfessional && clientProfile.personality    ? `- Brand Personality: ${clientProfile.personality}` : null,
         isProfessional && clientProfile.usp            ? `- Unique Selling Point: ${clientProfile.usp}` : null,
         isProfessional && clientProfile.bioOrOffering  ? `- Bio / Offering: ${clientProfile.bioOrOffering}` : null,
         isProfessional && clientProfile.customerPains  ? `- Customer Pains to address: ${clientProfile.customerPains}` : null,
-        clientProfile.verbatimLanguage ? `- Native phrases to weave in naturally: ${clientProfile.verbatimLanguage}` : null,
+        isProfessional && clientProfile.verbatimLanguage ? `- Native phrases to weave in naturally: ${clientProfile.verbatimLanguage}` : null,
         clientProfile.wordsToAvoid   ? `- Words / phrases to NEVER use: ${clientProfile.wordsToAvoid}` : null,
         !isProfessional
           ? `\n⛔ INTENT OVERRIDE: This topic is a personal story or reflection. Write about the topic directly and authentically. Do NOT inject the author's product, service, or business niche. Do NOT add automation, AI, or industry statistics unless the topic explicitly mentions them. The post should stand alone as a human story — not a promotional piece.`
@@ -370,11 +377,12 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
         ``,
         `ABSOLUTE RULES for this generation:`,
         `1. Write ONLY about the topic the user described. Stay on that topic from hook to CTA.`,
-        `2. Do NOT mention, reference, or connect to: the author's product, service, business, automation, AI tools, LinkedIn strategy, content creation, or any industry niche.`,
+        `2. Do NOT mention, reference, or connect to: the author's product, service, business, automation, AI tools, LinkedIn strategy, content creation, posting habits, or any industry niche. The HOOK must be about the topic — never about the author's frustration with posting, building a personal brand, or finding time to write.`,
         `3. Do NOT add statistics about AI, automation, marketing, or technology unless the user's topic explicitly contains them.`,
         `4. Do NOT end with a business CTA. End with a human question or reflection relevant to the story.`,
         `5. The brand profile below provides ONLY writing voice and style — not subject matter.`,
         `6. Ignore past posts in memory as topic inspiration — use them ONLY to match writing style.`,
+        `7. If any phrase in the brand profile or writing samples references LinkedIn, posting, content creation, automation, or the author's product/offering, IGNORE that phrase for this post — even if the profile labels it a "native phrase to weave in". For personal topics those phrases are off-limits.`,
         ``,
         `Violation of any rule above makes this generation a failure.`,
         `══════════════════════════════════════════`,
@@ -411,8 +419,21 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
     `BRAND CONTEXT`,
     `══════════════════════════════════════════`,
     clientBranding,
+    // On personal intent: strip summary + keywords from samples, keep style_notes
+    // only. Otherwise the "What it covered" lines feed the topic of past posts
+    // (often product-related) into a personal generation, encouraging Cortex to
+    // bridge from the personal topic back into the user's business angle.
     writingSamples && writingSamples.length > 0
-      ? `\n\n${buildWritingSamplesBlock(writingSamples)}`
+      ? isProfessional
+        ? `\n\n${buildWritingSamplesBlock(writingSamples)}`
+        : (() => {
+            const styleLines = writingSamples
+              .filter((s: any) => s?.style_notes)
+              .map((s: any) => `- ${s.style_notes}`);
+            return styleLines.length === 0
+              ? ""
+              : `\n\n══════════════════════════════════════════\nVOICE PATTERNS (style only — do NOT use as topic inspiration)\n══════════════════════════════════════════\n${styleLines.join("\n")}`;
+          })()
       : "",
     memoryContext && memoryContext.length > 0
       ? !isProfessional
