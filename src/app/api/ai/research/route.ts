@@ -51,6 +51,8 @@ export async function POST(req: NextRequest) {
       intentType === "professional" && clientProfile.niche         && `- Niche: ${clientProfile.niche}`,
       intentType === "professional" && clientProfile.bioOrOffering && `- Offering: ${clientProfile.bioOrOffering}`,
       intentType === "professional" && clientProfile.icp           && `- Target customer: ${clientProfile.icp}`,
+      intentType === "professional" && clientProfile.jtbd           && `- Jobs-to-be-Done: ${clientProfile.jtbd}`,
+      intentType === "professional" && clientProfile.customerPains  && `- Customer Pains: ${clientProfile.customerPains}`,
     ].filter(Boolean) : [];
     const clientContext = profileLines.length > 0 ? `\nClient context:\n${profileLines.join("\n")}` : "";
 
