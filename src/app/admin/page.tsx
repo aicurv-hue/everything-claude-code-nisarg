@@ -354,6 +354,14 @@ type SortKey = "lastSignIn" | "postCount" | "failedCount" | "createdAt";
 
 interface BetaEntry { email: string; added_at: string | null; }
 
+interface WaitlistEntry {
+  email: string;
+  name: string | null;
+  source: string;
+  status: string;
+  created_at: string | null;
+}
+
 interface PromoCode {
   code: string; label: string; plan: string; trialDays: number;
   maxUses: number | null; usesCount: number;
@@ -389,6 +397,11 @@ export default function AdminPage() {
   const [betaInput,     setBetaInput]     = useState("");
   const [betaActionId,  setBetaActionId]  = useState<string | null>(null);
   const [betaMsg,       setBetaMsg]       = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  // Waitlist state
+  const [waitlist,       setWaitlist]       = useState<WaitlistEntry[]>([]);
+  const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [waitlistActionId, setWaitlistActionId] = useState<string | null>(null);
 
   // Auth token stored in a ref — resolved once at mount, refreshed on demand
   const tokenRef = useRef<string | null>(null);
@@ -572,6 +585,34 @@ export default function AdminPage() {
   }, [adminFetch]);
 
   useEffect(() => { if (tab === "beta") loadBeta(); }, [tab, loadBeta]);
+
+  const loadWaitlist = useCallback(async () => {
+    setWaitlistLoading(true);
+    try {
+      const res = await adminFetch("/api/admin/waitlist");
+      const data = await res.json();
+      setWaitlist(data.entries || []);
+    } catch { setBetaMsg({ type: "err", text: "Failed to load waitlist." }); }
+    finally { setWaitlistLoading(false); }
+  }, [adminFetch]);
+
+  useEffect(() => { if (tab === "beta") loadWaitlist(); }, [tab, loadWaitlist]);
+
+  async function waitlistAction(email: string, action: "approve" | "reject") {
+    setWaitlistActionId(email);
+    setBetaMsg(null);
+    try {
+      const res = await adminFetch("/api/admin/waitlist", {
+        method: "POST",
+        body: JSON.stringify({ email, action }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setBetaMsg({ type: "ok", text: action === "approve" ? `✅ ${email} approved` : `${email} rejected` });
+      await Promise.all([loadWaitlist(), loadBeta()]);
+    } catch (e: any) {
+      setBetaMsg({ type: "err", text: e.message || "Failed" });
+    } finally { setWaitlistActionId(null); }
+  }
 
   async function betaAdd() {
     const email = betaInput.trim().toLowerCase();
@@ -1044,6 +1085,78 @@ export default function AdminPage() {
               {betaMsg.text}
             </div>
           )}
+
+          {/* Waitlist Requests */}
+          <div className="bg-slate-900 border border-white/[0.07] rounded-xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-white/[0.07] flex items-center justify-between">
+              <p className="text-xs text-slate-500 uppercase tracking-wider">Waitlist Requests</p>
+              <div className="flex items-center gap-2">
+                {waitlist.filter(w => w.status === "pending").length > 0 && (
+                  <span className="bg-amber-500/15 text-amber-400 text-xs px-2 py-0.5 rounded-full border border-amber-500/30">
+                    {waitlist.filter(w => w.status === "pending").length} pending
+                  </span>
+                )}
+                <button onClick={loadWaitlist} disabled={waitlistLoading} className="text-slate-500 hover:text-white transition-colors">
+                  <RefreshCw className={`w-3.5 h-3.5 ${waitlistLoading ? "animate-spin" : ""}`} />
+                </button>
+              </div>
+            </div>
+            {waitlistLoading ? (
+              <div className="py-8 flex justify-center">
+                <div className="w-5 h-5 border-2 border-[#0A66C2] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : waitlist.length === 0 ? (
+              <div className="py-8 text-center text-slate-500 text-sm">No waitlist requests yet.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/[0.05] text-slate-400 text-xs uppercase tracking-wider">
+                    <th className="px-5 py-3 text-left font-medium">Email</th>
+                    <th className="px-5 py-3 text-left font-medium">Name</th>
+                    <th className="px-5 py-3 text-left font-medium">Requested</th>
+                    <th className="px-5 py-3 text-left font-medium">Status</th>
+                    <th className="px-5 py-3 text-left font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {waitlist.map(w => (
+                    <tr key={w.email} className="hover:bg-white/[0.02]">
+                      <td className="px-5 py-3 text-white">{w.email}</td>
+                      <td className="px-5 py-3 text-slate-400 text-xs">{w.name || "—"}</td>
+                      <td className="px-5 py-3 text-slate-400 text-xs">
+                        {w.created_at ? new Date(w.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                      </td>
+                      <td className="px-5 py-3">
+                        {w.status === "pending"  && <span className="bg-amber-500/15 text-amber-400 text-xs px-2 py-0.5 rounded-full border border-amber-500/30">Pending</span>}
+                        {w.status === "approved" && <span className="bg-green-500/15 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-500/30">Approved</span>}
+                        {w.status === "rejected" && <span className="bg-red-500/15 text-red-400 text-xs px-2 py-0.5 rounded-full border border-red-500/30">Rejected</span>}
+                      </td>
+                      <td className="px-5 py-3">
+                        {w.status === "pending" && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => waitlistAction(w.email, "approve")}
+                              disabled={waitlistActionId === w.email}
+                              className="flex items-center gap-1 text-xs bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/30 rounded-lg px-2.5 py-1 transition-colors disabled:opacity-40"
+                            >
+                              <UserCheck className="w-3 h-3" /> Approve
+                            </button>
+                            <button
+                              onClick={() => waitlistAction(w.email, "reject")}
+                              disabled={waitlistActionId === w.email}
+                              className="flex items-center gap-1 text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 rounded-lg px-2.5 py-1 transition-colors disabled:opacity-40"
+                            >
+                              <UserX className="w-3 h-3" /> Reject
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
 
           {/* Add email */}
           <div className="bg-slate-900 border border-white/[0.07] rounded-xl p-5">
