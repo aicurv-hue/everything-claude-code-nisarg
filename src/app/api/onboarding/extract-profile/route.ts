@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase-admin";
 import { openRouter, DEFAULT_MODEL, FALLBACK_MODEL } from "@/lib/ai/openrouter";
+import { withDateContext } from "@/lib/ai/currentContext";
 
 export const runtime = "nodejs";
 
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   async function callModel(model: string) {
     return openRouter.chat.completions.create({
       model,
-      messages: [
+      messages: withDateContext([
         { role: "system", content: SYSTEM },
         {
           role: "user",
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
             ? `Pasted LinkedIn COMPANY PAGE content (tagline + About us + specialties):\n"""\n${trimmed}\n"""\n\nExtract a COMPANY brand profile JSON. Treat "name" as the company name, "roleOrIndustry" as the company's industry, "bioOrOffering" as what the company does and for whom, "icp" as the company's target customer, "personality" as the company's brand voice. Use third-person company language ("we"/"the company"), not first-person individual.`
             : `Pasted LinkedIn content:\n"""\n${trimmed}\n"""\n\nExtract the profile JSON.`,
         },
-      ],
+      ]),
       temperature: 0.4,
       max_tokens: 700,
     });

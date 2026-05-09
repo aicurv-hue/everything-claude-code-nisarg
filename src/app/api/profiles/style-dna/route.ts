@@ -13,6 +13,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { withDateContext } from "@/lib/ai/currentContext";
 
 export const runtime = "nodejs";
 
@@ -96,7 +97,7 @@ Return ONLY valid JSON with this exact schema (no preamble, no markdown):
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: prompt }],
+        messages: withDateContext([{ role: "user", content: prompt }]),
         temperature: 0.2,
         max_tokens: 400,
       }),

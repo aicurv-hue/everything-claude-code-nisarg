@@ -1,5 +1,6 @@
 import { openRouter, DEFAULT_MODEL, FALLBACK_MODEL } from "./openrouter";
 import type { VoiceDNA } from "@/lib/db/voice-dna";
+import { withDateContext } from "./currentContext";
 
 export async function buildVoiceDNA(
   userId: string,
@@ -34,10 +35,10 @@ Each dimension must be a specific, actionable sentence a ghost-writer could foll
     try {
       const res = await openRouter.chat.completions.create({
         model,
-        messages: [
+        messages: withDateContext([
           { role: "system", content: system },
           { role: "user", content: user },
-        ],
+        ]),
         temperature: 0.1,
         max_tokens: 500,
       });

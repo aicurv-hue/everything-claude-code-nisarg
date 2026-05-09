@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyTokenEdge } from "@/lib/utils/verifyTokenEdge";
 import { openRouter } from "@/lib/ai/openrouter";
+import { withDateContext } from "@/lib/ai/currentContext";
 
 const PRIMARY_SCORE_MODEL  = "google/gemini-2.5-flash";
 const FALLBACK_SCORE_MODEL = "google/gemini-2.5-flash";
@@ -116,10 +117,10 @@ Return ONLY the JSON object specified above. No commentary.`;
     async function callModel(model: string) {
       return openRouter.chat.completions.create({
         model,
-        messages: [
+        messages: withDateContext([
           { role: "system", content: systemMsg },
           { role: "user", content: userMsg },
-        ],
+        ]),
         temperature: 0.2,
         max_tokens: 700,
         response_format: { type: "json_object" },

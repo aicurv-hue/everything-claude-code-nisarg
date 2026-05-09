@@ -10,6 +10,7 @@
 export const runtime = "edge";
 
 import { NextRequest, NextResponse } from "next/server";
+import { withDateContext } from "@/lib/ai/currentContext";
 
 // Per-field enhancement instructions — each one tells the AI exactly what to produce
 const FIELD_PROMPTS: Record<string, string> = {
@@ -113,10 +114,10 @@ ${fieldPrompt}`;
         },
         body: JSON.stringify({
           model,
-          messages: [
+          messages: withDateContext([
             { role: "system", content: systemPrompt },
             { role: "user",   content: userPrompt },
-          ],
+          ]),
           max_tokens: 350,
           temperature: 0.72,
         }),

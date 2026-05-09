@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { suggestionService } from "@/lib/db/schedule-suggestions";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { withDateContext } from "@/lib/ai/currentContext";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL          = process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash";
@@ -221,7 +222,7 @@ Return ONLY a JSON array of exactly 3 objects sorted by score descending, no mar
           const res = await fetch(OPENROUTER_URL, {
             method: "POST",
             headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ model: m, temperature: 0.3, messages: [{ role: "user", content: prompt }] }),
+            body: JSON.stringify({ model: m, temperature: 0.3, messages: withDateContext([{ role: "user", content: prompt }]) }),
           });
           const aiData = await res.json();
           const raw = aiData.choices?.[0]?.message?.content || "[]";

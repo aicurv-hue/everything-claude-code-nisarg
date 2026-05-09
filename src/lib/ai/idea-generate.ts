@@ -1,5 +1,6 @@
 import type { ProfileSegment } from "@/lib/db/profiles";
 import { openRouter, DEFAULT_MODEL, FALLBACK_MODEL } from "./openrouter";
+import { withDateContext } from "./currentContext";
 
 export async function generateIdeas(
   profile: ProfileSegment,
@@ -43,10 +44,10 @@ Generate ${count} fresh, specific LinkedIn post ideas.`;
     try {
       const res = await openRouter.chat.completions.create({
         model,
-        messages: [
+        messages: withDateContext([
           { role: "system", content: system },
           { role: "user", content: user },
-        ],
+        ]),
         temperature: 0.9,
         max_tokens: 1200,
       });

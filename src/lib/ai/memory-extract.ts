@@ -13,6 +13,7 @@
  */
 
 import { openRouter } from "./openrouter";
+import { withDateContext } from "./currentContext";
 
 export interface MemoryExtract {
   summary: string;      // 2 sentences: angle taken + core argument/conclusion
@@ -73,10 +74,10 @@ Return JSON only.`;
 
     const res = await openRouter.chat.completions.create({
       model: EXTRACT_MODEL,
-      messages: [
+      messages: withDateContext([
         { role: "system", content: systemPrompt },
         { role: "user",   content: userPrompt },
-      ],
+      ]),
       temperature: 0.1, // Low temp — we want consistent structured output
       max_tokens: 200,  // Summary + 10 keywords fit easily in 200 tokens
     });

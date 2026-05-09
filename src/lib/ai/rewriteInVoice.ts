@@ -13,6 +13,7 @@
  */
 import { openRouter, DEFAULT_MODEL, FALLBACK_MODEL } from "./openrouter";
 import { REWRITE_IN_VOICE_PROMPT } from "./neel-prompt-sections";
+import { withDateContext } from "./currentContext";
 
 export interface RewriteInVoiceResult {
   rewrittenPost: string;
@@ -100,7 +101,7 @@ async function callWithTimeout(model: string, prompt: string, timeoutMs: number)
     return await openRouter.chat.completions.create(
       {
         model,
-        messages: [{ role: "user", content: prompt }],
+        messages: withDateContext([{ role: "user", content: prompt }]),
         temperature: 0.6,
         max_tokens: 1200,
         response_format: { type: "json_object" },

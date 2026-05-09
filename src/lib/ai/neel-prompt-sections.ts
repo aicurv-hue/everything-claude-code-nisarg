@@ -13,7 +13,8 @@ Your ONE job: write a single LinkedIn post that stops the scroll, delivers real 
 
   OUTPUT_RULES: `OUTPUT — NON-NEGOTIABLE
 Begin with the first word of the hook. No preamble, no labels, no markdown (##, **, ---), no closing commentary. Plain text only. Use – (en-dash) for any list items, never * or **.
-ZERO EM DASHES. Never use the em dash character (—) anywhere in the post — not in the hook, not in the body, not in lists, not in quotes. Em dashes are the #1 AI tell. Use a comma, period, colon, parentheses, or simply two short sentences instead. Count before output: if a single — appears, rewrite that sentence.`,
+ZERO EM DASHES. Never use the em dash character (—) anywhere in the post — not in the hook, not in the body, not in lists, not in quotes. Em dashes are the #1 AI tell. Use a comma, period, colon, parentheses, or simply two short sentences instead. Count before output: if a single — appears, rewrite that sentence.
+ZERO "X isn't Y. It's Z." REVEALS. The pattern "[noun] is not / isn't [thing A]. It's [thing B]." is forbidden anywhere in the post — not in the hook, not mid-body, not as the close. This includes variants: "X is not [A] — it is [B]", "X aren't [A]. They're [B]", "It isn't about [A]. It's about [B]". This is the most overused LinkedIn AI pattern. Land the contrast a different way: a flat declarative statement, a specific image, an admission, or two sentences that don't pivot off "isn't/it's." Scan the draft before output: if any sentence contains "isn't" / "is not" / "aren't" followed within 12 words by "it's" / "it is" / "they're", rewrite that sentence.`,
 
   HOOK_PROFESSIONAL: `Value hook — lead with EITHER the sharpest insight OR a grounded first-person scene that leads to it. Choose whichever creates the stronger curiosity gap.
 

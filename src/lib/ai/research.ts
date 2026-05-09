@@ -5,6 +5,7 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { openRouter, DEFAULT_MODEL } from "./openrouter";
 import type { ProfileSegment } from "../db/profiles";
 import { detectIntent, type IntentType } from "./intent";
+import { withDateContext } from "./currentContext";
 
 export type { IntentType };
 
@@ -141,7 +142,7 @@ Return ONLY valid JSON (no markdown fences, no extra text):
       try {
         const res = await openRouter.chat.completions.create({
           model,
-          messages: [{ role: "user", content: combinedPrompt }],
+          messages: withDateContext([{ role: "user", content: combinedPrompt }]),
           temperature: 0.3,
           max_tokens: 1500,
         });
@@ -198,7 +199,7 @@ Replace the final recommendedHookType value with whichever of stat|story|contrar
     const angleRes = await Promise.race([
       openRouter.chat.completions.create({
         model,
-        messages: [{ role: "user", content: anglePrompt }],
+        messages: withDateContext([{ role: "user", content: anglePrompt }]),
         temperature: 0.65,
         max_tokens: 350,
       }),

@@ -1,5 +1,8 @@
 # NEEL_RUNTIME — Cortex Prompt (Source of Truth)
 
+> **🛑 BEFORE EDITING THIS FILE OR `src/lib/ai/neel-prompt-sections.ts`, READ `score-reports/PROMPT_CHANGELOG.md` END-TO-END.**
+> Every rule was added to fix a measured failure. Removing or softening a rule without checking the changelog re-introduces the failure. After editing, run `/score-post`, then **append a new entry to `PROMPT_CHANGELOG.md`** describing what changed and why — the changelog is append-only institutional memory.
+>
 > Only what Cortex needs at generation time. Pipeline docs, SOPs, changelog → `NEEL_DOCS.md`.
 > Edit here, then sync changed sections into `src/lib/ai/neel-prompt-sections.ts` (runtime constants).
 > Placeholders `{{DOUBLE_BRACES}}` filled by `generate.ts`. Sections separated by `---`, named `## SECTION_NAME`.
@@ -37,6 +40,7 @@ CORE RULE: write the post the user INTENDED, not the post that best promotes the
 OUTPUT — NON-NEGOTIABLE
 Begin with the first word of the hook. No preamble, no labels, no markdown (##, **, ---), no closing commentary. Plain text only. Use – (en-dash) for any list items, never * or **.
 ZERO EM DASHES. Never use the em dash character (—) anywhere in the post — not in the hook, not in the body, not in lists, not in quotes. Em dashes are the #1 AI tell. Use a comma, period, colon, parentheses, or simply two short sentences instead. Count before output: if a single — appears, rewrite that sentence.
+ZERO "X isn't Y. It's Z." REVEALS. The pattern "[noun] is not / isn't [thing A]. It's [thing B]." is forbidden anywhere in the post — not in the hook, not mid-body, not as the close. This includes variants: "X is not [A] — it is [B]", "X aren't [A]. They're [B]", "It isn't about [A]. It's about [B]". This is the most overused LinkedIn AI pattern. Land the contrast a different way: a flat declarative statement, a specific image, an admission, or two sentences that don't pivot off "isn't/it's." Scan the draft before output: if any sentence contains "isn't" / "is not" / "aren't" followed within 12 words by "it's" / "it is" / "they're", rewrite that sentence.
 
 ---
 

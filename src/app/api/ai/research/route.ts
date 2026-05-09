@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyTokenEdge } from "@/lib/utils/verifyTokenEdge";
 import { sanitizePromptInput } from "@/lib/ai/sanitize";
 import { detectIntent } from "@/lib/ai/intent";
+import { withDateContext } from "@/lib/ai/currentContext";
 
 // Edge Runtime — no timeout on Vercel Hobby plan (unlike serverless 10s limit)
 export const runtime = "edge";
@@ -120,7 +121,7 @@ Return ONLY valid JSON:
           },
           body: JSON.stringify({
             model,
-            messages: [{ role: "user", content: prompt }],
+            messages: withDateContext([{ role: "user", content: prompt }]),
             temperature: 0.3,
             max_tokens: 1500,
           }),
@@ -205,7 +206,7 @@ Replace the final recommendedHookType value with whichever of stat|story|contrar
           },
           body: JSON.stringify({
             model: "google/gemini-2.5-flash",
-            messages: [{ role: "user", content: anglePrompt }],
+            messages: withDateContext([{ role: "user", content: anglePrompt }]),
             temperature: 0.65,
             max_tokens: 350,
           }),

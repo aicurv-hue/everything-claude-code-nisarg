@@ -4,6 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { checkAndIncrementBulk } from "@/lib/usageTracking";
 import { getUserPlan, canUseCampaigns } from "@/lib/checkSubscription";
 import { rewriteInVoice } from "@/lib/ai/rewriteInVoice";
+import { withDateContext } from "@/lib/ai/currentContext";
 
 async function getUid(req: NextRequest): Promise<string | null> {
   const auth = req.headers.get("authorization") || "";
@@ -25,7 +26,7 @@ async function callOpenRouter(messages: any[], model: string): Promise<string> {
           Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ model: m, messages, max_tokens: 1200 }),
+        body: JSON.stringify({ model: m, messages: withDateContext(messages), max_tokens: 1200 }),
       });
       if (!res.ok) {
         console.warn(`[campaigns] ${m} HTTP ${res.status} — ${m === CAMPAIGN_FALLBACK_MODEL ? "no more fallbacks" : "trying fallback"}`);

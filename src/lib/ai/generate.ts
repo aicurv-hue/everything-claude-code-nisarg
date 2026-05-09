@@ -4,6 +4,7 @@ import type { PostMemory } from "../db/memory";
 import { openRouter, GENERATION_MODEL, DEFAULT_MODEL, FALLBACK_MODEL } from "./openrouter";
 import { NEEL_SECTIONS } from "./neel-prompt-sections";
 import { sanitizePromptInput } from "./sanitize";
+import { withDateContext } from "./currentContext";
 
 export interface GenerateResult {
   post: string;
@@ -584,7 +585,7 @@ Start directly with the hook line. Output nothing else.`;
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
       return await openRouter.chat.completions.create(
-        { model, messages, temperature, max_tokens },
+        { model, messages: withDateContext(messages), temperature, max_tokens },
         { signal: controller.signal as any }
       );
     } finally {
@@ -726,10 +727,10 @@ export async function generateImagePrompt(topic: string, segment: string, post: 
 
   const completion = await openRouter.chat.completions.create({
     model: DEFAULT_MODEL,
-    messages: [
+    messages: withDateContext([
       { role: "system", content: imageSystemPrompt },
       { role: "user",   content: imageUserPrompt },
-    ],
+    ]),
     temperature: 0.7,
     max_tokens: 500,
   });
@@ -802,10 +803,10 @@ export async function generateCarouselPrompts(args: {
 
   const completion = await openRouter.chat.completions.create({
     model: DEFAULT_MODEL,
-    messages: [
+    messages: withDateContext([
       { role: "system", content: system },
       { role: "user",   content: user },
-    ],
+    ]),
     temperature: 0.75,
     max_tokens: 1100,
   });
@@ -861,10 +862,10 @@ export async function refineCarouselPrompt(args: {
 
   const completion = await openRouter.chat.completions.create({
     model: DEFAULT_MODEL,
-    messages: [
+    messages: withDateContext([
       { role: "system", content: system },
       { role: "user",   content: user },
-    ],
+    ]),
     temperature: 0.7,
     max_tokens: 280,
   });
@@ -880,7 +881,7 @@ export async function generateImageHook(post: string, topic: string): Promise<st
   // Use the centralized OpenRouter client — consistent auth, error handling, and future logging
   const completion = await openRouter.chat.completions.create({
     model: DEFAULT_MODEL,
-    messages: [
+    messages: withDateContext([
       {
         role: "system",
         content: "You write short, punchy image overlay hooks for LinkedIn posts. Output ONLY the hook text — 7 words maximum, no punctuation at the end, no quotes. Make it a bold question or provocative statement that makes the viewer stop and read the post. Do not explain. Do not use hashtags.",
@@ -889,7 +890,7 @@ export async function generateImageHook(post: string, topic: string): Promise<st
         role: "user",
         content: `Topic: "${topic}"\n\nPost:\n${post.slice(0, 600)}\n\nWrite a 7-word-max hook for the image overlay.`,
       },
-    ],
+    ]),
     temperature: 0.85,
     max_tokens: 30,
   });
