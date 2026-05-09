@@ -42,6 +42,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Parse body before quota increment so a malformed request doesn't leak a usage count.
+    const { backgroundStyle = "professional", postTopic = "" } = await req.json();
+
     const usageCheck = await checkAndIncrementUsage(uid, "faceImage");
     if (!usageCheck.allowed) {
       return NextResponse.json(
@@ -49,8 +52,6 @@ export async function POST(req: NextRequest) {
         { status: 429 }
       );
     }
-
-    const { backgroundStyle = "professional", postTopic = "" } = await req.json();
 
     const profileSnap = await adminDb.collection("profiles").doc(uid).get();
     if (!profileSnap.exists) {

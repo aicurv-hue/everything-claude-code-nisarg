@@ -581,8 +581,8 @@ Start directly with the hook line. Output nothing else.`;
       200,
       GENERATION_MODEL,
       DEFAULT_MODEL,
-      20000,
-      15000,
+      16000,  // 16s cap: happy-path Stage1(16)+Stage2(12)=28s < 30s Vercel Edge limit
+      12000,
     );
     console.log(`[Cortex trace=${traceId}] stage=post model=${GENERATION_MODEL} ms=${Date.now() - t1} length=${length} tokens=${postMaxTokens}`);
 
