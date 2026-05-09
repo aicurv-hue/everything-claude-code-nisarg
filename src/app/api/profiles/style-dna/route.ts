@@ -125,7 +125,7 @@ Return ONLY valid JSON with this exact schema (no preamble, no markdown):
   // Save to profiles/{uid} — merge so other segment fields are not overwritten
   try {
     await adminDb.collection("profiles").doc(uid).set(
-      { [segment]: { style_dna: styleDna } },
+      { [`${segment}.style_dna`]: styleDna },
       { merge: true }
     );
     console.log(`[style-dna] Saved for uid=${uid} segment=${segment}`);

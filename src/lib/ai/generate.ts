@@ -188,7 +188,6 @@ function buildMemoryBlock(memories: PostMemory[]): string {
     const typeCount: Record<string, number> = {};
     for (const t of hookTypes) typeCount[t] = (typeCount[t] || 0) + 1;
     const underused = allTypes.filter((t) => !typeCount[t]);
-    const dominant = Object.entries(typeCount).sort((a, b) => b[1] - a[1])[0]?.[0];
     if (underused.length > 0) {
       return `HOOK VARIETY: Last ${hookTypes.length} posts used [${hookTypes.join(", ")}] hooks. Consider a ${underused[0]} hook this time for variety and reach.`;
     }

@@ -195,12 +195,15 @@ Return ONLY JSON, no preamble:
   "recommendedHookType": "stat"
 }
 Replace the final recommendedHookType value with whichever of stat|story|contrarian|question|observation best fits the recommended hook.`;
-    const angleRes = await openRouter.chat.completions.create({
-      model,
-      messages: [{ role: "user", content: anglePrompt }],
-      temperature: 0.65,
-      max_tokens: 350,
-    });
+    const angleRes = await Promise.race([
+      openRouter.chat.completions.create({
+        model,
+        messages: [{ role: "user", content: anglePrompt }],
+        temperature: 0.65,
+        max_tokens: 350,
+      }),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error("angle timeout")), 5000)),
+    ]);
     const angleRaw = (angleRes.choices[0]?.message?.content || "").trim();
     const angleData = extractJSON(angleRaw);
     if (Array.isArray(angleData?.hookCandidates) && angleData.hookCandidates.length >= 1) {
