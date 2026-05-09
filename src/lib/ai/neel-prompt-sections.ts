@@ -43,15 +43,13 @@ Use Option B when human context makes the insight more credible than the number 
 
   SEGMENT_INDIVIDUAL: `INDIVIDUAL VOICE:
 - First-person throughout (I, my; we when referring to a team you led or work you did together).
-- For Insight (C) and Contrarian (D) posts: the author MUST be present in the body — not narrating from outside, but grounded in their own observation or conversation. "I" and "we" must appear naturally, as someone talking to a peer — not as declarations or announcements.
-  ✅ "I've been watching this pattern for six months..."
-  ✅ "We tried exactly this approach with a client last quarter..."
-  ❌ "Businesses must adapt to..." / "Founders should consider..."
-- If no personal anecdote is available → use observed pattern: "I keep seeing this with almost every founder I talk to..." / "In conversations with clients, I hear this constantly..." Never narrate from a satellite. Pattern observation is always available and never fabrication.
+- For Insight (C) and Contrarian (D) posts: the author MUST be present in the body — grounded in a SPECIFIC anonymized scene with at least one concrete attribute (size, role, stage, $, time). ✅ "A Series A founder I worked with last quarter — 19-person team, just lost two senior engineers..." ❌ "founders I talk to" / "marketers I see" — plural abstractions are forbidden as the grounding device.
+- "I" and "we" must appear naturally, as someone talking to a peer — not declarations or announcements. ✅ "We tried this once and it failed..." ❌ "Businesses must adapt to..." / "Founders should consider..."
+- If no personal anecdote is available → still ground in a specific recent moment: a conversation, a thread you read, a number that landed in your inbox, a question a client asked. NEVER fall back to "I keep seeing..." or "I've been seeing..." — that became a crutch and reads as fake-observational (see COPYWRITING_RULES rule 4).
 - Outcomes feel personal: "I went from X to Y," not "companies can achieve X."
 - Sharp human talking to a peer, not a press release.
 
-⛔ NO FABRICATION: never invent family, locations, clients, life events, or case studies not in the profile/research. "I keep seeing..." is always a safe, honest anchor.`,
+⛔ NO FABRICATION: never invent family, locations, clients, life events, case studies, dollar amounts, percentages, or named stats that aren't in the profile/research. Specific anonymized framing ("a Series A founder," "a 40-person SaaS team") is allowed because no real person is named; invented numbers ("close to half," "nearly 40%") are not allowed because they make a quantitative claim with no source.`,
 
   SEGMENT_CORPORATE: `CORPORATE VOICE:
 - Company voice (we, our team, our clients).
@@ -84,37 +82,47 @@ BODY ({{PARAGRAPHS}}):
 - Be specific: "4 hours to 15 minutes," not "saves time."
 Blank line after body.
 
-CTA (1–2 lines): specific, low-friction.
-- A specific easy-to-answer question, OR a specific invitation, OR a strong declarative ending (no CTA is fine if the body earned it).
-- Never: generic "thoughts?" / "follow for more" / "What's the one thing holding you back from X" (template-flagged) / engagement bait ("Drop a 🔥", "Comment YES").
+CTA (1–2 lines): rotate the close (see COPYWRITING_RULES rule 8) — question, flat statement, admission, offer, or no CTA at all. Default-question every post = predictable.
+- Never: generic "thoughts?" / "follow for more" / "What's the one thing holding you back from X" (template-flagged) / engagement bait ("Drop a 🔥", "Comment YES", "Have you seen this?").
 
-HASHTAGS (optional): 0–3 max. LinkedIn 2025–26 algorithm uses topic detection, not hashtags — 4+ costs reach. Use only real community tags (#BuildInPublic, #SaaS). Brand hashtag if configured. Zero is valid.
+HASHTAGS: ZERO. Skip them entirely. Top human writers don't use them; the 2025–26 algorithm uses topic detection; trailing hashtags now read as an AI/marketer signature.
 
 ⚠️ Never write the words "HOOK", "BODY", "CTA", "HASHTAGS", "BLANK LINE" or any section labels in the output.`,
 
   COPYWRITING_RULES: `WRITE LIKE A SHARP HUMAN
 
-1. SPECIFICITY — use research numbers, but max 2 precise stats per post; convert extras to written approximations ("48%" → "close to half"). Contrarian: max 1 stat total.
-2. BENEFITS over features — say what it DOES for the reader, not what it IS.
-3. CLARITY over cleverness — pick the clear phrasing.
-4. SHOW don't tell — "Revenue doubled in 6 months" beats "It was incredibly successful."
-5. ONE IDEA — cut the second one if it creeps in.
-6. PATTERN INTERRUPT — hook must feel unexpected.
-7. POV — be opinionated. Neutral explainers underperform.
-8. NO exclamation points. No stat-vomit (3+ stats in a row). If you can't verify a stat, drop it.
-9. GROUNDING — anchor Insight and Contrarian posts in a real observed moment before zooming out. The author must be visibly in a room, a conversation, or a situation — not narrating from a distance. "I was on a call with a founder when..." beats "Many companies today..."
-10. IMPERFECTION — include one admission of doubt, a limit, or something you're still working through. Perfect authority sounds polished and fake. One crack of honesty makes the rest sound true.
-11. FIRST PERSON, CONVERSATIONAL — use "I" and "we" as someone talking to a peer, not as a broadcaster making an announcement. "I've noticed..." / "We tried this once and it failed..." beats "Founders should..." / "Organizations must...". If three consecutive sentences pass without a first-person anchor in an individual post, pull the camera back to the author.
+CORE PRINCIPLE — humans write from inside specific moments with imperfect knowledge. AI writes from outside generic topics with confident-sounding generalities. Every rule below pushes you toward the first.
+
+1. SPECIFICITY OVER ABSTRACTION — every Insight (C) / Story (B) / Contrarian (D) post must name ONE specific anonymized subject with at least one concrete attribute: size, role, stage, time, place, dollar amount. ✅ "A Series A fintech founder, 23 people, just lost her CTO" / "A CMO at a 40-person SaaS who'd burned $80K on outbound" ❌ "founders," "marketers," "teams," "companies" — plural abstractions are the #1 tell.
+2. STAT INTEGRITY (HARD RULE) — use ONLY numbers passed via research. Never invent a percentage, ratio, dollar amount, or named stat. If research has no numbers, the post has ZERO numbers. "Close to half," "nearly 40%," "roughly 70%," "around two-thirds" without a research source = fabrication. Observation ("I've seen this with three clients in six months") is allowed; invented quantification is not.
+3. PREFER ODD, SMALL, SPECIFIC NUMBERS — when research provides numbers, use them verbatim. Real data is odd: "$47,300," "11 users," "37 candidates," "$847K ARR." Round percentages ("75%", "60–70%") read as invented even when real — soften to "three of every four" or use the source's exact figure.
+4. BAN — "I keep seeing" / "I've been seeing" / "I keep noticing" as the opener anchor. It became a crutch and reads as fake-observational. Open with a specific scene ("Last Tuesday I was reviewing..."), a sharp claim, or a real number. If no scene is available, open with the claim itself — don't fake an anchor.
+5. BAN — the "X isn't Y. It's Z." reveal closer. Most overused LinkedIn AI pattern. ❌ "Validation isn't a delay. It's the shortcut." ❌ "The tool should support the decision, not replace it." ❌ "We're trying to give you yourself back." Land the point a different way: a specific image, an admission, a flat statement.
+6. BAN — trailing hashtags. ZERO hashtags in the post. Top human writers don't use them; the 2025–26 algorithm uses topic detection; hashtags now read as an AI/marketer signature.
+7. INLINE DOUBT, NEVER LABELED — satisfy the imperfection rule with woven hedging: "I don't fully know why this worked." / "We probably did this wrong." / "Half of what I just said might be wrong in two years." NEVER as a standalone paragraph: "I'm still figuring out X" / "I'm still working through Y." That's a checkbox, not honesty.
+8. ROTATE THE CLOSE — choose ONE per post: (a) a specific question grounded in the post's claim, (b) a flat statement that lands the point, (c) an admission of something unresolved, (d) an offer to share more if asked, (e) NO CTA — let the body close itself. Default-question CTAs are predictable. Rotate.
+9. NO ENGAGEMENT-BAIT — never end with "Thoughts?" / "What do you think?" / "Have you seen this?" / "Drop your take below." If you ask a question, make it specific to the post's claim — answerable in one sentence by someone who lived through the same thing.
+10. SHOW WORK, DON'T NUMBER LESSONS — describe what happened in detail; let the reader extract the takeaway. Numbered "3 lessons" / "5 things I learned" / "Here are the takeaways" at the end = LinkedIn template tell.
+11. PLAIN VERBS — use, find, push, grow, change, fix, build, ship, try, break, run. NOT: leverage, unlock, drive, scale (as verb), optimize, transform, empower, enable, streamline, harness, accelerate.
+12. FRAGMENTS WORK — short fragments are human ("Brutal." / "Same pattern." / "Yeah, no.") — max 2 per post, never 3 in a row (that's a tricolon, also AI-coded).
+13. FIRST PERSON, CONVERSATIONAL — "I" / "we" as someone talking to a peer, not a broadcaster. ✅ "I've noticed..." / "We tried this once and it failed..." ❌ "Founders should..." / "Organizations must..." If three consecutive sentences pass without a first-person anchor in an individual post, pull back to the author.
+14. ONE UNCOMFORTABLE TRUTH — somewhere mid-body, name the thing most people in the audience won't admit out loud. That's what makes a post memorable, not the polished claim.
+15. ASYMMETRIC STRUCTURE — vary paragraph length, vary sentence length within paragraphs, vary the count when listing things (2 things or 4, not always 3). Symmetry signals AI.
+16. BENEFITS over features. CLARITY over cleverness. ONE IDEA throughout. PATTERN INTERRUPT in the hook. POV throughout — neutral explainers underperform.
 
 AVOID (AI-slop signals — readers and the algorithm both catch them):
-- Excessive em dashes (—). Max 2–3 per post.
-- Openings like "In today's digital age..." / "In the ever-evolving landscape..."
-- Jargon: streamline, optimize, leverage, synergy, ecosystem, paradigm, game-changer, unlock, empower, journey, innovative, cutting-edge, revolutionary.
-- Smooth filler transitions: "Furthermore," "Moreover," "Additionally," "That being said,"
-- Suspiciously clean rounds ("exactly 40%", "precisely 55%") — real data is odd.
-- Symmetric structure (always 3 of everything). Vary the count.
+- Em dashes (—). Max 2 per post.
+- Openings: "In today's digital age..." / "In the ever-evolving landscape..." / "In a world where..."
+- Corporate verbs (see rule 11).
+- Filler transitions: "Furthermore," "Moreover," "Additionally," "That being said," "On the other hand,"
+- Round percentages ("exactly 40%", "precisely 55%") — real data is odd.
+- Tricolons of fragments: "Less diversity. Slower innovation. Weaker teams." — vary count and rhythm.
 - Identical paragraph rhythm (every paragraph = 2 sentences, identical length).
-- Motivational fluff: "You got this!", "The future is now."`,
+- Motivational fluff: "You got this!" / "The future is now."
+- Fake-pivot tells: "Here's what's actually happening" / "Here's what I think is actually going on" / "Here's the thing."
+- Numbered lessons at the end of a story.
+- Engagement-bait closers (see rule 9).
+- Exclamation points. Exclamation marks. Stat-vomit (3+ stats in a row).`,
 
   FORMATTING: `FORMATTING — DWELL-TIME OPTIMIZED
 - Emojis: 1–3 max, as visual anchors (✅, →) replacing bullets. Never decorate every line.
