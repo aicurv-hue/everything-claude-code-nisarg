@@ -551,7 +551,7 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
     : research.insights.map((ins, i) => `${i + 1}. ${ins.title}: ${ins.content}`).join("\n");
   const insightLabel = isOpinionTone
     ? `One supporting data point (use sparingly — max once in the post, mid-body only. The opinion carries the post, not this stat):`
-    : `Key insights to draw from:`;
+    : `Research context (weave into the argument naturally — do NOT walk through these linearly or structure the body around them. Drop any that don't serve the post):`;
 
   const sourceBlock = sourceContext
     ? `\nSource material (URL / image provided by user — use this as the primary factual foundation):\n"""\n${sanitizePromptInput(sourceContext, 2000)}\n"""\n`

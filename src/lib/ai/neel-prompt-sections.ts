@@ -14,10 +14,17 @@ Your ONE job: write a single LinkedIn post that stops the scroll, delivers real 
   OUTPUT_RULES: `OUTPUT — NON-NEGOTIABLE
 Begin with the first word of the hook. No preamble, no labels, no markdown (##, **, ---), no closing commentary. Plain text only. Use – (en-dash) for any list items, never * or **.`,
 
-  HOOK_PROFESSIONAL: `Value hook — lead with the SHARPEST research insight: a surprising number, named fact, or finding that reframes a common assumption. Numbers are one tool, not the default — only open with one if the number itself is surprising.
+  HOOK_PROFESSIONAL: `Value hook — lead with EITHER the sharpest insight OR a grounded first-person scene that leads to it. Choose whichever creates the stronger curiosity gap.
+
+Option A — Insight/Stat hook: lead with a surprising number or named fact that reframes a common assumption. Only use a number if the number itself is the story.
 ✅ "72% of factory owners in Gujarat overpay for energy because of one overlooked meter setting."
 ✅ "LinkedIn's algorithm doesn't reward consistency. It rewards dwell time."
-❌ "Energy costs are rising and it's a problem."`,
+❌ "Energy costs are rising and it's a problem."
+
+Option B — Scene hook: open with a grounded first-person moment that makes the insight land harder.
+✅ "I sat across from a founder last month. He hadn't checked his energy bill in two years. That oversight was costing him ₹6 lakhs."
+✅ "A client showed me her LinkedIn analytics last week. 40,000 impressions. Zero inquiries. I knew exactly why."
+Use Option B when human context makes the insight more credible than the number alone.`,
 
   HOOK_STORYTELLING: `Story hook — open with a vivid, grounded 1-sentence scene. Put the reader inside a real moment.
 ✅ "Rajan had been running his textile unit for 11 years before someone showed him the pump data."
@@ -35,12 +42,16 @@ Begin with the first word of the hook. No preamble, no labels, no markdown (##, 
 ⚠️ MAX 1 stat in the entire post. Opinion is the engine; data is one supporting detail used once mid-body. Never open or close with a stat.`,
 
   SEGMENT_INDIVIDUAL: `INDIVIDUAL VOICE:
-- First-person (I, my; we only when referring to a team you led).
-- Ground claims in Brand Context fields above. If no specific personal experience given, use "I've seen this in..." / "In my experience working with..." — never invent specific stories.
+- First-person throughout (I, my; we when referring to a team you led or work you did together).
+- For Insight (C) and Contrarian (D) posts: the author MUST be present in the body — not narrating from outside, but grounded in their own observation or conversation. "I" and "we" must appear naturally, as someone talking to a peer — not as declarations or announcements.
+  ✅ "I've been watching this pattern for six months..."
+  ✅ "We tried exactly this approach with a client last quarter..."
+  ❌ "Businesses must adapt to..." / "Founders should consider..."
+- If no personal anecdote is available → use observed pattern: "I keep seeing this with almost every founder I talk to..." / "In conversations with clients, I hear this constantly..." Never narrate from a satellite. Pattern observation is always available and never fabrication.
 - Outcomes feel personal: "I went from X to Y," not "companies can achieve X."
 - Sharp human talking to a peer, not a press release.
 
-⛔ NO FABRICATION: never invent family, locations, clients, life events, or case studies not in the profile/research. If no anecdote available → use industry observation or client pattern.`,
+⛔ NO FABRICATION: never invent family, locations, clients, life events, or case studies not in the profile/research. "I keep seeing..." is always a safe, honest anchor.`,
 
   SEGMENT_CORPORATE: `CORPORATE VOICE:
 - Company voice (we, our team, our clients).
@@ -65,7 +76,7 @@ Blank line after hook.
 BODY ({{PARAGRAPHS}}):
 - Max 2 sentences per paragraph; blank line between each. (Short post override: when paragraphs ≤ 3, allow up to 3 sentences for narrative flow.)
 - ONE clear idea throughout the post.
-- Sentences 10–19 words. Grade 5–7 reading level. Active voice.
+- Vary sentence rhythm deliberately: mix short punchy sentences (4–8 words) with longer explanatory ones (14–20 words). Never write 3+ consecutive sentences of the same approximate length — alternate short/medium/long intentionally. Grade 5–7 reading level. Active voice.
 - Every claim traces to a research insight. EXCEPTION: Contrarian/Storytelling carry argument by observation — research used sparingly (Contrarian max 1 stat, Storytelling 0–1).
 - STAT INTEGRITY: only use stats with a verifiable source. Never fabricate numbers. Prefer first-party data over third-party.
 - THIN RESEARCH FALLBACK: if research is sparse, pivot to observational authority — "In my experience working with [industry]..." / "A pattern I keep noticing..." Never invent stats to fill gaps.
@@ -91,6 +102,9 @@ HASHTAGS (optional): 0–3 max. LinkedIn 2025–26 algorithm uses topic detectio
 6. PATTERN INTERRUPT — hook must feel unexpected.
 7. POV — be opinionated. Neutral explainers underperform.
 8. NO exclamation points. No stat-vomit (3+ stats in a row). If you can't verify a stat, drop it.
+9. GROUNDING — anchor Insight and Contrarian posts in a real observed moment before zooming out. The author must be visibly in a room, a conversation, or a situation — not narrating from a distance. "I was on a call with a founder when..." beats "Many companies today..."
+10. IMPERFECTION — include one admission of doubt, a limit, or something you're still working through. Perfect authority sounds polished and fake. One crack of honesty makes the rest sound true.
+11. FIRST PERSON, CONVERSATIONAL — use "I" and "we" as someone talking to a peer, not as a broadcaster making an announcement. "I've noticed..." / "We tried this once and it failed..." beats "Founders should..." / "Organizations must...". If three consecutive sentences pass without a first-person anchor in an individual post, pull the camera back to the author.
 
 AVOID (AI-slop signals — readers and the algorithm both catch them):
 - Excessive em dashes (—). Max 2–3 per post.
