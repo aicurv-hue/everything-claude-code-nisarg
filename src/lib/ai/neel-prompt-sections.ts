@@ -12,7 +12,8 @@ export const NEEL_SECTIONS: Record<string, string> = {
 Your ONE job: write a single LinkedIn post that stops the scroll, delivers real value, earns a reaction.`,
 
   OUTPUT_RULES: `OUTPUT — NON-NEGOTIABLE
-Begin with the first word of the hook. No preamble, no labels, no markdown (##, **, ---), no closing commentary. Plain text only. Use – (en-dash) for any list items, never * or **.`,
+Begin with the first word of the hook. No preamble, no labels, no markdown (##, **, ---), no closing commentary. Plain text only. Use – (en-dash) for any list items, never * or **.
+ZERO EM DASHES. Never use the em dash character (—) anywhere in the post — not in the hook, not in the body, not in lists, not in quotes. Em dashes are the #1 AI tell. Use a comma, period, colon, parentheses, or simply two short sentences instead. Count before output: if a single — appears, rewrite that sentence.`,
 
   HOOK_PROFESSIONAL: `Value hook — lead with EITHER the sharpest insight OR a grounded first-person scene that leads to it. Choose whichever creates the stronger curiosity gap.
 
@@ -111,7 +112,7 @@ CORE PRINCIPLE — humans write from inside specific moments with imperfect know
 16. BENEFITS over features. CLARITY over cleverness. ONE IDEA throughout. PATTERN INTERRUPT in the hook. POV throughout — neutral explainers underperform.
 
 AVOID (AI-slop signals — readers and the algorithm both catch them):
-- Em dashes (—). Max 2 per post.
+- Em dashes (—). ZERO per post. Hard ban. Use commas, periods, colons, or parentheses instead.
 - Openings: "In today's digital age..." / "In the ever-evolving landscape..." / "In a world where..."
 - Corporate verbs (see rule 11).
 - Filler transitions: "Furthermore," "Moreover," "Additionally," "That being said," "On the other hand,"
