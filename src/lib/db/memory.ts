@@ -49,6 +49,12 @@ export interface PostMemory {
   raw_content?: string;
   /** Original URL — only stored for user_url entries */
   source_url?: string;
+  /**
+   * Hook type detected from the post's opening line — used to track hook variety
+   * and suggest underused types in future generations.
+   * Values: "stat" | "story" | "contrarian" | "question" | "observation"
+   */
+  hook_type?: string;
   created_at: any;
 }
 

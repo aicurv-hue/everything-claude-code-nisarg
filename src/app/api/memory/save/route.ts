@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { extractMemory } from "@/lib/ai/memory-extract";
+import { detectHookType } from "@/lib/ai/detectHookType";
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,6 +44,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ saved: false, reason: "extraction returned null" });
     }
 
+    const hookType = detectHookType(content);
+
     await adminDb.collection("post_memories").add({
       user_id:     firebaseUid,          // always from verified token — never from body
       segment:     segment || "individual",
@@ -53,6 +56,7 @@ export async function POST(req: NextRequest) {
       summary:     extract.summary,
       keywords:    extract.keywords,
       style_notes: extract.style_notes || "",
+      hook_type:   hookType,
       created_at:  FieldValue.serverTimestamp(),
     });
 

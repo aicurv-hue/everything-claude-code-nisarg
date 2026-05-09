@@ -163,7 +163,72 @@ Return ONLY valid JSON:
       });
     }
 
-    const result = { topic, ...synthesis, intentType };
+    // ── Angle Engine — generate hook candidates + recommended angle ─────────────
+    // Runs after research with a tight 5s timeout so worst-case total stays under
+    // the 30s Vercel Edge budget: 12s (primary) + 10s (fallback) + 5s (angle) = 27s.
+    let hookCandidates: string[] = [];
+    let recommendedAngle = "";
+    let recommendedHookType = "observation";
+    try {
+      const insightLine = synthesis.insights?.[0]
+        ? `${synthesis.insights[0].title}: ${synthesis.insights[0].content}`
+        : synthesis.summary;
+      const anglePrompt = `You are a LinkedIn post strategist. Given research, generate 3 distinct hook options and identify the sharpest angle.
+
+Topic: "${topic}"
+Audience: ${audience}
+Tone: ${tone}
+Research summary: ${synthesis.summary}
+Top insight: ${insightLine}
+
+Return ONLY JSON, no preamble:
+{
+  "hookCandidates": [
+    "STAT hook: [open with the sharpest number/fact, max 2 lines]",
+    "STORY hook: [open with a vivid scene or first-person moment, max 2 lines]",
+    "CONTRARIAN hook: [challenge a common belief about this topic, max 2 lines]"
+  ],
+  "recommendedAngle": "[1-2 sentences: the single sharpest thesis this post should argue]",
+  "recommendedHookType": "stat"
+}
+Replace the final recommendedHookType value with whichever of stat|story|contrarian|question|observation best fits the recommended hook.`;
+      const angleController = new AbortController();
+      const angleTid = setTimeout(() => angleController.abort(), 5000);
+      try {
+        const angleRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://linkedin-automation-chi.vercel.app",
+            "X-Title": "Cridl",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [{ role: "user", content: anglePrompt }],
+            temperature: 0.65,
+            max_tokens: 350,
+          }),
+          signal: angleController.signal,
+        });
+        if (angleRes.ok) {
+          const angleData = await angleRes.json();
+          const angleRaw = (angleData.choices?.[0]?.message?.content || "").trim();
+          const parsed = extractJSON(angleRaw);
+          if (Array.isArray(parsed?.hookCandidates) && parsed.hookCandidates.length >= 1) {
+            hookCandidates = parsed.hookCandidates.slice(0, 3);
+            recommendedAngle = typeof parsed.recommendedAngle === "string" ? parsed.recommendedAngle.trim() : "";
+            recommendedHookType = typeof parsed.recommendedHookType === "string" ? parsed.recommendedHookType : "observation";
+          }
+        }
+      } finally {
+        clearTimeout(angleTid);
+      }
+    } catch (angleErr: any) {
+      console.warn("[research] angle engine failed (non-fatal):", angleErr?.name === "AbortError" ? "timeout" : angleErr?.message);
+    }
+
+    const result = { topic, ...synthesis, intentType, hookCandidates, recommendedAngle, recommendedHookType };
     // Store in cache (only when no sourceContext was used — cached results are topic-generic)
     if (!sourceContext) {
       researchCache.set(cacheKey, { result, cachedAt: Date.now() });

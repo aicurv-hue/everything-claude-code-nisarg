@@ -114,5 +114,20 @@ export async function POST(req: NextRequest) {
   }
 
   console.log(`[memory/upload] uid=${firebaseUid} segment=${segment} saved=${saved} failed=${failed}`);
+
+  // Fire-and-forget Style DNA re-extraction whenever samples are added.
+  // Ensures the style fingerprint stays current without blocking the upload response.
+  if (saved > 0) {
+    const origin = req.headers.get("origin") || req.nextUrl.origin;
+    fetch(`${origin}/api/profiles/style-dna`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: req.headers.get("authorization") || "",
+      },
+      body: JSON.stringify({ segment }),
+    }).catch((e) => console.warn("[memory/upload] style-dna trigger failed:", e?.message));
+  }
+
   return NextResponse.json({ saved, failed, entries, total: existingCount + saved });
 }

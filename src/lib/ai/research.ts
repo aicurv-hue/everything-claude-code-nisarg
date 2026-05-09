@@ -20,6 +20,10 @@ export interface ResearchResult {
   summary: string;
   references: string[];
   intentType: IntentType;
+  // Angle Engine output — generated after research, feeds generate.ts
+  hookCandidates?: string[];    // 3 hook options (stat / story / contrarian)
+  recommendedAngle?: string;    // single sharpest thesis for the post
+  recommendedHookType?: string; // type label of the winning hook
 }
 
 export interface ResearchOptions {
@@ -162,12 +166,61 @@ Return ONLY valid JSON (no markdown fences, no extra text):
     };
   }
 
+  // ── Angle Engine — generate hook candidates + recommended angle ─────────────
+  // Runs after research; separate call so a failure here never blocks research.
+  // Gives generate.ts a "thinking-first" foundation instead of blank-slate writing.
+  let hookCandidates: string[] = [];
+  let recommendedAngle = "";
+  let recommendedHookType = "observation";
+  try {
+    const insightLine = synthesis.insights?.[0]
+      ? `${synthesis.insights[0].title}: ${synthesis.insights[0].content}`
+      : synthesis.summary;
+    const anglePrompt = `You are a LinkedIn post strategist. Given research, generate 3 distinct hook options and identify the sharpest angle.
+
+Topic: "${topic}"
+Audience: ${options.audience || "general"}
+Tone: ${options.tone || "professional"}
+Research summary: ${synthesis.summary}
+Top insight: ${insightLine}
+
+Return ONLY JSON, no preamble:
+{
+  "hookCandidates": [
+    "STAT hook: [open with the sharpest number/fact, max 2 lines]",
+    "STORY hook: [open with a vivid scene or first-person moment, max 2 lines]",
+    "CONTRARIAN hook: [challenge a common belief about this topic, max 2 lines]"
+  ],
+  "recommendedAngle": "[1-2 sentences: the single sharpest thesis this post should argue]",
+  "recommendedHookType": "stat"
+}
+Replace the final recommendedHookType value with whichever of stat|story|contrarian|question|observation best fits the recommended hook.`;
+    const angleRes = await openRouter.chat.completions.create({
+      model,
+      messages: [{ role: "user", content: anglePrompt }],
+      temperature: 0.65,
+      max_tokens: 350,
+    });
+    const angleRaw = (angleRes.choices[0]?.message?.content || "").trim();
+    const angleData = extractJSON(angleRaw);
+    if (Array.isArray(angleData?.hookCandidates) && angleData.hookCandidates.length >= 1) {
+      hookCandidates = angleData.hookCandidates.slice(0, 3);
+      recommendedAngle = typeof angleData.recommendedAngle === "string" ? angleData.recommendedAngle.trim() : "";
+      recommendedHookType = typeof angleData.recommendedHookType === "string" ? angleData.recommendedHookType : "observation";
+    }
+  } catch (angleErr) {
+    console.warn("[research] angle engine failed (non-fatal):", (angleErr as any)?.message || angleErr);
+  }
+
   const result: ResearchResult = {
     topic,
     summary: synthesis.summary,
     insights: synthesis.insights,
     references: synthesis.references ?? [],
     intentType,
+    hookCandidates,
+    recommendedAngle,
+    recommendedHookType,
   };
 
   // Persist research to Firestore (skip in mock mode)

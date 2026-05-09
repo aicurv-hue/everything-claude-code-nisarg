@@ -1,10 +1,26 @@
 import { db, isMock } from "@/lib/firebase";
-import { 
-  setDoc, 
-  getDoc, 
-  doc, 
-  serverTimestamp 
+import {
+  setDoc,
+  getDoc,
+  doc,
+  serverTimestamp
 } from "firebase/firestore";
+
+/**
+ * Compact AI-extracted writing fingerprint.
+ * Generated once from user-uploaded writing samples; stored in Firestore.
+ * Replaces the verbose raw-sample block in the generation prompt (~2500 chars → ~250 chars).
+ */
+export interface StyleDNA {
+  hookStyle: string;          // e.g. "contrarian_question", "stat_number", "story_scene"
+  sentenceRhythm: string;     // "short_punchy" | "medium_flowing" | "mixed_varied"
+  avgSentenceWords: number;   // approximate average
+  humorPresence: string;      // "none" | "dry_occasional" | "warm_frequent"
+  emotionalIntensity: string; // "controlled" | "moderate" | "high"
+  ctaStyle: string;           // "reflective_question" | "direct_invitation" | "declarative"
+  signaturePatterns: string[]; // distinctive writing patterns observed across samples
+  extractedAt: number;        // Unix timestamp ms
+}
 
 export interface ProfileSegment {
   // Identity
@@ -34,6 +50,9 @@ export interface ProfileSegment {
 
   // LinkedIn (corporate only)
   linkedinOrganizationId?: string;
+
+  // Style DNA — extracted from writing samples, replaces verbose sample injection
+  style_dna?: StyleDNA;
 }
 
 export interface UserProfile {

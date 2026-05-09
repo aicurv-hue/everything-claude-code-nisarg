@@ -57,6 +57,35 @@ function section(name: string, replacements?: Record<string, string>): string {
   return text;
 }
 
+// ─── Style DNA block builder ───────────────────────────────────────────────────
+
+/**
+ * Builds a compact style fingerprint block from the AI-extracted StyleDNA.
+ * ~250 chars vs ~2500 chars for raw samples — 10x token reduction while
+ * preserving all the actionable style signals Cortex needs.
+ */
+function buildStyleDnaBlock(dna: any): string {
+  if (!dna?.hookStyle || !dna?.sentenceRhythm) return "";
+  const patterns = Array.isArray(dna.signaturePatterns) && dna.signaturePatterns.length > 0
+    ? dna.signaturePatterns.map((p: string) => `  - ${p}`).join("\n")
+    : "";
+  return [
+    `══════════════════════════════════════════`,
+    `VOICE DNA — EXTRACTED STYLE FINGERPRINT`,
+    `══════════════════════════════════════════`,
+    `Hook style:           ${dna.hookStyle}`,
+    `Sentence rhythm:      ${dna.sentenceRhythm}${dna.avgSentenceWords ? ` (avg ~${dna.avgSentenceWords} words/sentence)` : ""}`,
+    `Humor:                ${dna.humorPresence || "none"}`,
+    `Emotional intensity:  ${dna.emotionalIntensity || "controlled"}`,
+    `CTA style:            ${dna.ctaStyle || "reflective_question"}`,
+    patterns ? `Signature patterns:\n${patterns}` : "",
+    ``,
+    `MANDATE: Every sentence you write must embody the patterns above.`,
+    `The reader should not be able to distinguish your output from the author's own writing.`,
+    `══════════════════════════════════════════`,
+  ].filter(Boolean).join("\n");
+}
+
 // ─── Writing samples block builder ────────────────────────────────────────────
 
 /**
@@ -146,6 +175,26 @@ function buildMemoryBlock(memories: PostMemory[]): string {
     lines.push("");
   }
 
+  // Hook type diversity hint — tracks which hook types have been used recently
+  // so Cortex can suggest variety rather than repeating the same opener style.
+  const hookTypes = memories
+    .filter((m: any) => typeof m.hook_type === "string" && m.hook_type)
+    .slice(0, 5)
+    .map((m: any) => m.hook_type as string);
+
+  const hookDiversityHint = (() => {
+    if (hookTypes.length < 3) return "";
+    const allTypes = ["stat", "story", "contrarian", "question", "observation"];
+    const typeCount: Record<string, number> = {};
+    for (const t of hookTypes) typeCount[t] = (typeCount[t] || 0) + 1;
+    const underused = allTypes.filter((t) => !typeCount[t]);
+    const dominant = Object.entries(typeCount).sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (underused.length > 0) {
+      return `HOOK VARIETY: Last ${hookTypes.length} posts used [${hookTypes.join(", ")}] hooks. Consider a ${underused[0]} hook this time for variety and reach.`;
+    }
+    return `HOOK VARIETY: Good hook diversity in recent posts [${hookTypes.join(", ")}] — maintain the mix.`;
+  })();
+
   lines.push(
     "CONTINUITY RULES — READ ALL BEFORE DECIDING:",
     "",
@@ -168,6 +217,7 @@ function buildMemoryBlock(memories: PostMemory[]): string {
     "WHAT TO NEVER DO:",
     "• Never invent a story arc, experience, or angle that contradicts the past posts.",
     "• Never pivot so sharply that the post sounds like a different author.",
+    hookDiversityHint ? `\n${hookDiversityHint}` : "",
     "══════════════════════════════════════════",
   );
 
@@ -389,6 +439,29 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
       ].join("\n")
     : "";
 
+  // ── Angle Engine block ────────────────────────────────────────────────────
+  // Injected between structure rules and brand context so Cortex has a
+  // "thinking-first" foundation — a pre-selected angle + 3 hook options —
+  // before it writes. Skipped gracefully if research didn't produce them.
+  const hasAngle = (research.recommendedAngle && research.recommendedAngle.length > 10) ||
+    (Array.isArray(research.hookCandidates) && research.hookCandidates.length > 0);
+  const angleBlock = hasAngle
+    ? [
+        `══════════════════════════════════════════`,
+        `ANGLE ENGINE — THINK BEFORE YOU WRITE`,
+        `══════════════════════════════════════════`,
+        research.recommendedAngle
+          ? `Sharpest angle for this post (build your argument around this):\n"${research.recommendedAngle}"`
+          : "",
+        Array.isArray(research.hookCandidates) && research.hookCandidates.length > 0
+          ? `\n3 hook candidates — pick the strongest or write a superior one in the same vein:\n${research.hookCandidates.map((h, i) => `${i + 1}. ${h}`).join("\n")}`
+          : "",
+        ``,
+        `Do not copy a hook verbatim — use these as the strategic foundation, then sharpen.`,
+        `══════════════════════════════════════════`,
+      ].filter(Boolean).join("\n")
+    : "";
+
   const systemInstructions = [
     personalTopOverride,
     section("IDENTITY"),
@@ -414,26 +487,32 @@ export async function generatePost(request: PostRequest): Promise<GenerateResult
     "",
     section("FORMATTING"),
     "",
+    angleBlock,
+    "",
     `══════════════════════════════════════════`,
     `BRAND CONTEXT`,
     `══════════════════════════════════════════`,
     clientBranding,
-    // On personal intent: strip summary + keywords from samples, keep style_notes
-    // only. Otherwise the "What it covered" lines feed the topic of past posts
-    // (often product-related) into a personal generation, encouraging Cortex to
-    // bridge from the personal topic back into the user's business angle.
-    writingSamples && writingSamples.length > 0
-      ? isProfessional
-        ? `\n\n${buildWritingSamplesBlock(writingSamples)}`
-        : (() => {
-            const styleLines = writingSamples
-              .filter((s: any) => s?.style_notes)
-              .map((s: any) => `- ${s.style_notes}`);
-            return styleLines.length === 0
-              ? ""
-              : `\n\n══════════════════════════════════════════\nVOICE PATTERNS (style only — do NOT use as topic inspiration)\n══════════════════════════════════════════\n${styleLines.join("\n")}`;
-          })()
-      : "",
+    // Voice/style signal: prefer compact Style DNA fingerprint when available,
+    // fall back to raw writing-samples block for users who haven't extracted it yet.
+    // On personal intent: strip all topic/summary fields — voice signals only.
+    (() => {
+      const dna = clientProfile?.style_dna;
+      if (dna?.hookStyle) {
+        // Style DNA available — inject compact fingerprint (~250 chars)
+        return `\n\n${buildStyleDnaBlock(dna)}`;
+      }
+      // Fall back to raw samples
+      if (!writingSamples || writingSamples.length === 0) return "";
+      if (isProfessional) return `\n\n${buildWritingSamplesBlock(writingSamples)}`;
+      // Personal intent: style_notes only
+      const styleLines = writingSamples
+        .filter((s: any) => s?.style_notes)
+        .map((s: any) => `- ${s.style_notes}`);
+      return styleLines.length === 0
+        ? ""
+        : `\n\n══════════════════════════════════════════\nVOICE PATTERNS (style only — do NOT use as topic inspiration)\n══════════════════════════════════════════\n${styleLines.join("\n")}`;
+    })(),
     memoryContext && memoryContext.length > 0
       ? !isProfessional
         // Personal topics: only pass style_notes from memory — topic/summary stripped to prevent brand contamination
