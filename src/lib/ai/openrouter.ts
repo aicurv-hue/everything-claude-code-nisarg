@@ -19,7 +19,12 @@ export const openRouter = new OpenAI({
   }
 });
 
-// Single-model architecture: Gemini 2.5 Flash powers every text + vision call across Cridl.
-// FALLBACK_MODEL is kept equal so existing fallback chains retry the same model once on transient errors.
-export const DEFAULT_MODEL   = "google/gemini-2.5-flash";
-export const FALLBACK_MODEL  = "google/gemini-2.5-flash";
+// Model allocation:
+//   GENERATION_MODEL — final LinkedIn post writing only. Claude Sonnet for superior
+//   storytelling quality, emotional realism, sentence-rhythm variation, and hook strength.
+//   DEFAULT_MODEL    — all other text tasks (research, intent, image prompts, scoring,
+//   voice-rewrite on demand, idea generation, etc.). Fast + cheap.
+//   FALLBACK_MODEL   — retry fallback for DEFAULT_MODEL call sites.
+export const GENERATION_MODEL = "anthropic/claude-sonnet-4-6";
+export const DEFAULT_MODEL    = "google/gemini-2.5-flash";
+export const FALLBACK_MODEL   = "google/gemini-2.5-flash";

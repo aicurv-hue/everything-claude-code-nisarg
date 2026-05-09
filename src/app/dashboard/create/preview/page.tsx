@@ -20,7 +20,7 @@ import PostQualityScore from "@/components/PostQualityScore";
 import RewriteButton from "@/components/RewriteButton";
 // Memory is saved via /api/memory/save (server-side Admin SDK) — not client-side
 import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
-import { generateImageClient } from "@/lib/ai/clientImage";
+import { generateImageClient, generateFaceClient } from "@/lib/ai/clientImage";
 
 type ImageMode = "ai" | "upload" | "reference" | "face" | "carousel" | "none";
 
@@ -617,30 +617,26 @@ export default function PostPreviewPage() {
     setFaceGeneratedUrl(null);
     try {
       const token = await getAuthToken();
-      const res = await fetch("/api/image/face-generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ backgroundStyle: faceStyle, postTopic: postData?.metadata?.topic || "" }),
+      // Submit → poll via queue (avoids Vercel Node timeout on synchronous flux-pulid call)
+      const falUrl = await generateFaceClient({
+        backgroundStyle: faceStyle,
+        postTopic: postData?.metadata?.topic || "",
+        token,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Face image generation failed");
-      // Upload fal.ai URL server-side to avoid CORS — fal.ai CDN blocks browser fetches
-      let persistentFaceUrl = data.url;
+      // Re-host to Firebase Storage — fal.ai CDN blocks direct browser <img> fetches (CORS)
+      let persistentFaceUrl = falUrl;
       try {
-        const faceToken = await getAuthToken();
+        const uploadToken = await getAuthToken();
         const uploadRes = await fetch("/api/image/upload-url", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(faceToken ? { Authorization: `Bearer ${faceToken}` } : {}),
-          },
-          body: JSON.stringify({ url: data.url, fileName: `post-images/${Date.now()}-face.jpg` }),
+          headers: { "Content-Type": "application/json", ...(uploadToken ? { Authorization: `Bearer ${uploadToken}` } : {}) },
+          body: JSON.stringify({ url: falUrl, fileName: `post-images/${Date.now()}-face.jpg` }),
         });
         if (uploadRes.ok) {
           const uploadData = await uploadRes.json();
           if (uploadData.url) persistentFaceUrl = uploadData.url;
         }
-      } catch { /* fallback */ }
+      } catch { /* fallback to fal CDN url */ }
       setFaceGeneratedUrl(persistentFaceUrl);
     } catch (err: any) {
       setFaceError(err.message || "Failed to generate face image");

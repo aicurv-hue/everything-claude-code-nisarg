@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { X, Sparkles, Upload, User, ImageIcon, Loader2, AlertCircle } from "lucide-react";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
 import { uploadDataUrlToStorage } from "@/lib/storage/uploadImage";
-import { generateImageClient } from "@/lib/ai/clientImage";
+import { generateImageClient, generateFaceClient } from "@/lib/ai/clientImage";
 
 interface PostData {
   id: string;
@@ -122,14 +122,8 @@ export default function CampaignPostDrawer({ post, segment, onClose, onSaved }: 
     setFaceGeneratedUrl(null);
     try {
       const token = await getAuthToken();
-      const res = await fetch("/api/image/face-generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ backgroundStyle: faceStyle, postTopic: "" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Face image generation failed");
-      setFaceGeneratedUrl(data.url);
+      const url = await generateFaceClient({ backgroundStyle: faceStyle, postTopic: "", token });
+      setFaceGeneratedUrl(url);
     } catch (err: any) {
       setImageError(err.message || "Failed to generate face image");
     } finally {

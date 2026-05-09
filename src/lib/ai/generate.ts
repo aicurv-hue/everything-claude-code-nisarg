@@ -1,10 +1,9 @@
 import type { ResearchResult } from "./research";
 import type { ProfileSegment } from "../db/profiles";
 import type { PostMemory } from "../db/memory";
-import { openRouter, DEFAULT_MODEL, FALLBACK_MODEL } from "./openrouter";
+import { openRouter, GENERATION_MODEL, DEFAULT_MODEL, FALLBACK_MODEL } from "./openrouter";
 import { NEEL_SECTIONS } from "./neel-prompt-sections";
 import { sanitizePromptInput } from "./sanitize";
-import { rewriteInVoice } from "./rewriteInVoice";
 
 export interface GenerateResult {
   post: string;
@@ -498,8 +497,10 @@ HARD CONSTRAINT — word count: The post MUST be ${lengthSpec.words}. Count your
 
 Start directly with the hook line. Output nothing else.`;
 
-  // Per-call timeouts must add up to less than the Vercel edge function budget.
-  // Single model (Gemini 2.5 Flash) — primary capped at 12s, retry capped at 10s.
+  // max_tokens scales with post length — long posts need more headroom to avoid
+  // mid-generation truncation (380–420 words ≈ 560–620 tokens + system prompt overhead).
+  const postMaxTokens = length === "long" ? 1600 : length === "short" ? 800 : 1200;
+
   const callWithTimeout = async (model: string, messages: any[], temperature: number, max_tokens: number, timeoutMs: number) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -516,67 +517,85 @@ Start directly with the hook line. Output nothing else.`;
   const isUsableCompletion = (c: any, minChars: number) => {
     const txt = (c?.choices?.[0]?.message?.content || "").trim();
     const finish = c?.choices?.[0]?.finish_reason;
-    // A "stop" finish with enough text is good. Anything else (length, content_filter,
-    // safety, error) or a suspiciously short body means the model truncated mid-generation.
     return finish === "stop" && txt.length >= minChars;
   };
 
-  const chatWithFallback = async (messages: any[], temperature: number, max_tokens: number = 1200, minChars: number = 200) => {
-    // Single-model architecture: always Gemini 2.5 Flash, ignoring any legacy
-    // model ID stored in user profiles. Same model used as retry on transient errors.
+  // Errors that should NOT trigger a retry — the same model will refuse again.
+  const isRetryable = (err: any): boolean => {
+    const msg = (err?.message || "").toLowerCase();
+    if (msg.includes("content_filter") || msg.includes("safety") || msg.includes("policy")) return false;
+    if (msg.startsWith("unusable_completion:content_filter")) return false;
+    return true;
+  };
+
+  // Generation call: GENERATION_MODEL (Claude Sonnet) as primary for final post quality.
+  // Falls back to DEFAULT_MODEL (Gemini Flash) on timeout or transient network errors.
+  // Safety refusals are NOT retried — they'll refuse again on the same content.
+  const chatWithFallback = async (
+    messages: any[],
+    temperature: number,
+    max_tokens: number,
+    minChars: number = 200,
+    primaryModel: string = DEFAULT_MODEL,
+    fallbackModel: string = FALLBACK_MODEL,
+    primaryTimeoutMs: number = 20000,
+    fallbackTimeoutMs: number = 15000,
+  ) => {
     try {
-      const c = await callWithTimeout(DEFAULT_MODEL, messages, temperature, max_tokens, 12000);
+      const c = await callWithTimeout(primaryModel, messages, temperature, max_tokens, primaryTimeoutMs);
       if (!isUsableCompletion(c, minChars)) {
         const finish = c?.choices?.[0]?.finish_reason;
         const len = (c?.choices?.[0]?.message?.content || "").length;
-        console.warn(`[Cortex] ${DEFAULT_MODEL} returned unusable completion (finish=${finish}, len=${len}) — retrying`);
+        console.warn(`[Cortex] ${primaryModel} unusable (finish=${finish}, len=${len}) — retrying`);
         throw new Error(`unusable_completion:${finish}:${len}`);
       }
       return c;
     } catch (err: any) {
+      if (!isRetryable(err)) {
+        const reason = err?.name === "AbortError" ? "timeout" : (err?.message || "unknown");
+        console.warn(`[Cortex] ${primaryModel} non-retryable failure (${reason}) — surfacing to caller`);
+        throw err;
+      }
       const reason = err?.name === "AbortError" ? "timeout" : (err?.status || err?.code || err?.message);
-      console.warn(`[Cortex] ${DEFAULT_MODEL} failed (${reason}) — retrying with ${FALLBACK_MODEL}`);
-      const c2 = await callWithTimeout(FALLBACK_MODEL, messages, temperature, max_tokens, 10000);
-      // Final attempt — return whatever we got (even if short) so caller can decide.
-      // The route handler still throws if post is empty, surfacing a clear error to UI.
+      console.warn(`[Cortex] ${primaryModel} failed (${reason}) — retrying with ${fallbackModel}`);
+      const c2 = await callWithTimeout(fallbackModel, messages, temperature, max_tokens, fallbackTimeoutMs);
       return c2;
     }
   };
 
+  const traceId = Math.random().toString(36).slice(2, 9);
+
   try {
-    // Stage 1: Cortex writes the LinkedIn post
+    // Stage 1: Cortex writes the LinkedIn post.
+    // Uses GENERATION_MODEL (Claude Sonnet) for superior hook quality, emotional
+    // realism, and sentence-rhythm variation. Falls back to DEFAULT_MODEL on
+    // timeout or transient errors only — safety refusals are not retried.
+    const t1 = Date.now();
     const completion = await chatWithFallback(
       [
         { role: "system", content: systemInstructions },
         { role: "user",   content: userPrompt },
       ],
-      isRegeneration ? 0.95 : 0.72,  // bump variance for regenerations to push a meaningfully different output
-      1200,
-      200  // post must be at least ~200 chars or we retry
+      isRegeneration ? 0.95 : 0.72,
+      postMaxTokens,
+      200,
+      GENERATION_MODEL,
+      DEFAULT_MODEL,
+      20000,
+      15000,
     );
+    console.log(`[Cortex trace=${traceId}] stage=post model=${GENERATION_MODEL} ms=${Date.now() - t1} length=${length} tokens=${postMaxTokens}`);
 
     const raw = completion.choices[0].message.content || "";
-    const draftPost = sanitizePost(raw) || raw.trim();
-    // Final guard — if even the fallback came back too short, fail loudly so the
-    // UI shows an error instead of saving a 16-word stub as a "post".
-    if (draftPost.trim().length < 100) {
+    const post = sanitizePost(raw) || raw.trim();
+    if (post.trim().length < 100) {
       const finish = completion.choices[0]?.finish_reason;
-      throw new Error(`Post generation returned a truncated response (finish=${finish}, length=${draftPost.length}). The model may have hit a safety filter or timeout. Try rewording the topic or regenerating.`);
+      throw new Error(`Post generation returned a truncated response (finish=${finish}, length=${post.length}). The model may have hit a safety filter or timeout. Try rewording the topic or regenerating.`);
     }
 
-    // Stage 1.5: Voice-rewrite pass — runs on every generation to deliver the same
-    // human-sounding output the standalone "Rewrite in my voice" feature produces.
-    // Uses the structured client profile + writing samples already in scope.
-    // Falls back silently to draftPost if the rewrite call fails or returns junk.
-    const rewriteResult = await rewriteInVoice({
-      rawText: draftPost,
-      voiceProfile: clientProfile,
-      writingSamples,
-      timeoutMs: 10000,
-    });
-    const post = rewriteResult.ok ? rewriteResult.rewrittenPost : draftPost;
-
-    // Stage 2: Generate image prompt — always generate so user can switch modes on preview page
+    // Stage 2: Generate image prompt — always generated so user can switch image modes
+    // on preview. Uses DEFAULT_MODEL (Gemini Flash) — this is a short structured task
+    // where speed matters more than stylistic depth.
     const imageSystemPrompt = section("IMAGE_PROMPT_SYSTEM");
     const imageUserPrompt = section("IMAGE_PROMPT_USER", {
       TOPIC:   topic,
@@ -584,27 +603,31 @@ Start directly with the hook line. Output nothing else.`;
       POST:    post,
     });
 
-    // Image prompt is short (~150 tokens) and low-stakes — cap it tight so it
-    // can never blow the function budget. If both models fail we still ship
-    // the post with an empty image prompt; the user can regenerate it.
     let imagePrompt = "";
     try {
+      const t2 = Date.now();
       const imagePromptCompletion = await chatWithFallback(
         [
           { role: "system", content: imageSystemPrompt },
           { role: "user",   content: imageUserPrompt },
         ],
         0.7,
-        500
+        500,
+        0,
+        DEFAULT_MODEL,
+        FALLBACK_MODEL,
+        12000,
+        10000,
       );
       imagePrompt = (imagePromptCompletion.choices[0].message.content || "").trim();
+      console.log(`[Cortex trace=${traceId}] stage=image-prompt ms=${Date.now() - t2}`);
     } catch (e: any) {
-      console.warn("[Cortex] image prompt generation failed, returning empty:", e?.message || e);
+      console.warn(`[Cortex trace=${traceId}] image prompt generation failed, returning empty:`, e?.message || e);
     }
 
     return { post, imagePrompt };
   } catch (error: any) {
-    console.error("OpenRouter post generation failed:", error);
+    console.error(`[Cortex trace=${traceId}] post generation failed:`, error);
     throw new Error(
       `Post generation failed: ${error.message || "Check your OpenRouter API key."}`
     );

@@ -27,10 +27,21 @@ export async function POST(req: NextRequest) {
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json({ error: "Missing image prompt." }, { status: 400 });
     }
-    const requestId = await submitImageJob(prompt);
-    return NextResponse.json({ request_id: requestId });
+    try {
+      const requestId = await submitImageJob(prompt);
+      return NextResponse.json({ request_id: requestId });
+    } catch (error: any) {
+      // Refund quota — quota was charged pre-submit; job never reached fal.ai queue.
+      fetch(new URL("/api/usage/refund", req.url), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: req.headers.get("authorization") || "" },
+        body: JSON.stringify({ action: "image" }),
+      }).catch(() => {});
+      console.error("Image submit error:", error);
+      return NextResponse.json({ error: error.message || "Image submit failed." }, { status: 500 });
+    }
   } catch (error: any) {
-    console.error("Image submit error:", error);
+    console.error("Image route error:", error);
     return NextResponse.json({ error: error.message || "Image submit failed." }, { status: 500 });
   }
 }

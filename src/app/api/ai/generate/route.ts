@@ -29,8 +29,13 @@ export async function POST(req: NextRequest) {
       ? err.message
       : "Generation failed";
     console.error("[api/ai/generate] Error:", message, err);
-    // Surface the real cause to the UI so users (and we) can tell whether it's a
-    // truncated completion, OpenRouter quota, profile/research issue, etc.
+    // Refund quota — quota was incremented pre-flight; user must not be charged
+    // for a generation that failed due to model error, timeout, or safety filter.
+    fetch(new URL("/api/usage/refund", req.url), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: req.headers.get("authorization") || "" },
+      body: JSON.stringify({ action: "post" }),
+    }).catch(() => {});
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

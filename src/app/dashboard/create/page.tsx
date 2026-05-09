@@ -175,7 +175,7 @@ export default function CreatePostPage() {
       return combined;
     } catch (e: any) {
       setSourceStatus("error");
-      alert(`Source extraction failed: ${e?.message}`);
+      setGenerateError(`Source extraction failed: ${e?.message || "Unknown error"}`);
       return null;
     }
   };
@@ -202,32 +202,27 @@ export default function CreatePostPage() {
         ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
       };
 
-      // ── Stage 1: Research (via API route — supports 60s timeout) ────────────
+      // ── Stage 1+2 (parallel): Research + Memory ─────────────────────────────
+      // Research and memory are independent — run concurrently to cut ~3–5s of
+      // sequential wait time. Generation starts as soon as both resolve.
       setGeneratingStep("research");
-      const researchRes = await fetch("/api/ai/research", {
-        method: "POST",
-        headers: authHeaders,
-        body: JSON.stringify({ topic, options: { segment, tone, audience, length, clientProfile: activeProfile }, sourceContext: resolvedSourceContext || undefined }),
-      });
+      const [researchRes, memoryData] = await Promise.all([
+        fetch("/api/ai/research", {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify({ topic, options: { segment, tone, audience, length, clientProfile: activeProfile }, sourceContext: resolvedSourceContext || undefined }),
+        }),
+        idToken
+          ? fetch(`/api/memory?segment=${segment}&topic=${encodeURIComponent(topic)}&limit=5`, {
+              headers: { Authorization: `Bearer ${idToken}` },
+            }).then((r) => r.ok ? r.json() : { entries: [] }).catch(() => ({ entries: [] }))
+          : Promise.resolve({ entries: [] }),
+      ]);
+
       if (!researchRes.ok) throw new Error(`Research failed: ${await researchRes.text()}`);
       const research = await researchRes.json();
       const intentType: "personal" | "professional" = research.intentType ?? "professional";
-
-      // ── Stage 2: Load auto-saved memory via API route ────────────────────────
-      setGeneratingStep("memory");
-      let memoryContext: any[] = [];
-      try {
-        if (idToken) {
-          const memRes = await fetch(`/api/memory?segment=${segment}&topic=${encodeURIComponent(topic)}&limit=5`, {
-            headers: { Authorization: `Bearer ${idToken}` },
-          });
-          if (memRes.ok) {
-            const memData = await memRes.json();
-            // Only auto-saved entries for content continuity (user_upload handled separately as style samples)
-            memoryContext = (memData.entries || []).filter((e: any) => e.source !== "user_upload");
-          }
-        }
-      } catch { /* memory is non-critical */ }
+      const memoryContext: any[] = ((memoryData as any)?.entries || []).filter((e: any) => e.source !== "user_upload");
 
       // ── Stage 3: Generate post (via API route — supports 60s timeout) ────────
       setGeneratingStep("writing");
@@ -766,11 +761,10 @@ export default function CreatePostPage() {
                 <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1">Generating your post…</p>
                 {[
                   ...(sourceUrl.trim() || sourceImage ? [{ step: "source", label: "Reading your URL / image", icon: "🔗" }] : []),
-                  { step: "research", label: "Deep-researching your topic",    icon: "🔍" },
-                  { step: "memory",   label: "Reading your past posts for style", icon: "🧠" },
-                  { step: "writing",  label: "Writing your LinkedIn post",      icon: "✍️" },
+                  { step: "research", label: "Researching topic + loading memory", icon: "🔍" },
+                  { step: "writing",  label: "Writing your LinkedIn post",         icon: "✍️" },
                 ].map(({ step, label, icon }) => {
-                  const steps = [...(sourceUrl.trim() || sourceImage ? ["source"] : []), "research", "memory", "writing"];
+                  const steps = [...(sourceUrl.trim() || sourceImage ? ["source"] : []), "research", "writing"];
                   const currentIdx = steps.indexOf(generatingStep || steps[0]);
                   const thisIdx = steps.indexOf(step);
                   const isDone    = thisIdx < currentIdx;
@@ -826,8 +820,7 @@ export default function CreatePostPage() {
                   <Zap className="w-4 h-4 animate-pulse" />
                   {generatingStep === "source"   && "Reading source…"}
                   {generatingStep === "research" && "Stage 1 — Researching…"}
-                  {generatingStep === "memory"   && "Stage 2 — Loading memory…"}
-                  {generatingStep === "writing"  && "Stage 3 — Writing post…"}
+                  {generatingStep === "writing"  && "Stage 2 — Writing post…"}
                   {!generatingStep               && "Starting…"}
                 </>
               ) : (
