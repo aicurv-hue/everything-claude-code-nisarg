@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/context/auth";
 import { getIdToken } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
+import { consumeGenerateStream } from "@/lib/utils/consumeNdjson";
 import { Zap, Search, Brain, SlidersHorizontal, ChevronDown, ChevronUp, User, Building2, Sparkles, Link2, ImagePlus, X, CheckCircle2, PenLine } from "lucide-react";
 import { HelpTooltip } from "@/components/ui/HelpTooltip";
 import RewriteButton from "@/components/RewriteButton";
@@ -224,7 +225,8 @@ export default function CreatePostPage() {
       const intentType: "personal" | "professional" = research.intentType ?? "professional";
       const memoryContext: any[] = ((memoryData as any)?.entries || []).filter((e: any) => e.source !== "user_upload");
 
-      // ── Stage 3: Generate post (via API route — supports 60s timeout) ────────
+      // ── Stage 3: Generate post (streaming NDJSON — keepalive pings defeat
+      // Vercel's 25s edge gateway timeout) ─────────────────────────────────────
       setGeneratingStep("writing");
       const generateRes = await fetch("/api/ai/generate", {
         method: "POST",
@@ -239,11 +241,27 @@ export default function CreatePostPage() {
           sourceContext: resolvedSourceContext || undefined,
         }),
       });
-      if (!generateRes.ok) {
-        const errBody = await generateRes.json().catch(() => ({} as any));
-        throw new Error(errBody?.error || `Generation failed (HTTP ${generateRes.status})`);
-      }
-      const { post: content, imagePrompt } = await generateRes.json();
+      const { post: content } = await consumeGenerateStream(generateRes);
+
+      // Stage 4: image prompt is now generated lazily (in parallel with navigation).
+      // The preview page will display the post immediately and fill imagePrompt
+      // in as soon as this resolves. Failure here is non-fatal — the preview
+      // page also has a fallback effect that retries on mount if missing.
+      const imagePromptPromise = fetch("/api/ai/image-prompt", {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ topic, segment, post: content }),
+      })
+        .then((r) => r.ok ? r.json() : { imagePrompt: "" })
+        .then((j) => (j?.imagePrompt as string) || "")
+        .catch(() => "");
+
+      // Await with a soft 12s ceiling — if image prompt is slow, navigate
+      // anyway. Preview page picks it up via the fallback effect.
+      const imagePrompt: string = await Promise.race([
+        imagePromptPromise,
+        new Promise<string>((r) => setTimeout(() => r(""), 12000)),
+      ]);
 
       // Fresh regeneration session id — used to key the temporary regen memory
       // in Firestore (regeneration_sessions/{sessionId}). Created lazily on the

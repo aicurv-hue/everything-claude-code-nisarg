@@ -660,8 +660,11 @@ Start directly with the hook line. Output nothing else.`;
       200,
       GENERATION_MODEL,
       DEFAULT_MODEL,
-      16000,  // 16s cap: happy-path Stage1(16)+Stage2(12)=28s < 30s Vercel Edge limit
-      12000,
+      // Sonnet primary 35s, Gemini fallback 20s. Route streams keepalive
+      // pings to the client so Vercel's 25s first-byte limit never trips —
+      // the only real ceiling is the OpenRouter call itself.
+      35000,
+      20000,
     );
     console.log(`[Cortex trace=${traceId}] stage=post model=${GENERATION_MODEL} ms=${Date.now() - t1} length=${length} tokens=${postMaxTokens}`);
 
@@ -672,39 +675,9 @@ Start directly with the hook line. Output nothing else.`;
       throw new Error(`Post generation returned a truncated response (finish=${finish}, length=${post.length}). The model may have hit a safety filter or timeout. Try rewording the topic or regenerating.`);
     }
 
-    // Stage 2: Generate image prompt — always generated so user can switch image modes
-    // on preview. Uses DEFAULT_MODEL (Gemini Flash) — this is a short structured task
-    // where speed matters more than stylistic depth.
-    const imageSystemPrompt = section("IMAGE_PROMPT_SYSTEM");
-    const imageUserPrompt = section("IMAGE_PROMPT_USER", {
-      TOPIC:   topic,
-      SEGMENT: segment,
-      POST:    post,
-    });
-
-    let imagePrompt = "";
-    try {
-      const t2 = Date.now();
-      const imagePromptCompletion = await chatWithFallback(
-        [
-          { role: "system", content: imageSystemPrompt },
-          { role: "user",   content: imageUserPrompt },
-        ],
-        0.7,
-        500,
-        0,
-        DEFAULT_MODEL,
-        FALLBACK_MODEL,
-        12000,
-        10000,
-      );
-      imagePrompt = (imagePromptCompletion.choices[0].message.content || "").trim();
-      console.log(`[Cortex trace=${traceId}] stage=image-prompt ms=${Date.now() - t2}`);
-    } catch (e: any) {
-      console.warn(`[Cortex trace=${traceId}] image prompt generation failed, returning empty:`, e?.message || e);
-    }
-
-    return { post, imagePrompt };
+    // Stage 2 (image prompt) is now lazy — the client calls /api/ai/image-prompt
+    // after navigating to preview, so this route's wall time is post-only.
+    return { post, imagePrompt: "" };
   } catch (error: any) {
     console.error(`[Cortex trace=${traceId}] post generation failed:`, error);
     throw new Error(

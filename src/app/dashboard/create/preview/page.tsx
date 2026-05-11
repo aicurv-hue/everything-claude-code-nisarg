@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
+import { consumeGenerateStream } from "@/lib/utils/consumeNdjson";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Post } from "@/lib/db/posts";
@@ -222,6 +223,36 @@ export default function PostPreviewPage() {
     });
   }, [router]);
 
+  // Lazy fallback: if create page navigated here before the image-prompt
+  // request finished (slow OpenRouter), fetch it now. Idempotent — only runs
+  // when imagePrompt is empty AND we have content to base it on.
+  const imagePromptFallbackRef = useRef(false);
+  useEffect(() => {
+    if (imagePromptFallbackRef.current) return;
+    if (imagePrompt || !editedContent || !postData?.metadata) return;
+    imagePromptFallbackRef.current = true;
+    (async () => {
+      try {
+        const tok = await getAuthToken();
+        const r = await fetch("/api/ai/image-prompt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
+          body: JSON.stringify({
+            topic:   postData.metadata.topic,
+            segment: postData.metadata.segment,
+            post:    editedContent,
+          }),
+        });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (j?.imagePrompt) {
+          setImagePrompt(j.imagePrompt);
+          localStorage.setItem("latest_post", JSON.stringify({ ...postData, imagePrompt: j.imagePrompt }));
+        }
+      } catch { /* non-fatal */ }
+    })();
+  }, [imagePrompt, editedContent, postData]);
+
   /* ── Regenerate post ── */
   const handleRegeneratePost = async () => {
     if (!postData || isRegeneratingPost) return;
@@ -289,8 +320,23 @@ export default function PostPreviewPage() {
           regenerationTrail:     regenerationTrail.length > 0 ? regenerationTrail : undefined,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Regeneration failed");
+      const streamed = await consumeGenerateStream(res);
+      // Lazy image prompt — fire in parallel, soft 12s ceiling. Old prompt
+      // is reused if the regen lookup is slow; user can still hit "Regenerate
+      // image prompt" on the preview if they want a fresh one.
+      const newImagePromptPromise = fetch("/api/ai/image-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(regenToken ? { Authorization: `Bearer ${regenToken}` } : {}) },
+        body: JSON.stringify({ topic: postData.metadata.topic, segment: postData.metadata.segment, post: streamed.post }),
+      })
+        .then((r) => r.ok ? r.json() : { imagePrompt: "" })
+        .then((j) => (j?.imagePrompt as string) || "")
+        .catch(() => "");
+      const newImagePrompt: string = await Promise.race([
+        newImagePromptPromise,
+        new Promise<string>((r) => setTimeout(() => r(imagePrompt || ""), 12000)),
+      ]);
+      const data = { post: streamed.post, imagePrompt: newImagePrompt };
 
       setEditedContent(data.post);
       setImagePrompt(data.imagePrompt);
