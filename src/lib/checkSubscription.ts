@@ -3,10 +3,10 @@ import { adminDb } from "./firebase-admin";
 export type PlanName = "free" | "starter" | "pro" | "business";
 
 export const PLAN_LIMITS = {
-  free:     { postsPerMonth: 5,    imagesPerMonth: 2,    faceImagesPerMonth: 0,  profiles: 1, companyPages: 0, campaigns: false, corporate: false, carousel: false },
-  starter:  { postsPerMonth: 30,   imagesPerMonth: 10,   faceImagesPerMonth: 5,  profiles: 1, companyPages: 0, campaigns: false, corporate: false, carousel: false },
-  pro:      { postsPerMonth: 100,  imagesPerMonth: 50,   faceImagesPerMonth: 20, profiles: 1, companyPages: 1, campaigns: true,  corporate: true,  carousel: true  },
-  business: { postsPerMonth: 9999, imagesPerMonth: 9999, faceImagesPerMonth: 9999, profiles: 3, companyPages: 3, campaigns: true,  corporate: true,  carousel: true  },
+  free:     { postsPerMonth: 5,    imagesPerMonth: 2,    faceImagesPerMonth: 0,  profiles: 1, companyPages: 0, campaigns: false, corporate: false, carousel: false, teamSize: 0 },
+  starter:  { postsPerMonth: 30,   imagesPerMonth: 10,   faceImagesPerMonth: 5,  profiles: 1, companyPages: 0, campaigns: false, corporate: false, carousel: false, teamSize: 0 },
+  pro:      { postsPerMonth: 100,  imagesPerMonth: 50,   faceImagesPerMonth: 20, profiles: 1, companyPages: 1, campaigns: true,  corporate: true,  carousel: true,  teamSize: 0 },
+  business: { postsPerMonth: 9999, imagesPerMonth: 9999, faceImagesPerMonth: 9999, profiles: 3, companyPages: 3, campaigns: true,  corporate: true,  carousel: true,  teamSize: 5 },
 } as const;
 
 export const PLAN_IDS: Record<string, PlanName> = {
@@ -62,6 +62,16 @@ export function canUseCorporate(plan: string): boolean {
 export function canUseCarousel(plan: string): boolean {
   const limits = PLAN_LIMITS[plan as PlanName] ?? PLAN_LIMITS.free;
   return limits.carousel;
+}
+
+export function canUseTeam(plan: string): boolean {
+  const limits = PLAN_LIMITS[plan as PlanName] ?? PLAN_LIMITS.free;
+  return limits.teamSize > 0;
+}
+
+export function getTeamSeatLimit(plan: string): number {
+  const limits = PLAN_LIMITS[plan as PlanName] ?? PLAN_LIMITS.free;
+  return limits.teamSize;
 }
 
 export async function canUserPerformAction(
