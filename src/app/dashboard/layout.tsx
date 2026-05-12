@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, UserCircle2, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut, BookOpen, HelpCircle, TrendingUp, Rocket, CreditCard, Lightbulb, Zap } from "lucide-react";
+import { LayoutDashboard, UserCircle2, Building2, User, Brain, PenSquare, FileText, Clock, CalendarDays, LogOut, BookOpen, HelpCircle, TrendingUp, Rocket, CreditCard, Lightbulb, Zap, Users } from "lucide-react";
 import { SegmentProvider, useSegment } from "@/lib/context/segment";
 import { useAuth } from "@/lib/context/auth";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
@@ -95,9 +95,10 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
     {
       label: "Account",
       items: [
-        { href: "/dashboard/settings", label: "Profile",  icon: <UserCircle2 className="w-[15px] h-[15px]" /> },
-        { href: "/dashboard/billing",  label: "Billing",  icon: <CreditCard className="w-[15px] h-[15px]" /> },
-        { href: "/dashboard/guide",    label: "Guide",    icon: <BookOpen className="w-[15px] h-[15px]" /> },
+        { href: "/dashboard/settings",      label: "Profile",  icon: <UserCircle2 className="w-[15px] h-[15px]" /> },
+        { href: "/dashboard/settings/team", label: "Team",     icon: <Users className="w-[15px] h-[15px]" /> },
+        { href: "/dashboard/billing",       label: "Billing",  icon: <CreditCard className="w-[15px] h-[15px]" /> },
+        { href: "/dashboard/guide",         label: "Guide",    icon: <BookOpen className="w-[15px] h-[15px]" /> },
       ],
     },
   ];

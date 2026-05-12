@@ -203,6 +203,11 @@ export default function PostDetailDrawer({ post, onClose, onReschedule, onDelete
               {post.segment && (
                 <span className="text-[11px] bg-[var(--toggle-bg)] text-[var(--text-sub)] px-2 py-0.5 rounded-full capitalize">{post.segment}</span>
               )}
+              {(post as any).authorDisplayName && post.segment === "corporate" && (
+                <span className="text-[11px] bg-[var(--primary)]/10 text-[var(--primary)] px-2 py-0.5 rounded-full font-medium">
+                  Posted by {(post as any).authorDisplayName}
+                </span>
+              )}
             </div>
           </div>
 
