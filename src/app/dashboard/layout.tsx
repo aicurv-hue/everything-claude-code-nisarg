@@ -10,6 +10,7 @@ import { getAuthToken } from "@/lib/utils/getAuthToken";
 import OnboardingModal from "@/components/ui/OnboardingModal";
 import QuickAddIdea from "@/components/ui/QuickAddIdea";
 import Logo from "@/components/ui/Logo";
+import PendingInviteBanner from "@/components/PendingInviteBanner";
 import BottomNav from "@/components/mobile/BottomNav";
 import MobileHeader from "@/components/mobile/MobileHeader";
 import { PlanStatusProvider, usePlanStatus } from "@/lib/context/planStatus";
@@ -317,6 +318,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen hidden md:flex bg-[var(--background)] text-[var(--foreground)]">
         <Sidebar onOpenGuide={() => setShowGuide(true)} failedCount={failedCount} />
         <main className="flex-1 overflow-auto min-h-screen bg-[var(--bg-sub)]" style={{ padding: '32px 36px' }}>
+          <PendingInviteBanner />
           {trialBanner && !bannerDismissed && (
             <div className="bg-amber-500/20 text-amber-400 text-sm font-medium px-4 py-2 flex items-center justify-between rounded-lg mb-4 border border-amber-500/30">
               <span>Trial active — {trialBanner.daysRemaining} day{trialBanner.daysRemaining !== 1 ? "s" : ""} remaining</span>
@@ -334,6 +336,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         <MobileHeader />
         <main className="flex-1 overflow-auto pb-20">
           {/* pb-20 = clears the 64px bottom nav */}
+          <div className="px-4 pt-3"><PendingInviteBanner /></div>
           {trialBanner && !bannerDismissed && (
             <div className="bg-amber-500 text-black text-sm font-medium px-4 py-2 flex items-center justify-between">
               <span>Trial active — {trialBanner.daysRemaining} day{trialBanner.daysRemaining !== 1 ? "s" : ""} remaining</span>

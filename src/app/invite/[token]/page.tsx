@@ -10,12 +10,29 @@ interface PageProps {
   params: Promise<{ token: string }>;
 }
 
+interface InvitePreview {
+  invite: {
+    id: string;
+    status: string;
+    email: string;
+    inviterName: string;
+    orgName: string | null;
+    expiresAt: number | null;
+    expired: boolean;
+    emailMatches: boolean;
+  };
+  team: { memberCount: number; orgName: string | null };
+}
+
 export default function InviteAcceptPage({ params }: PageProps) {
   const { token } = use(params);
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [status, setStatus] = useState<"idle" | "accepting" | "success" | "error">("idle");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [preview, setPreview] = useState<InvitePreview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(true);
+  const [acceptStatus, setAcceptStatus] = useState<"idle" | "accepting" | "success" | "error">("idle");
+  const [acceptError, setAcceptError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -24,13 +41,37 @@ export default function InviteAcceptPage({ params }: PageProps) {
     }
   }, [user, loading, router, token]);
 
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const idToken = await getAuthToken();
+        const res = await fetch(`/api/team/invite/${encodeURIComponent(token)}/preview`, {
+          headers: idToken ? { Authorization: `Bearer ${idToken}` } : {},
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok) {
+          setPreviewError(data?.error || "Could not load invite");
+        } else {
+          setPreview(data);
+        }
+      } catch {
+        if (!cancelled) setPreviewError("Could not load invite");
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user, token]);
+
   async function handleAccept() {
-    setStatus("accepting");
-    setErrorMsg(null);
+    setAcceptStatus("accepting");
+    setAcceptError(null);
     try {
       const idToken = await getAuthToken();
       if (!idToken) throw new Error("Sign-in required");
-
       const res = await fetch("/api/team/invite/accept", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
@@ -38,60 +79,105 @@ export default function InviteAcceptPage({ params }: PageProps) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setStatus("error");
-        setErrorMsg(data?.error || "Could not accept invite");
+        setAcceptStatus("error");
+        setAcceptError(data?.error || "Could not accept invite");
         return;
       }
-      setStatus("success");
+      setAcceptStatus("success");
       setTimeout(() => router.push("/dashboard"), 1500);
     } catch (err) {
-      setStatus("error");
-      setErrorMsg(err instanceof Error ? err.message : "Could not accept invite");
+      setAcceptStatus("error");
+      setAcceptError(err instanceof Error ? err.message : "Could not accept invite");
     }
   }
 
-  if (loading || !user) {
+  if (loading || !user || previewLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-sm text-slate-500">Loading…</div>
+      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+        <div className="text-sm text-[var(--text-muted)]">Loading…</div>
       </div>
     );
   }
 
+  if (previewError || !preview) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--background)] px-4">
+        <div className="max-w-md w-full bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+          <h1 className="text-lg font-semibold text-[var(--foreground)] mb-2">Invite unavailable</h1>
+          <p className="text-sm text-[var(--text-sub)] mb-4">{previewError || "Invite not found."}</p>
+          <Link href="/dashboard" className="text-sm text-[var(--primary)] underline">Go to dashboard</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const { invite, team } = preview;
+  const teamLabel = invite.orgName || team.orgName || `${invite.inviterName}'s team`;
+  const totalSeatsAfter = team.memberCount + 1;
+  const expiresOn = invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : null;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white px-4">
-      <div className="max-w-md w-full">
-        <h1 className="text-2xl font-semibold text-slate-900 mb-3">Join a Cridl team</h1>
-        <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-          You're signed in as <span className="font-medium text-slate-900">{user.email}</span>. Accepting this invite will:
+    <div className="min-h-screen flex items-center justify-center bg-[var(--background)] px-4 py-10">
+      <div className="max-w-lg w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-8">
+        <h1 className="text-2xl font-semibold text-[var(--foreground)] mb-2">Join a Cridl team</h1>
+        <p className="text-sm text-[var(--text-sub)] mb-6 leading-relaxed">
+          <span className="font-medium text-[var(--foreground)]">{invite.inviterName}</span> invited you to join <span className="font-medium text-[var(--foreground)]">{teamLabel}</span>.
         </p>
-        <ul className="text-sm text-slate-600 space-y-2 mb-6 list-disc pl-5">
-          <li>Add you to the team owner's company page</li>
-          <li>Unlock Pro-level features on your personal workspace while you're on the team</li>
-          <li>Cancel any active paid subscription on this account (no refund)</li>
+
+        <div className="rounded-lg bg-[var(--bg-sub)] border border-[var(--border)] p-4 mb-6 space-y-2 text-sm">
+          <div className="flex justify-between"><span className="text-[var(--text-muted)]">Signed in as</span><span className="text-[var(--foreground)]">{user.email}</span></div>
+          <div className="flex justify-between"><span className="text-[var(--text-muted)]">Invite addressed to</span><span className="text-[var(--foreground)]">{invite.email}</span></div>
+          <div className="flex justify-between"><span className="text-[var(--text-muted)]">Team size after joining</span><span className="text-[var(--foreground)]">{totalSeatsAfter} of 6</span></div>
+          {expiresOn && (
+            <div className="flex justify-between"><span className="text-[var(--text-muted)]">Invite expires</span><span className="text-[var(--foreground)]">{expiresOn}</span></div>
+          )}
+        </div>
+
+        <p className="text-sm text-[var(--text-sub)] mb-3 font-medium">By accepting, you'll:</p>
+        <ul className="text-sm text-[var(--text-sub)] space-y-1.5 mb-6 list-disc pl-5">
+          <li>Get added to the team's shared company page (post directly, no approval)</li>
+          <li>Unlock Pro-level features on your personal workspace while on the team</li>
+          <li>Have any active paid Cridl subscription on this account cancelled (no refund)</li>
         </ul>
 
-        {status === "success" ? (
-          <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 mb-4">
+        {invite.expired && (
+          <div className="mb-4 rounded-lg bg-amber-500/10 border border-amber-500/30 px-4 py-3 text-sm text-amber-400">
+            This invite has expired. Ask the team owner to send a new one.
+          </div>
+        )}
+
+        {!invite.emailMatches && !invite.expired && (
+          <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
+            This invite is for <span className="font-medium">{invite.email}</span>. Sign in with that email to accept.
+          </div>
+        )}
+
+        {acceptStatus === "success" ? (
+          <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 text-sm text-emerald-400">
             Joined! Redirecting…
           </div>
         ) : (
           <button
             onClick={handleAccept}
-            disabled={status === "accepting"}
-            className="w-full bg-slate-900 text-white text-sm font-medium px-4 py-3 rounded-lg hover:bg-slate-800 disabled:opacity-50"
+            disabled={
+              acceptStatus === "accepting" ||
+              invite.expired ||
+              !invite.emailMatches ||
+              invite.status !== "pending"
+            }
+            className="w-full bg-[var(--primary)] text-white text-sm font-semibold px-4 py-3 rounded-lg hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
-            {status === "accepting" ? "Accepting…" : "Accept invite"}
+            {acceptStatus === "accepting" ? "Accepting…" : "Accept invite"}
           </button>
         )}
 
-        {errorMsg && (
-          <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
-            {errorMsg}
+        {acceptError && (
+          <div className="mt-4 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
+            {acceptError}
           </div>
         )}
 
-        <p className="text-xs text-slate-500 mt-6 text-center">
+        <p className="text-xs text-[var(--text-muted)] mt-6 text-center">
           Not your invite? <Link href="/dashboard" className="underline">Go to dashboard</Link>.
         </p>
       </div>

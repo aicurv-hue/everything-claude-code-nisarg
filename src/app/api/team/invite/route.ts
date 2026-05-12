@@ -10,8 +10,6 @@ import {
   generateInviteToken,
   inviteExpiryMillis,
 } from "@/lib/team";
-import { sendTeamInviteEmail } from "@/lib/email/resend";
-
 export const runtime = "nodejs";
 
 async function verifyToken(req: NextRequest): Promise<string | null> {
@@ -79,24 +77,23 @@ export async function POST(req: NextRequest) {
   const token = generateInviteToken(inviteId);
   const expiresAt = Timestamp.fromMillis(inviteExpiryMillis());
 
+  const inviterName =
+    (ownerSnap.data()?.displayName as string) ||
+    (ownerSnap.data()?.name as string) ||
+    (ownerSnap.data()?.email as string) ||
+    "A Cridl user";
+
   await inviteRef.set({
     teamId: team.id,
     ownerUid: uid,
     orgId: team.orgId || null,
+    orgName: team.orgName || null,
+    inviterName,
     email,
     status: "pending",
     createdAt: FieldValue.serverTimestamp(),
     expiresAt,
   });
-
-  try {
-    const inviterName = (ownerSnap.data()?.displayName as string) || (ownerSnap.data()?.name as string) || "Your colleague";
-    const teamLabel = team.orgName ? `${team.orgName} on Cridl` : "the Cridl team";
-    await sendTeamInviteEmail({ to: email, inviterName, teamLabel, inviteToken: token });
-  } catch (err) {
-    console.error("[team/invite] email send failed", err);
-    // Don't fail the invite — owner can copy the link from the response
-  }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   return NextResponse.json({
