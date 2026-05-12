@@ -113,14 +113,19 @@ export async function POST(req: NextRequest) {
   if (!postSnap.exists) return NextResponse.json({ error: "Post not found" }, { status: 404 });
 
   const post = postSnap.data()!;
-  if (post.user_id !== uid) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // Allow if caller owns the post (user_id) OR drafted it (authorUid — team member case)
+  const isAllowed = post.user_id === uid || post.authorUid === uid;
+  if (!isAllowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (post.status !== "scheduled" && post.status !== "failed" && post.status !== "published") {
     return NextResponse.json({ error: "Post is not in a publishable state" }, { status: 400 });
   }
 
-  // Plan gate — corporate posting is Pro+ only
+  // Plan gate uses the post owner's plan, not the caller's. For team-shared
+  // corporate posts user_id is the team owner (always Business); for solo posts
+  // it's the caller themselves.
+  const ownerUid: string = post.user_id;
   if (post.segment === "corporate") {
-    const plan = await getUserPlan(uid);
+    const plan = await getUserPlan(ownerUid);
     if (!canUseCorporate(plan)) {
       return NextResponse.json(
         { error: "Company page posting requires the Pro plan or higher.", code: "PLAN_UPGRADE_REQUIRED" },
@@ -129,8 +134,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Get LinkedIn token
-  const tokenSnap = await adminDb.collection("tokens").doc(uid).get();
+  // Use the post owner's LinkedIn token. For team-shared corporate posts this
+  // is the team owner's token — which is the only token with company-page
+  // posting permission. For solo posts it's the caller themselves.
+  const tokenSnap = await adminDb.collection("tokens").doc(ownerUid).get();
   if (!tokenSnap.exists) {
     return NextResponse.json({ error: "LinkedIn not connected. Connect in Settings first." }, { status: 401 });
   }
@@ -147,7 +154,7 @@ export async function POST(req: NextRequest) {
   if (post.segment === "corporate") {
     let orgId = post.organization_id;
     if (!orgId) {
-      const profileSnap = await adminDb.collection("profiles").doc(uid).get();
+      const profileSnap = await adminDb.collection("profiles").doc(ownerUid).get();
       orgId = profileSnap.data()?.corporate?.linkedinOrganizationId;
     }
     if (!orgId) {

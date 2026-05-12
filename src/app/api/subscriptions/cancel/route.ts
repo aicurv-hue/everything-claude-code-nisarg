@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getRazorpay } from "@/lib/razorpay";
 import { FieldValue } from "firebase-admin/firestore";
+import { getOwnedTeam, countActiveMembers } from "@/lib/team";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,24 @@ export async function POST(req: NextRequest) {
     const subDoc = await adminDb.collection("subscriptions").doc(subscriptionId).get();
     if (!subDoc.exists || subDoc.data()?.userId !== userId) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    // Hard-block cancellation if user owns a team with active members.
+    // Cancellation drops them to "free" plan, which has no team access — would
+    // strand the team. They must remove all members first.
+    const ownTeam = await getOwnedTeam(userId);
+    if (ownTeam) {
+      const activeMembers = await countActiveMembers(ownTeam.id);
+      if (activeMembers > 0) {
+        return NextResponse.json(
+          {
+            error: `Cannot cancel — your team has ${activeMembers} active member${activeMembers === 1 ? "" : "s"}. Remove all team members first, then cancel.`,
+            code: "TEAM_HAS_MEMBERS",
+            activeMembers,
+          },
+          { status: 409 }
+        );
+      }
     }
 
     const now = FieldValue.serverTimestamp();

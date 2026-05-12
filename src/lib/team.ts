@@ -1,5 +1,5 @@
 import { adminDb } from "./firebase-admin";
-import { getUserPlan, canUseTeam, getTeamSeatLimit, type PlanName } from "./checkSubscription";
+import { getUserPlan, canUseTeam, getTeamSeatLimit } from "./checkSubscription";
 import crypto from "crypto";
 
 export type TeamMemberStatus = "active" | "removed";
@@ -50,20 +50,6 @@ export async function getActiveMembership(uid: string) {
   const data = memberSnap.data() as TeamMemberDoc;
   if (data.status !== "active") return null;
   return { id: memberSnap.id, ...data };
-}
-
-/**
- * Effective plan for a user: their own plan, OR Pro if they are an active member
- * of a Business team (members inherit Pro-tier features while on a team).
- */
-export async function getEffectivePlan(uid: string): Promise<PlanName> {
-  const ownPlan = await getUserPlan(uid);
-  if (ownPlan === "business" || ownPlan === "pro") return ownPlan;
-
-  const membership = await getActiveMembership(uid);
-  if (!membership) return ownPlan;
-
-  return "pro";
 }
 
 /** Lazily create a team for this owner if they don't have one yet. */

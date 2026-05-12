@@ -37,11 +37,19 @@ export async function getUserPlan(userId: string): Promise<PlanName> {
   }
 
   // Cancelled or paused subscriptions lose paid quota immediately
+  let basePlan: PlanName = (data.plan as PlanName) || "free";
   if (data.planStatus === "cancelled" || data.planStatus === "paused") {
-    return "free";
+    basePlan = "free";
   }
 
-  return (data.plan as PlanName) || "free";
+  // Active team members inherit Pro-tier features while on a Business team.
+  // We trust the activeTeamId field on the user doc (set on accept, cleared on
+  // leave/remove). Business owners never have activeTeamId set, so this is safe.
+  if (data.activeTeamId && basePlan !== "business") {
+    return "pro";
+  }
+
+  return basePlan;
 }
 
 export async function getUserLimits(userId: string) {
