@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Users, UserPlus, Mail, X, Trash2, AlertTriangle, Copy, Check, Crown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Users, UserPlus, Mail, X, Trash2, AlertTriangle, Copy, Check, Crown, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/context/auth";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
 
@@ -23,8 +24,17 @@ interface PendingInvite {
   expiresAt: number | null;
 }
 
+interface Membership {
+  teamId: string;
+  ownerUid: string;
+  ownerName: string | null;
+  ownerEmail: string | null;
+  joinedAt: number | null;
+}
+
 interface TeamData {
   team: { id: string; orgName: string | null } | null;
+  membership: Membership | null;
   plan: string;
   canUseTeam: boolean;
   seatLimit: number;
@@ -34,6 +44,7 @@ interface TeamData {
 
 export default function TeamSettingsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [data, setData] = useState<TeamData | null>(null);
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -42,6 +53,8 @@ export default function TeamSettingsPage() {
   const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -119,6 +132,29 @@ export default function TeamSettingsPage() {
     }
   }
 
+  async function handleLeave() {
+    if (!confirm("Leave this team? You'll lose company-page access and Pro-level features immediately. Your personal posts and account stay intact.")) return;
+    setLeaving(true);
+    setLeaveError(null);
+    try {
+      const token = await getAuthToken();
+      const res = await fetch("/api/team/leave", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setLeaveError(json?.error || "Failed to leave team");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      setLeaveError(err instanceof Error ? err.message : "Failed to leave team");
+    } finally {
+      setLeaving(false);
+    }
+  }
+
   async function copyInviteUrl() {
     if (!lastInviteUrl) return;
     try {
@@ -136,7 +172,52 @@ export default function TeamSettingsPage() {
     return <div className="text-sm text-red-400">Could not load team data.</div>;
   }
 
-  // Free / Starter / Pro — show upsell
+  // Member view — caller is on someone else's team
+  if (data.membership) {
+    const m = data.membership;
+    return (
+      <div className="max-w-2xl mx-auto animate-fade-in space-y-5">
+        <div>
+          <h1 className="text-[22px] font-bold text-[var(--foreground)] flex items-center gap-2">
+            <Users className="w-5 h-5" /> Team membership
+          </h1>
+          <p className="text-[13px] text-[var(--text-muted)] mt-1">
+            You're on a Cridl team. While you're here, your personal workspace gets Pro-level features and you can post on the team's shared company page.
+          </p>
+        </div>
+
+        <div className="card" style={{ padding: '20px' }}>
+          <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)] font-semibold mb-2">Team owner</div>
+          <p className="text-[14px] font-semibold text-[var(--foreground)]">{m.ownerName || m.ownerEmail || "Owner"}</p>
+          {m.ownerEmail && m.ownerName && (
+            <p className="text-[12px] text-[var(--text-muted)] mt-0.5">{m.ownerEmail}</p>
+          )}
+          {m.joinedAt && (
+            <p className="text-[12px] text-[var(--text-muted)] mt-2">Joined {new Date(m.joinedAt).toLocaleDateString()}</p>
+          )}
+        </div>
+
+        <div className="card" style={{ padding: '20px' }}>
+          <h2 className="text-[14px] font-semibold text-[var(--foreground)] mb-2">Leave the team</h2>
+          <p className="text-[12px] text-[var(--text-sub)] mb-3 leading-relaxed">
+            Leaving instantly revokes your company-page access and reverts your personal workspace to the Free plan. Any company-page posts you drafted stay in the team queue and become owned by the team owner. Your personal posts and account are unaffected.
+          </p>
+          <button
+            onClick={handleLeave}
+            disabled={leaving}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-red-400 bg-red-500/10 hover:bg-red-500/20 disabled:opacity-50"
+          >
+            <LogOut className="w-3.5 h-3.5" /> {leaving ? "Leaving…" : "Leave team"}
+          </button>
+          {leaveError && (
+            <p className="text-[12px] text-red-400 mt-2">{leaveError}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Free / Starter / Pro with no membership — show upsell
   if (!data.canUseTeam) {
     return (
       <div className="max-w-2xl mx-auto animate-fade-in">

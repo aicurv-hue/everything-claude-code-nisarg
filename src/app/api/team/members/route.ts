@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 import { getUserPlan, canUseTeam, getTeamSeatLimit } from "@/lib/checkSubscription";
-import { getOwnedTeam } from "@/lib/team";
+import { getOwnedTeam, getActiveMembership } from "@/lib/team";
 
 export const runtime = "nodejs";
 
@@ -36,8 +36,33 @@ export async function GET(req: NextRequest) {
   const team = await getOwnedTeam(uid);
 
   if (!team) {
+    // No owned team — caller might still be an active member of someone else's
+    // team. Return that membership so the UI can render a "Leave team" panel.
+    const membership = await getActiveMembership(uid);
+    let membershipInfo: {
+      teamId: string;
+      ownerUid: string;
+      ownerName: string | null;
+      ownerEmail: string | null;
+      joinedAt: number | null;
+    } | null = null;
+
+    if (membership) {
+      const ownerSnap = await adminDb.collection("users").doc(membership.ownerUid).get();
+      const ownerData = ownerSnap.data() || {};
+      const joinedAtMs = tsToMillis(membership.joinedAt);
+      membershipInfo = {
+        teamId: membership.teamId,
+        ownerUid: membership.ownerUid,
+        ownerName: (ownerData.displayName as string) || (ownerData.name as string) || null,
+        ownerEmail: (ownerData.email as string) || null,
+        joinedAt: joinedAtMs,
+      };
+    }
+
     return NextResponse.json({
       team: null,
+      membership: membershipInfo,
       plan,
       canUseTeam: canUseTeam(plan),
       seatLimit: getTeamSeatLimit(plan),
@@ -81,6 +106,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     team: { id: team.id, orgId: team.orgId, orgName: team.orgName },
+    membership: null,
     plan,
     canUseTeam: canUseTeam(plan),
     seatLimit: getTeamSeatLimit(plan),

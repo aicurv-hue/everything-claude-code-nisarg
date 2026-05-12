@@ -128,4 +128,74 @@ export async function canManageTeam(uid: string, teamId: string): Promise<boolea
   return teamSnap.data()?.ownerUid === uid;
 }
 
+/**
+ * Shared removal logic for both owner-initiated remove and member-initiated leave.
+ * Idempotent — calling it on an already-removed member is a no-op.
+ *
+ * Effects:
+ *  - Sets teamMembers/{teamId_memberUid}.status = "removed", stamps removedAt
+ *  - Decrements teams/{teamId}.memberCount (guarded against double-decrement)
+ *  - Clears users/{memberUid}.activeTeamId — getUserPlan reverts to actual plan
+ *  - Reassigns any team corporate posts authored by the member: authorUid →
+ *    ownerUid (so removed member loses edit access), originalAuthorUid kept
+ *    for history. authorDisplayName left as-is so "Posted by" UI still shows
+ *    the original drafter.
+ */
+export async function removeMember(teamId: string, memberUid: string): Promise<void> {
+  const { FieldValue } = await import("firebase-admin/firestore");
+  const teamRef = adminDb.collection("teams").doc(teamId);
+  const memberRef = adminDb.collection("teamMembers").doc(teamMemberId(teamId, memberUid));
+  const userRef = adminDb.collection("users").doc(memberUid);
+
+  const teamSnap = await teamRef.get();
+  if (!teamSnap.exists) throw new Error("Team not found");
+  const ownerUid = teamSnap.data()?.ownerUid as string;
+
+  // 1) Member status flip + team count + user activeTeamId in one transaction
+  await adminDb.runTransaction(async (tx) => {
+    const m = await tx.get(memberRef);
+    if (!m.exists) return;
+    const data = m.data()!;
+    if (data.status === "removed") return; // idempotent
+
+    tx.update(memberRef, {
+      status: "removed",
+      removedAt: FieldValue.serverTimestamp(),
+    });
+    tx.update(teamRef, {
+      memberCount: FieldValue.increment(-1),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    tx.set(
+      userRef,
+      { activeTeamId: FieldValue.delete(), teamRemovedAt: FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+  });
+
+  // 2) Reassign authorUid on team corporate posts they drafted
+  // Single where(teamId) + JS filter — no composite index needed.
+  const postsSnap = await adminDb.collection("posts").where("teamId", "==", teamId).get();
+  const toReassign = postsSnap.docs.filter((d) => {
+    const p = d.data();
+    return p.authorUid === memberUid && p.segment === "corporate";
+  });
+
+  if (toReassign.length > 0) {
+    // Firestore batch supports up to 500 writes
+    for (let i = 0; i < toReassign.length; i += 450) {
+      const batch = adminDb.batch();
+      for (const doc of toReassign.slice(i, i + 450)) {
+        const data = doc.data();
+        batch.update(doc.ref, {
+          originalAuthorUid: data.authorUid,
+          authorUid: ownerUid,
+          updated_at: FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+    }
+  }
+}
+
 export { getTeamSeatLimit };
