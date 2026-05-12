@@ -840,3 +840,60 @@ Iterative regeneration with comments now has temporary, session-scoped memory so
 - **Files**:
   - New: `src/lib/db/regenerationSessions.ts`, `src/app/api/regeneration-sessions/[sessionId]/route.ts`.
   - Modified: `src/lib/ai/generate.ts` (PostRequest fields `initialPost` + `regenerationTrail`, new `buildRegenerationBlock`), `src/app/dashboard/create/page.tsx` (seeds `regenSessionId` + `initialPost` into `latest_post`), `src/app/dashboard/create/preview/page.tsx` (regen handler fetches trail → calls generate → appends turn; cleanup wired into save/schedule/publish).
+
+---
+
+## Team Feature (Business plan)
+
+Multi-user collaboration on a shared LinkedIn company page. Business owner + up to 5 team members. Members get Pro-level features on their personal workspace and can post directly to the team's company page using the owner's LinkedIn token. No approval flow — pure trust model.
+
+### Data model (Firestore)
+
+- **`teams/{teamId}`** — one per owner, lazily created on first invite. Fields: `ownerUid`, `orgId`, `orgName`, `memberCount` (denormalized), `createdAt`, `updatedAt`.
+- **`teamMembers/{teamId}_{memberUid}`** — composite docId. Re-invite reactivates the same record so prior history (joinedAt, prior drafts) survives. Fields: `teamId`, `memberUid`, `ownerUid`, `email`, `displayName`, `status: "active" | "removed"`, `invitedBy`, `joinedAt`, `removedAt?`, `rejoinedAt?`.
+- **`teamInvites/{inviteId}`** — Fields: `teamId`, `ownerUid`, `orgId`, `orgName`, `inviterName`, `email` (lowercased), `status: "pending" | "accepted" | "expired" | "revoked"`, `createdAt`, `expiresAt` (7d), `acceptedAt?`, `acceptedByUid?`, `revokedAt?`.
+- **`users/{uid}`** — adds `activeTeamId?: string`. Truth source for "is on a team." Drives `getUserPlan()` → `"pro"`.
+- **`posts/{postId}`** — for team corporate posts: `user_id = team.ownerUid` (so cron uses owner token + usage pools to owner), `authorUid = drafter`, `teamId = team.id`, `authorDisplayName = drafter name` (kept for "Posted by" UI even after member leaves), `originalAuthorUid?` (set on removal).
+
+### Invite token
+
+Signed HMAC-SHA256 of `inviteId` using `INVITE_SIGNING_SECRET`. Token format: `{inviteId}.{32charHex}`. Verified via `crypto.timingSafeEqual` to prevent timing attacks. Single env var, no JWT library.
+
+### Plan inheritance
+
+`getUserPlan()` in `src/lib/checkSubscription.ts` returns `"pro"` automatically when `users/{uid}.activeTeamId` is set and base plan isn't already `"business"`. This single change makes every existing plan-gated route (generation, image, face, carousel, campaigns) auto-correct for team members without per-call-site updates. Zero new Firestore reads — uses a field already on the user doc.
+
+### Post pipeline routing
+
+`/api/posts` POST runs `resolveTeamContext(uid)` which returns `owner | member | none` in one Firestore read pair. For corporate posts:
+- **member** → `user_id = team.ownerUid`, stamp `teamId` + `authorUid` + `authorDisplayName`. Owner's plan governs.
+- **owner** → `user_id = uid` (self), stamp `teamId` + `authorUid = uid` so members can see the post in their shared queue.
+- **none** → solo flow, `user_id = uid`, `authorUid = uid`, no `teamId`.
+
+`/api/posts` GET fetches own posts (`where user_id == uid`) plus, for active members, team-shared corporate posts (`where teamId == activeTeamId`, JS-filter `segment === "corporate"`). Deduped by post id.
+
+PATCH/DELETE auth check is `canEditPost(data, uid)`: `data.user_id === uid OR data.authorUid === uid`. Covers owner (always satisfies `user_id`) and drafter (satisfies `authorUid`).
+
+### Publish path
+
+Cron worker (`/api/cron/publish-due`) untouched — already keys on `post.user_id` for both LinkedIn token (`tokens/{user_id}`) and orgId (`profiles/{user_id}.corporate.linkedinOrganizationId`). Because we set `user_id = team.ownerUid` for team-shared corp posts, the cron naturally uses the owner's company-page-authorized token.
+
+`/api/posts/publish-now` mirrors this — fetches `tokens/{post.user_id}` (not caller's), plan-gates on the post owner's plan. Ownership check uses `canEditPost`.
+
+### Accept/leave/remove
+
+- **Accept** (`POST /api/team/invite/accept`): verifies signed token + expiry + email match against decoded Firebase ID token. Blocks if invitee already owns or belongs to another team. Auto-cancels their active Razorpay sub via `subscriptions.cancel({cancel_at_cycle_end:false})` (failure logs and proceeds — admin can clean up manually). One Firestore transaction: writes/reactivates `teamMembers` doc, increments team count, flips invite status, sets `users/{uid}.activeTeamId` + `plan: "free"` + `planStatus: "free"` + nullifies `subscriptionId`.
+- **Remove** / **Leave** share `removeMember(teamId, memberUid)` helper. Transaction: flip member status to "removed", decrement `teams/{teamId}.memberCount`, `FieldValue.delete()` the user's `activeTeamId`. Then batch-update any `posts where teamId == X` JS-filtered by `authorUid === memberUid AND segment === "corporate"` — sets `originalAuthorUid = authorUid` and `authorUid = ownerUid`. Removed member loses PATCH/DELETE access (canEditPost no longer matches). Idempotent.
+
+### Downgrade block
+
+`/api/subscriptions/cancel` checks `getOwnedTeam(uid)` + `countActiveMembers(teamId)`. If active members exist, returns 409 with `code: "TEAM_HAS_MEMBERS"`. Cancellation would strand the team on a downgraded plan with no team access.
+
+### Invitee surface
+
+In-app only — `RESEND_API_KEY` not required for v1. `PendingInviteBanner.tsx` mounts in `dashboard/layout.tsx` (desktop + mobile shells), polls `/api/team/invites/pending` on user-email change, and shows a Cridl-blue banner with "Review" CTA → `/invite/[token]` preview page. Owner can also copy the freshly-minted invite URL from the Team settings page's success panel and share via any channel.
+
+### Files
+
+- New: `src/lib/team.ts`, `src/lib/email/resend.ts` (dormant), `src/app/api/team/{invite,invite/accept,invite/revoke,invite/[token]/preview,invites/pending,members,members/remove,leave}/route.ts`, `src/app/invite/[token]/page.tsx`, `src/app/dashboard/settings/team/page.tsx`, `src/components/PendingInviteBanner.tsx`.
+- Modified: `src/lib/checkSubscription.ts` (teamSize, canUseTeam, getTeamSeatLimit, activeTeamId → "pro" inheritance), `src/app/api/posts/route.ts` (team routing in POST, teamId query in GET, canEditPost in PATCH/DELETE), `src/app/api/posts/publish-now/route.ts` (tokens/{post.user_id}, ownership check), `src/app/api/subscriptions/cancel/route.ts` (TEAM_HAS_MEMBERS block), `src/app/dashboard/layout.tsx` (PendingInviteBanner mount + Team nav link), `src/components/PricingCards.tsx` (Business plan bullet), `src/components/schedule/PostDetailDrawer.tsx` ("Posted by" pill).
