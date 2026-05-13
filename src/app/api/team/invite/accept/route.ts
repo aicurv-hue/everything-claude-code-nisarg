@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getRazorpay } from "@/lib/razorpay";
+import { getUserPlan, canUseTeam, getTeamSeatLimit } from "@/lib/checkSubscription";
 import {
   verifyInviteToken,
   getActiveMembership,
@@ -49,7 +50,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invite expired" }, { status: 410 });
   }
 
-  if (!user.email || user.email !== String(invite.email).toLowerCase()) {
+  // Some Firebase auth providers don't include `email` in the JWT (phone-only,
+  // custom token, etc.). Fall back to the email on the user doc before
+  // rejecting — Cridl is email-primary so the user doc reliably has one.
+  let callerEmail = user.email;
+  if (!callerEmail) {
+    const fallbackSnap = await adminDb.collection("users").doc(user.uid).get();
+    callerEmail = String(fallbackSnap.data()?.email || "").toLowerCase();
+  }
+  if (!callerEmail || callerEmail !== String(invite.email).toLowerCase()) {
     return NextResponse.json(
       { error: "This invite is for a different email address", invitedEmail: invite.email },
       { status: 403 }
@@ -72,12 +81,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Auto-cancel invitee's active paid sub (no refund — by design)
+  // Verify the inviting owner still has team entitlement before allowing accept.
+  // If the owner downgraded between invite-create and now we must not produce
+  // a phantom team-member on a non-Business owner.
+  const ownerPlan = await getUserPlan(invite.ownerUid as string);
+  if (!canUseTeam(ownerPlan)) {
+    return NextResponse.json(
+      { error: "Inviter no longer has team access. Ask them to reactivate Business." },
+      { status: 409 }
+    );
+  }
+
+  // Auto-cancel invitee's active paid sub (no refund — by design). If the
+  // cancel fails we abort the accept — silently downgrading the user while
+  // their Razorpay sub keeps billing creates a payment/state mismatch.
   const userRef = adminDb.collection("users").doc(user.uid);
   const userSnap = await userRef.get();
   const userData = userSnap.data() || {};
   const subId = userData.subscriptionId as string | undefined;
   const planStatus = userData.planStatus as string | undefined;
+  let cancelledSubId: string | null = null;
   if (subId && (planStatus === "active" || planStatus === "authenticated")) {
     try {
       await getRazorpay().subscriptions.cancel(subId, { cancel_at_cycle_end: false } as never);
@@ -85,9 +108,13 @@ export async function POST(req: NextRequest) {
         { status: "cancelled", updatedAt: FieldValue.serverTimestamp() },
         { merge: true }
       );
+      cancelledSubId = subId;
     } catch (err) {
       console.error("[team/invite/accept] razorpay cancel failed", err);
-      // Proceed regardless — owner can clean up manually if needed
+      return NextResponse.json(
+        { error: "Could not cancel your existing paid subscription. Try again in a minute or cancel it from Billing first." },
+        { status: 502 }
+      );
     }
   }
 
@@ -95,53 +122,91 @@ export async function POST(req: NextRequest) {
   const memberDocId = teamMemberId(teamId, user.uid);
   const memberRef = adminDb.collection("teamMembers").doc(memberDocId);
   const teamRef = adminDb.collection("teams").doc(teamId);
+  const seatLimit = getTeamSeatLimit("business");
 
-  await adminDb.runTransaction(async (tx) => {
-    const teamSnap = await tx.get(teamRef);
-    if (!teamSnap.exists) throw new Error("Team no longer exists");
+  try {
+    await adminDb.runTransaction(async (tx) => {
+      // Re-read invite — could have been revoked/expired/accepted concurrently.
+      const inviteRecheck = await tx.get(inviteRef);
+      if (!inviteRecheck.exists || inviteRecheck.data()?.status !== "pending") {
+        throw new Error("INVITE_STATE_CHANGED");
+      }
 
-    const memberSnap = await tx.get(memberRef);
-    const wasPreviouslyRemoved = memberSnap.exists && memberSnap.data()?.status === "removed";
+      const teamSnap = await tx.get(teamRef);
+      if (!teamSnap.exists) throw new Error("TEAM_GONE");
 
-    tx.set(
-      memberRef,
-      {
-        teamId,
-        memberUid: user.uid,
-        ownerUid: invite.ownerUid,
-        email: user.email,
-        displayName: userData.displayName || userData.name || null,
-        status: "active",
-        invitedBy: invite.ownerUid,
-        joinedAt: memberSnap.exists ? memberSnap.data()?.joinedAt : FieldValue.serverTimestamp(),
-        rejoinedAt: wasPreviouslyRemoved ? FieldValue.serverTimestamp() : null,
-      },
-      { merge: true }
-    );
+      // Re-check seat cap inside the tx. Use single where(teamId) + JS filter
+      // to comply with the project rule against composite queries.
+      const membersSnap = await tx.get(
+        adminDb.collection("teamMembers").where("teamId", "==", teamId)
+      );
+      const activeMembers = membersSnap.docs.filter(
+        (d) => d.id !== memberDocId && d.data().status === "active"
+      ).length;
+      if (activeMembers + 1 > seatLimit) {
+        throw new Error("SEAT_LIMIT");
+      }
 
-    tx.update(teamRef, {
-      memberCount: FieldValue.increment(1),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+      const memberSnap = await tx.get(memberRef);
+      const wasPreviouslyRemoved = memberSnap.exists && memberSnap.data()?.status === "removed";
 
-    tx.update(inviteRef, {
-      status: "accepted",
-      acceptedAt: FieldValue.serverTimestamp(),
-      acceptedByUid: user.uid,
-    });
+      tx.set(
+        memberRef,
+        {
+          teamId,
+          memberUid: user.uid,
+          ownerUid: invite.ownerUid,
+          email: callerEmail,
+          displayName: userData.displayName || userData.name || null,
+          status: "active",
+          invitedBy: invite.ownerUid,
+          joinedAt: memberSnap.exists ? memberSnap.data()?.joinedAt : FieldValue.serverTimestamp(),
+          rejoinedAt: wasPreviouslyRemoved ? FieldValue.serverTimestamp() : null,
+        },
+        { merge: true }
+      );
 
-    tx.set(
-      userRef,
-      {
+      tx.update(teamRef, {
+        memberCount: FieldValue.increment(1),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      tx.update(inviteRef, {
+        status: "accepted",
+        acceptedAt: FieldValue.serverTimestamp(),
+        acceptedByUid: user.uid,
+      });
+
+      // Only stamp activeTeamId — getUserPlan() reads this to return "pro"
+      // automatically. We do NOT overwrite plan/planStatus to "free": doing
+      // so destroys the user's real plan state, and on leave/remove they'd
+      // be unable to revert. Razorpay sub already cancelled above, so the
+      // separate webhook will move planStatus → cancelled in its own time.
+      const userUpdate: Record<string, unknown> = {
         activeTeamId: teamId,
-        plan: "free",
-        planStatus: "free",
-        subscriptionId: null,
         teamJoinedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-  });
+      };
+      if (cancelledSubId) {
+        // Clear the local subscriptionId pointer so Billing UI doesn't try to
+        // manage a now-cancelled subscription.
+        userUpdate.subscriptionId = null;
+      }
+      tx.set(userRef, userUpdate, { merge: true });
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed";
+    if (msg === "INVITE_STATE_CHANGED") {
+      return NextResponse.json({ error: "This invite is no longer pending." }, { status: 410 });
+    }
+    if (msg === "TEAM_GONE") {
+      return NextResponse.json({ error: "Team no longer exists." }, { status: 410 });
+    }
+    if (msg === "SEAT_LIMIT") {
+      return NextResponse.json({ error: "Team is now at its seat limit. Ask the owner to free a seat." }, { status: 409 });
+    }
+    console.error("[team/invite/accept]", err);
+    return NextResponse.json({ error: "Failed to accept invite" }, { status: 500 });
+  }
 
   return NextResponse.json({ success: true, teamId });
 }

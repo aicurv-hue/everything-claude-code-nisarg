@@ -142,6 +142,13 @@ export async function POST(req: NextRequest) {
         teamId = ctx.teamId;
         // Owner's plan is the effective plan for the post — they're Business by
         // definition (you can't have members without it), so corporate is allowed.
+
+        // Capture drafter's display name for "Posted by" UI — only on
+        // member-drafted posts so the owner's solo posts don't render with
+        // their own "Posted by" tag.
+        const drafterSnap = await adminDb.collection("users").doc(uid).get();
+        const d = drafterSnap.data() || {};
+        authorDisplayName = (d.displayName as string) || (d.name as string) || (d.email as string) || null;
       } else if (ctx.role === "owner") {
         // Owner posting on their own corporate page — keep user_id=self, stamp
         // teamId so members can see the post.
@@ -158,11 +165,6 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Company page posting requires Pro or Business plan" }, { status: 403 });
         }
       }
-
-      // Capture drafter's display name for "Posted by" UI
-      const drafterSnap = await adminDb.collection("users").doc(uid).get();
-      const d = drafterSnap.data() || {};
-      authorDisplayName = (d.displayName as string) || (d.name as string) || (d.email as string) || null;
     }
 
     // Allowlist — only these fields can be set by clients on create

@@ -35,6 +35,14 @@ export async function GET(req: NextRequest) {
   const plan = await getUserPlan(uid);
   const team = await getOwnedTeam(uid);
 
+  // If the caller owns a team, surface the Business seat cap regardless of
+  // current plan state — the cancel-with-members guard prevents a downgraded
+  // owner from ever holding a team, but during webhook lag we don't want the
+  // settings UI to render "0 of 0 seats" while members still appear.
+  const effectiveSeatLimit = team
+    ? Math.max(getTeamSeatLimit(plan), getTeamSeatLimit("business"))
+    : getTeamSeatLimit(plan);
+
   if (!team) {
     // No owned team — caller might still be an active member of someone else's
     // team. Return that membership so the UI can render a "Leave team" panel.
@@ -65,7 +73,7 @@ export async function GET(req: NextRequest) {
       membership: membershipInfo,
       plan,
       canUseTeam: canUseTeam(plan),
-      seatLimit: getTeamSeatLimit(plan),
+      seatLimit: effectiveSeatLimit,
       members: [],
       pendingInvites: [],
     });
