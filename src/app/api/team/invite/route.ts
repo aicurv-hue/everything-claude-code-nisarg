@@ -4,8 +4,6 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getUserPlan, canUseTeam } from "@/lib/checkSubscription";
 import {
   ensureTeamForOwner,
-  countActiveMembers,
-  countPendingInvites,
   getTeamSeatLimit,
   generateInviteToken,
   inviteExpiryMillis,
@@ -42,18 +40,6 @@ export async function POST(req: NextRequest) {
 
   const team = await ensureTeamForOwner(uid);
 
-  const [activeMembers, pendingInvites] = await Promise.all([
-    countActiveMembers(team.id),
-    countPendingInvites(team.id),
-  ]);
-  const seatLimit = getTeamSeatLimit(plan);
-  if (activeMembers + pendingInvites >= seatLimit) {
-    return NextResponse.json(
-      { error: `Seat limit reached (${seatLimit}). Contact us to add more.` },
-      { status: 403 }
-    );
-  }
-
   // Block inviting yourself
   const ownerSnap = await adminDb.collection("users").doc(uid).get();
   const ownerEmail = (ownerSnap.data()?.email || "").toLowerCase();
@@ -61,17 +47,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "You cannot invite yourself" }, { status: 400 });
   }
 
-  // Block duplicate pending invite for the same email
-  const existing = await adminDb
-    .collection("teamInvites")
-    .where("teamId", "==", team.id)
-    .where("email", "==", email)
-    .get();
-  const hasPending = existing.docs.some((d) => d.data().status === "pending");
-  if (hasPending) {
-    return NextResponse.json({ error: "An invite is already pending for this email" }, { status: 409 });
-  }
-
+  // Owner with an existing team is always entitled to the Business seat cap,
+  // even if their plan is mid-recovery — the cancel-with-team-members guard in
+  // /api/subscriptions/cancel prevents the inconsistent state at the source.
+  const seatLimit = Math.max(getTeamSeatLimit(plan), getTeamSeatLimit("business"));
   const inviteRef = adminDb.collection("teamInvites").doc();
   const inviteId = inviteRef.id;
   const token = generateInviteToken(inviteId);
@@ -83,17 +62,47 @@ export async function POST(req: NextRequest) {
     (ownerSnap.data()?.email as string) ||
     "A Cridl user";
 
-  await inviteRef.set({
-    teamId: team.id,
-    ownerUid: uid,
-    orgId: team.orgId || null,
-    orgName: team.orgName || null,
-    inviterName,
-    email,
-    status: "pending",
-    createdAt: FieldValue.serverTimestamp(),
-    expiresAt,
-  });
+  // Atomic seat-cap + duplicate-email + invite-create.
+  // Reads done inside the transaction use single where(teamId) + JS filter to
+  // comply with the project rule against composite queries.
+  try {
+    await adminDb.runTransaction(async (tx) => {
+      const [membersSnap, invitesSnap] = await Promise.all([
+        tx.get(adminDb.collection("teamMembers").where("teamId", "==", team.id)),
+        tx.get(adminDb.collection("teamInvites").where("teamId", "==", team.id)),
+      ]);
+      const activeMembers = membersSnap.docs.filter((d) => d.data().status === "active").length;
+      const pendingInvites = invitesSnap.docs.filter((d) => d.data().status === "pending");
+      if (activeMembers + pendingInvites.length >= seatLimit) {
+        throw new Error(`SEAT_LIMIT:${seatLimit}`);
+      }
+      const dupe = pendingInvites.some((d) => String(d.data().email || "").toLowerCase() === email);
+      if (dupe) throw new Error("DUPLICATE_PENDING");
+
+      tx.set(inviteRef, {
+        teamId: team.id,
+        ownerUid: uid,
+        orgId: team.orgId || null,
+        orgName: team.orgName || null,
+        inviterName,
+        email,
+        status: "pending",
+        createdAt: FieldValue.serverTimestamp(),
+        expiresAt,
+      });
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed";
+    if (msg.startsWith("SEAT_LIMIT:")) {
+      const limit = msg.split(":")[1];
+      return NextResponse.json({ error: `Seat limit reached (${limit}). Contact us to add more.` }, { status: 403 });
+    }
+    if (msg === "DUPLICATE_PENDING") {
+      return NextResponse.json({ error: "An invite is already pending for this email" }, { status: 409 });
+    }
+    console.error("[team/invite]", err);
+    return NextResponse.json({ error: "Failed to create invite" }, { status: 500 });
+  }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   return NextResponse.json({

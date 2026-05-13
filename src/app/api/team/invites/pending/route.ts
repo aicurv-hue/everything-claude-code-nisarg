@@ -32,29 +32,36 @@ export async function GET(req: NextRequest) {
   if (!adminDb) return NextResponse.json({ error: "Admin SDK unavailable" }, { status: 503 });
   if (!user.email) return NextResponse.json({ invites: [] });
 
-  const snap = await adminDb.collection("teamInvites").where("email", "==", user.email).get();
+  // If the signing secret isn't configured, fail soft — the dashboard banner
+  // loads on every page render and a 500 here breaks the whole shell.
+  try {
+    const snap = await adminDb.collection("teamInvites").where("email", "==", user.email).get();
 
-  const now = Date.now();
-  const invites = snap.docs
-    .map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        teamId: data.teamId as string,
-        ownerUid: data.ownerUid as string,
-        orgName: (data.orgName as string) || null,
-        inviterName: (data.inviterName as string) || "A Cridl user",
-        status: data.status as string,
-        createdAt: tsToMillis(data.createdAt),
-        expiresAt: tsToMillis(data.expiresAt),
-        token: generateInviteToken(d.id),
-      };
-    })
-    .filter((i) => {
-      if (i.status !== "pending") return false;
-      if (i.expiresAt && i.expiresAt < now) return false;
-      return true;
-    });
+    const now = Date.now();
+    const invites = snap.docs
+      .map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          teamId: data.teamId as string,
+          ownerUid: data.ownerUid as string,
+          orgName: (data.orgName as string) || null,
+          inviterName: (data.inviterName as string) || "A Cridl user",
+          status: data.status as string,
+          createdAt: tsToMillis(data.createdAt),
+          expiresAt: tsToMillis(data.expiresAt),
+          token: generateInviteToken(d.id),
+        };
+      })
+      .filter((i) => {
+        if (i.status !== "pending") return false;
+        if (i.expiresAt && i.expiresAt < now) return false;
+        return true;
+      });
 
-  return NextResponse.json({ invites });
+    return NextResponse.json({ invites });
+  } catch (err) {
+    console.error("[team/invites/pending]", err);
+    return NextResponse.json({ invites: [] });
+  }
 }
