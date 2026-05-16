@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { getUserPlan, canUseCorporate } from "@/lib/checkSubscription";
+import { mapLinkedInPublishError } from "@/lib/linkedin/publishError";
 
 const LI_VERSION = "202604";
 const TIMEOUT_MS = 20_000;
@@ -221,16 +222,25 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       const errText = await res.text();
-      let liError = errText;
-      try { liError = JSON.parse(errText).message || errText; } catch {}
+      console.error(`[publish-now] Post failed (segment=${post.segment}, status=${res.status}, owner=${ownerUid}, caller=${uid}):`, errText);
+      const isTeamMemberCorp = post.segment === "corporate" && post.user_id !== uid;
+      const mapped = mapLinkedInPublishError({
+        status: res.status,
+        errText,
+        segment: post.segment,
+        isTeamMemberCorp,
+      });
       if (!isRepost) {
         await postRef.update({
           status: "failed",
-          failed_reason: `LinkedIn API ${res.status}: ${liError}`,
+          failed_reason: mapped.message,
           updated_at: FieldValue.serverTimestamp(),
         });
       }
-      return NextResponse.json({ error: `LinkedIn API error: ${liError}` }, { status: res.status });
+      return NextResponse.json(
+        { error: mapped.message, ...(mapped.code ? { code: mapped.code } : {}) },
+        { status: mapped.status }
+      );
     }
 
     const linkedinPostId = res.headers.get("x-restli-id") || res.headers.get("location") || "unknown";

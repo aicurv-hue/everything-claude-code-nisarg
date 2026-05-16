@@ -3,6 +3,7 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { savePostMemory } from "@/lib/ai/save-memory";
 import { getUserPlan, canUseCorporate, canUseCarousel } from "@/lib/checkSubscription";
 import { buildCarouselPdf } from "@/lib/linkedin/buildCarouselPdf";
+import { mapLinkedInPublishError } from "@/lib/linkedin/publishError";
 import { getActiveMembership } from "@/lib/team";
 
 const LI_VERSION = "202604"; // LinkedIn API version header (YYYYMM)
@@ -416,35 +417,17 @@ export async function POST(request: NextRequest) {
 
   if (!res.ok) {
     const errText = await res.text();
-    console.error(`[linkedin/publish] Post failed (${segment}):`, errText);
+    console.error(`[linkedin/publish] Post failed (${segment}, status=${res.status}, teamMember=${isTeamMemberCorp}):`, errText);
 
-    // 400/422 on corporate = missing w_organization_social scope (requires LinkedIn Partner approval)
-    const isOrgPermissionError = segment === "corporate" && (
-      res.status === 422 ||
-      (res.status === 400 && errText.toLowerCase().includes("organization permission"))
-    );
-    if (isOrgPermissionError) {
-      return NextResponse.json(
-        {
-          error: "Company page posting requires LinkedIn Partner approval for the w_organization_social scope. Please use Schedule instead — scheduled posts will publish automatically once approved.",
-          code: "PARTNER_APPROVAL_REQUIRED",
-        },
-        { status: 422 }
-      );
-    }
-
-    // Parse LinkedIn error for a readable message (details logged server-side only — never sent to client)
-    let liError = "Publishing failed. Please try again.";
-    try {
-      const parsed = JSON.parse(errText);
-      const msg = parsed.message || parsed.error_description || parsed.error || "";
-      // Surface only safe, non-sensitive parts of LinkedIn errors
-      if (msg && msg.length < 200) liError = msg;
-    } catch {}
-
+    const mapped = mapLinkedInPublishError({
+      status: res.status,
+      errText,
+      segment,
+      isTeamMemberCorp,
+    });
     return NextResponse.json(
-      { error: liError },
-      { status: res.status }
+      { error: mapped.message, ...(mapped.code ? { code: mapped.code } : {}) },
+      { status: mapped.status }
     );
   }
 

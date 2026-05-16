@@ -492,6 +492,13 @@ function WorkspaceHealthCard({ health, ownerLabel }: { health: OwnerHealth; owne
           </div>
         </div>
       </div>
+
+      <div className="mt-4 pt-3 border-t border-[var(--border-sub)] flex items-start gap-2">
+        <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0 text-amber-500" />
+        <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+          Even with both signals green, company-page posts will fail until LinkedIn approves {ownerLabel}&apos;s app for the Marketing Developer Platform — that&apos;s a separate one-time LinkedIn process. Personal posting is unaffected.
+        </p>
+      </div>
     </div>
   );
 }

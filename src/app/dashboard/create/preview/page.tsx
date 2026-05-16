@@ -1150,9 +1150,10 @@ export default function PostPreviewPage() {
             <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-200">
               <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-semibold text-amber-800">Company page publishing requires LinkedIn Partner approval</p>
+                <p className="text-xs font-semibold text-amber-800">Company page publishing needs LinkedIn Marketing Developer Platform approval</p>
                 <p className="text-[11px] text-amber-400 mt-0.5">
-                  LinkedIn restricts the <code className="bg-amber-500/20 px-1 rounded">w_organization_social</code> scope to approved Marketing Developer Platform partners. Until approved, use <strong>Schedule</strong> — once the token is approved, scheduled posts will publish automatically. Scheduling works today.
+                  LinkedIn only grants the <code className="bg-amber-500/20 px-1 rounded">w_organization_social</code> scope to approved Marketing Developer Platform partners. Until the app is approved, <strong>neither immediate publishing nor scheduling</strong> will work for the company page (both hit the same LinkedIn API). Workaround for now: post to a personal profile, or apply for MDP at{" "}
+                  <a href="https://www.linkedin.com/developers/apps" target="_blank" rel="noopener" className="underline font-semibold">linkedin.com/developers</a>.
                 </p>
               </div>
             </div>

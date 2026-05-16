@@ -23,6 +23,7 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { getUserPlan, canUseCorporate, canUseCarousel } from "@/lib/checkSubscription";
 import { buildCarouselPdf } from "@/lib/linkedin/buildCarouselPdf";
+import { mapLinkedInPublishError } from "@/lib/linkedin/publishError";
 
 const LI_VERSION  = "202604";
 const TIMEOUT_MS  = 20_000;
@@ -170,12 +171,13 @@ async function uploadDocument(accessToken: string, authorUrn: string, pdfBytes: 
 
 /** Post to LinkedIn. Returns postId or throws. */
 async function postToLinkedIn(
-  accessToken:   string,
-  authorUrn:     string,
-  content:       string,
-  imageUrl?:     string,
-  imageUrls?:    string[],
-  carouselTitle?: string
+  accessToken:    string,
+  authorUrn:      string,
+  content:        string,
+  imageUrl?:      string,
+  imageUrls?:     string[],
+  carouselTitle?: string,
+  errCtx?:        { segment?: string; isTeamMemberCorp?: boolean }
 ): Promise<string> {
   let imageUrn:    string | null = null;
   let documentUrn: string | null = null;
@@ -232,7 +234,14 @@ async function postToLinkedIn(
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`LinkedIn API ${res.status}: ${errText}`);
+    const mapped = mapLinkedInPublishError({
+      status: res.status,
+      errText,
+      segment: errCtx?.segment,
+      isTeamMemberCorp: errCtx?.isTeamMemberCorp,
+    });
+    console.error(`[cron] LinkedIn ${res.status} (segment=${errCtx?.segment}, teamMember=${errCtx?.isTeamMemberCorp}):`, errText);
+    throw new Error(mapped.message);
   }
 
   return res.headers.get("x-restli-id") || res.headers.get("location") || "unknown";
@@ -393,6 +402,8 @@ export async function POST(req: NextRequest) {
       if (content.startsWith("[Pending generation]")) content = post.topic || content;
       if (!content.trim()) throw new Error("Post content is empty.");
 
+      const isTeamMemberCorp =
+        post.segment === "corporate" && !!(post as any).teamId && (post as any).authorUid !== post.user_id;
       const postId = await postToLinkedIn(
         accessToken!,
         authorUrn,
@@ -400,6 +411,7 @@ export async function POST(req: NextRequest) {
         post.image_url || undefined,
         post.is_carousel ? post.image_urls : undefined,
         post.is_carousel ? post.carousel_title : undefined,
+        { segment: post.segment, isTeamMemberCorp },
       );
       await postRef.update({
         status: "published",
