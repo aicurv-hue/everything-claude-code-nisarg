@@ -22,9 +22,9 @@ export default function HomeNavbar() {
       <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
         <span className="font-bold text-xl text-[var(--foreground)]">Cridl</span>
         <div className="flex gap-3 items-center">
-          <a href="#pricing" className="text-sm text-[var(--text-sub)] hover:text-[var(--foreground)] px-4 py-2 rounded-lg">
+          <Link href="/#pricing" className="text-sm text-[var(--text-sub)] hover:text-[var(--foreground)] px-4 py-2 rounded-lg">
             Pricing
-          </a>
+          </Link>
           {checked && (
             loggedIn ? (
               <Link
@@ -38,12 +38,12 @@ export default function HomeNavbar() {
                 <Link href="/login" className="text-sm text-[var(--text-sub)] hover:text-[var(--foreground)] px-4 py-2 rounded-lg">
                   Sign in
                 </Link>
-                <a
-                  href="#pricing"
+                <Link
+                  href="/#pricing"
                   className="text-sm bg-[var(--primary)] text-white px-4 py-2 rounded-lg hover:opacity-90 transition-colors"
                 >
                   Get started free
-                </a>
+                </Link>
               </>
             )
           )}

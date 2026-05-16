@@ -115,9 +115,14 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="py-8 border-t border-slate-200 bg-white">
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <span className="text-sm text-slate-400">© 2026 Cridl. All rights reserved.</span>
-          <span className="text-sm text-slate-400">app.cridl.com</span>
+          <div className="flex items-center gap-5 text-sm text-slate-400">
+            <Link href="/privacy" className="hover:text-slate-600">Privacy</Link>
+            <Link href="/terms" className="hover:text-slate-600">Terms</Link>
+            <a href="mailto:support@cridl.app" className="hover:text-slate-600">support@cridl.app</a>
+            <span>app.cridl.com</span>
+          </div>
         </div>
       </footer>
     </>
