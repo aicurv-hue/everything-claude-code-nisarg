@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import Logo from "@/components/ui/Logo";
 
 export default function HomeNavbar() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -20,7 +21,9 @@ export default function HomeNavbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-[var(--card)] border-b border-[var(--border)]">
       <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
-        <span className="font-bold text-xl text-[var(--foreground)]">Cridl</span>
+        <Link href="/" aria-label="Cridl — Home" className="inline-flex items-center rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]">
+          <Logo size="md" />
+        </Link>
         <div className="flex gap-3 items-center">
           <Link href="/#pricing" className="text-sm text-[var(--text-sub)] hover:text-[var(--foreground)] px-4 py-2 rounded-lg">
             Pricing
