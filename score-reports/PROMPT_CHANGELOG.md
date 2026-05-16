@@ -92,3 +92,28 @@ Posts had passed previous internal review but failed the human-feel test in ever
 - Mandating one anonymized specific subject per post can feel forced when the user's topic is genuinely abstract. Acceptable tradeoff — better forced specificity than safe abstraction.
 
 ---
+
+## 2026-05-17 — `67059eb` — Deterministic AI-tell post-pass + voice-rewrite Stage 1.5 restored
+
+**Score before → after:** TBD (will measure after deploy)
+**Triggered by:** User reported a back-office-automation post that violated 4 hard-banned rules already in the prompt: 4 em dashes, banned "X isn't Y. It's Z." pattern, plural abstractions ("manufacturers", "plant operators"), and a fabricated round percentage ("30-40%"). Existing rule layer did not enforce — model knew the rules and ignored them.
+
+**What changed:**
+- `src/lib/ai/generate.ts` — `sanitizePost()` gains a deterministic AI-tell pass after the existing preamble-strip: em-dash (—) and en-dash (–) → comma, unicode ellipsis → ASCII three dots, curly quotes → straight, markdown asterisks stripped, trailing hashtag blocks removed, comma whitespace tightened, 3+ blank lines collapsed.
+- `src/lib/ai/generate.ts` — voice-rewrite Stage 1.5 restored (removed 2026-05-09 for latency). Runs after the main draft when `clientProfile` or `writingSamples` are present, 12s timeout, silently falls back to the draft. The rewrite output runs through `sanitizePost()` again because the rewrite model can re-introduce em-dashes.
+- `NEEL_RUNTIME.md` + `src/lib/ai/neel-prompt-sections.ts` — `REWRITE_IN_VOICE_PROMPT` strengthened: explicit ZERO em dash rule, X-isn't-Y ban, plural-abstraction warning, expanded jargon list (added unlock/transform/empower/streamline), no trailing hashtags, no fabricated stats, first-person mandate.
+
+**Why:**
+Two complementary failure modes were compounding. (1) The prompt had all the right rules but the model violated them anyway — em dashes in particular slip through every single time despite a hard ZERO ban in OUTPUT_RULES. A deterministic post-pass kills this at the layer below model attention, with zero token cost. (2) The 2026-05-07 voice-rewrite Stage 1.5 was doing more of the heavy lifting than the latency-removal entry on 2026-05-09 acknowledged. The "superseded by voice signals already in the main prompt" claim was wrong in practice — the main prompt's voice signals exist but they share attention with 14 other concerns. A dedicated rewrite pass with a single job restores voice and strips slop far more reliably than rules in the main prompt ever do. The original removal rationale (10s of added wall time) was also obsolete by then: the 2026-05-11 streaming-keepalive fix had already lifted the Vercel 25s gateway limit, so adding 10s back is invisible to the user.
+
+**Do NOT revert because:**
+- *Em-dash deterministic strip:* the model has been instructed not to use em dashes since 2026-05-09. It still produces them in roughly half of outputs. Prompt-level rules are necessary but insufficient. The deterministic pass is the only thing that guarantees zero em dashes in shipped posts.
+- *Voice-rewrite Stage 1.5:* removed once on a latency argument that no longer applies. If a future editor wants to remove it for latency again, check whether the keepalive ping at `/api/ai/generate/route.ts` is still in place — if it is, latency is not a user-visible concern.
+- *Strengthened REWRITE_IN_VOICE_PROMPT:* the prior version of this prompt did not ban em dashes or plural abstractions, so the rewrite pass would actively reintroduce them. Without these bans, Stage 1.5 fights against the deterministic pass and Stage 1.
+
+**Known tradeoffs / open questions:**
+- Em-dash → comma substitution can produce slightly awkward sentences where the em-dash was being used legitimately for a parenthetical aside. The deterministic pass picks comma over period because comma is the safer default; a future iteration could be smarter (e.g. period when both sides are full clauses).
+- Voice-rewrite adds ~6–10s. Invisible to the user thanks to streaming keepalive, but counts against the model token budget twice. Acceptable: post quality is the product.
+- Stage 1.5 only runs when voice signal exists. Users with no profile + no samples get the raw draft (still post-passed). Acceptable: those users have no voice fingerprint anyway.
+
+---

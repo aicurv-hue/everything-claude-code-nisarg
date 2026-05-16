@@ -5,6 +5,7 @@ import { openRouter, GENERATION_MODEL, DEFAULT_MODEL, FALLBACK_MODEL } from "./o
 import { NEEL_SECTIONS } from "./neel-prompt-sections";
 import { sanitizePromptInput } from "./sanitize";
 import { withDateContext } from "./currentContext";
+import { rewriteInVoice } from "./rewriteInVoice";
 
 export interface GenerateResult {
   post: string;
@@ -330,8 +331,14 @@ function buildRegenerationBlock(args: {
 // ─── Output sanitiser ──────────────────────────────────────────────────────────
 
 /**
- * Strips any AI preamble or explanation that leaked into the post output.
- * Removes lines like "Here's your post:", "Sure!", "---", markdown headers, etc.
+ * Strips any AI preamble or explanation that leaked into the post output,
+ * then runs a deterministic AI-tell pass:
+ *   - em dash (—) and en dash (–) → ", " (banned per OUTPUT_RULES)
+ *   - "..." (real ellipsis char) → "..." (three ASCII dots)
+ *   - curly quotes → straight quotes
+ *   - leftover markdown bold/italic asterisks → stripped (LinkedIn renders literal)
+ *   - trailing #hashtags removed (banned per COPYWRITING_RULES rule 6)
+ *   - exclamation overuse softened (banned per AVOID list)
  */
 function sanitizePost(raw: string): string {
   const lines = raw.split("\n");
@@ -357,7 +364,40 @@ function sanitizePost(raw: string): string {
     }
   }
 
-  return lines.slice(start, end).join("\n").trim();
+  let cleaned = lines.slice(start, end).join("\n").trim();
+
+  // ── AI-tell deterministic pass ──────────────────────────────────────────────
+  // Em-dash / en-dash → comma. Handles spaced ("word — word") and unspaced
+  // ("word—word") forms. Banned per OUTPUT_RULES; the #1 AI fingerprint.
+  cleaned = cleaned
+    .replace(/\s*[—–]\s*/g, ", ")    // — or – with surrounding spaces
+    .replace(/[—–]/g, ", ");          // any stragglers
+
+  // Unicode ellipsis → three ASCII dots
+  cleaned = cleaned.replace(/…/g, "...");
+
+  // Curly quotes → straight (LinkedIn renders both, but straight reads more human)
+  cleaned = cleaned
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"');
+
+  // Strip markdown bold/italic asterisks — LinkedIn renders them literal
+  cleaned = cleaned.replace(/\*+/g, "");
+
+  // Remove trailing hashtag block (1+ lines of hashtags at the end).
+  // Mid-body #words are left alone (rare, usually intentional).
+  cleaned = cleaned.replace(/\n+(?:#\S+\s*)+\s*$/g, "");
+
+  // Tighten ", ," and " ," that the em-dash replacement may have produced
+  cleaned = cleaned
+    .replace(/,\s*,/g, ",")
+    .replace(/\s+,/g, ",")
+    .replace(/,([^\s])/g, ", $1");
+
+  // Collapse 3+ consecutive blank lines down to 2
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+
+  return cleaned.trim();
 }
 
 // ─── Main generation function ──────────────────────────────────────────────────
@@ -669,10 +709,34 @@ Start directly with the hook line. Output nothing else.`;
     console.log(`[Cortex trace=${traceId}] stage=post model=${GENERATION_MODEL} ms=${Date.now() - t1} length=${length} tokens=${postMaxTokens}`);
 
     const raw = completion.choices[0].message.content || "";
-    const post = sanitizePost(raw) || raw.trim();
-    if (post.trim().length < 100) {
+    const draft = sanitizePost(raw) || raw.trim();
+    if (draft.trim().length < 100) {
       const finish = completion.choices[0]?.finish_reason;
-      throw new Error(`Post generation returned a truncated response (finish=${finish}, length=${post.length}). The model may have hit a safety filter or timeout. Try rewording the topic or regenerating.`);
+      throw new Error(`Post generation returned a truncated response (finish=${finish}, length=${draft.length}). The model may have hit a safety filter or timeout. Try rewording the topic or regenerating.`);
+    }
+
+    // Stage 1.5: voice-rewrite pass. Restored 2026-05-17 after user reported
+    // posts felt AI-written — the 2026-05-09 removal traded ~10s of latency for
+    // a measurable quality regression. Streaming keepalive (see route.ts) makes
+    // the latency invisible to the user. Always passes; helper silently falls
+    // back to the draft on timeout/error so this can't break generation.
+    const hasVoiceSignal = !!clientProfile ||
+      (Array.isArray(writingSamples) && writingSamples.length > 0);
+    let post = draft;
+    if (hasVoiceSignal) {
+      const t2 = Date.now();
+      const rewriteResult = await rewriteInVoice({
+        rawText: draft,
+        voiceProfile: clientProfile,
+        writingSamples,
+        timeoutMs: 12000,
+      });
+      console.log(`[Cortex trace=${traceId}] stage=voice-rewrite ok=${rewriteResult.ok} ms=${Date.now() - t2}`);
+      if (rewriteResult.ok && rewriteResult.rewrittenPost.length >= 100) {
+        // Run the deterministic AI-tell pass again on the rewrite output, since
+        // the rewrite model can re-introduce em-dashes/curly-quotes.
+        post = sanitizePost(rewriteResult.rewrittenPost) || rewriteResult.rewrittenPost;
+      }
     }
 
     // Stage 2 (image prompt) is now lazy — the client calls /api/ai/image-prompt
