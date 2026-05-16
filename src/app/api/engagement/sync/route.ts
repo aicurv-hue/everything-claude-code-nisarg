@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 
-const LI_VERSION = "202505";
+const LI_VERSION = "202604";
 
 function withTimeout(ms: number) {
   const ctrl = new AbortController();

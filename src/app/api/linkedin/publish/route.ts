@@ -4,7 +4,7 @@ import { savePostMemory } from "@/lib/ai/save-memory";
 import { getUserPlan, canUseCorporate, canUseCarousel } from "@/lib/checkSubscription";
 import { buildCarouselPdf } from "@/lib/linkedin/buildCarouselPdf";
 
-const LI_VERSION = "202505"; // LinkedIn API version header (YYYYMM)
+const LI_VERSION = "202604"; // LinkedIn API version header (YYYYMM)
 const TIMEOUT_MS  = 15_000;
 
 const ALLOWED_IMAGE_HOSTS = new Set([

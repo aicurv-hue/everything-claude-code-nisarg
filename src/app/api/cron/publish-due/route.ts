@@ -24,7 +24,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getUserPlan, canUseCorporate, canUseCarousel } from "@/lib/checkSubscription";
 import { buildCarouselPdf } from "@/lib/linkedin/buildCarouselPdf";
 
-const LI_VERSION  = "202505";
+const LI_VERSION  = "202604";
 const TIMEOUT_MS  = 20_000;
 const CRON_SECRET = process.env.CRON_SECRET; // required — set this in Vercel env vars
 

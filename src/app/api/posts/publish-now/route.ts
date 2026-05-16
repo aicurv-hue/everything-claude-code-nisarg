@@ -12,7 +12,7 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { getUserPlan, canUseCorporate } from "@/lib/checkSubscription";
 
-const LI_VERSION = "202505";
+const LI_VERSION = "202604";
 const TIMEOUT_MS = 20_000;
 
 const ALLOWED_IMAGE_HOSTS = new Set([

@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 
-const LI_VERSION = "202505";
+const LI_VERSION = "202604";
 const TIMEOUT_MS = 10_000;
 
 function withTimeout(ms: number) {
