@@ -96,7 +96,7 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
       label: "Account",
       items: [
         { href: "/dashboard/settings",      label: "Profile",  icon: <UserCircle2 className="w-[15px] h-[15px]" /> },
-        { href: "/dashboard/settings/team", label: "Team",     icon: <Users className="w-[15px] h-[15px]" /> },
+        { href: "/dashboard/settings/team", label: "Team",     icon: <Users className="w-[15px] h-[15px]" />, comingSoon: true },
         { href: "/dashboard/billing",       label: "Billing",  icon: <CreditCard className="w-[15px] h-[15px]" /> },
         { href: "/dashboard/guide",         label: "Guide",    icon: <BookOpen className="w-[15px] h-[15px]" /> },
       ],
@@ -146,7 +146,9 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
               </p>
             )}
             <div className="space-y-[2px]">
-              {group.items.map(({ href, label, icon }) => {
+              {group.items.map((item) => {
+                const { href, label, icon } = item;
+                const comingSoon = "comingSoon" in item && item.comingSoon === true;
                 const isActive = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
                 const showBadge = href === "/dashboard/history" && failedCount > 0;
                 return (
@@ -166,6 +168,11 @@ function Sidebar({ onOpenGuide, failedCount }: { onOpenGuide: () => void; failed
                     {showBadge && (
                       <span className="text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">
                         {failedCount}
+                      </span>
+                    )}
+                    {comingSoon && (
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-[var(--primary)] bg-[var(--primary)]/10 px-1.5 py-0.5 rounded-full leading-none">
+                        Soon
                       </span>
                     )}
                   </Link>
