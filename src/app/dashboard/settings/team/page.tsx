@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Users, UserPlus, Mail, X, Trash2, AlertTriangle, Copy, Check, Crown, LogOut } from "lucide-react";
+import { Users, UserPlus, Mail, X, Trash2, AlertTriangle, Copy, Check, Crown, LogOut, Linkedin, CreditCard } from "lucide-react";
 import { useAuth } from "@/lib/context/auth";
 import { getAuthToken } from "@/lib/utils/getAuthToken";
 
@@ -32,9 +32,24 @@ interface Membership {
   joinedAt: number | null;
 }
 
+interface OwnerHealth {
+  linkedin: {
+    state: "healthy" | "warning" | "expired" | "disconnected";
+    daysLeft: number | null;
+    refreshExpiresAt: number | null;
+  };
+  plan: {
+    state: "healthy" | "warning";
+    plan: string;
+    status: string;
+    renewsAt: number | null;
+  };
+}
+
 interface TeamData {
   team: { id: string; orgName: string | null } | null;
   membership: Membership | null;
+  ownerHealth?: OwnerHealth | null;
   plan: string;
   canUseTeam: boolean;
   seatLimit: number;
@@ -175,6 +190,7 @@ export default function TeamSettingsPage() {
   // Member view — caller is on someone else's team
   if (data.membership) {
     const m = data.membership;
+    const ownerLabel = m.ownerName || m.ownerEmail || "the team owner";
     return (
       <div className="max-w-2xl mx-auto animate-fade-in space-y-5">
         <div>
@@ -196,6 +212,10 @@ export default function TeamSettingsPage() {
             <p className="text-[12px] text-[var(--text-muted)] mt-2">Joined {new Date(m.joinedAt).toLocaleDateString()}</p>
           )}
         </div>
+
+        {data.ownerHealth && (
+          <WorkspaceHealthCard health={data.ownerHealth} ownerLabel={ownerLabel} />
+        )}
 
         <div className="card" style={{ padding: '20px' }}>
           <h2 className="text-[14px] font-semibold text-[var(--foreground)] mb-2">Leave the team</h2>
@@ -388,6 +408,89 @@ export default function TeamSettingsPage() {
       <div className="text-[11px] text-[var(--text-muted)] flex items-start gap-1.5 pt-2">
         <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
         <span>Removing a member instantly revokes their company-page access and reverts their personal workspace to the Free plan. Posts they drafted stay in your team queue.</span>
+      </div>
+    </div>
+  );
+}
+
+function planLabel(plan: string): string {
+  if (!plan) return "Plan";
+  return plan.charAt(0).toUpperCase() + plan.slice(1);
+}
+
+function planStatusLabel(status: string): string {
+  if (status === "active") return "Active";
+  if (status === "trial") return "On trial";
+  if (status === "cancelled") return "Cancelled";
+  if (status === "paused") return "Paused";
+  if (status === "pending") return "Pending";
+  if (status === "free") return "Free";
+  return status || "Unknown";
+}
+
+function WorkspaceHealthCard({ health, ownerLabel }: { health: OwnerHealth; ownerLabel: string }) {
+  const li = health.linkedin;
+  const pl = health.plan;
+
+  // LinkedIn row
+  const liTone =
+    li.state === "healthy" ? "emerald" :
+    li.state === "warning" ? "amber"   : "red";
+  const liDotClass =
+    liTone === "emerald" ? "bg-emerald-500" :
+    liTone === "amber"   ? "bg-amber-500"   : "bg-red-500";
+  const liTitle =
+    li.state === "healthy"      ? `Connected — reconnect needed in ~${li.daysLeft} days` :
+    li.state === "warning"      ? `Reconnect needed in ${li.daysLeft} day${li.daysLeft === 1 ? "" : "s"}` :
+    li.state === "expired"      ? "Reconnection needed — token has expired" :
+                                  "Not connected";
+  const liHint =
+    li.state === "healthy"      ? null :
+    li.state === "warning"      ? `Ask ${ownerLabel} to reconnect LinkedIn from Settings → Identity before scheduled and company-page posts start failing.` :
+    li.state === "expired"      ? `Posts to the company page can't publish until ${ownerLabel} reconnects LinkedIn in Settings → Identity.` :
+                                  `${ownerLabel} hasn't connected LinkedIn yet. They need to connect in Settings → Identity before company-page posts can publish.`;
+
+  // Plan row
+  const plTone = pl.state === "healthy" ? "emerald" : "amber";
+  const plDotClass = plTone === "emerald" ? "bg-emerald-500" : "bg-amber-500";
+  const plTitle = `${planLabel(pl.plan)} · ${planStatusLabel(pl.status)}`;
+  const plHint =
+    pl.state === "healthy"
+      ? null
+      : pl.status === "cancelled"
+        ? `${ownerLabel}'s plan was cancelled${pl.renewsAt ? ` and ends ${new Date(pl.renewsAt).toLocaleDateString()}` : ""}. Your Pro-level features will revert once it ends.`
+        : pl.status === "paused"
+          ? `${ownerLabel}'s plan is paused${pl.renewsAt ? ` (next attempt ${new Date(pl.renewsAt).toLocaleDateString()})` : ""}. Posting on the company page may fail until billing is fixed.`
+          : `${ownerLabel}'s plan needs attention${pl.renewsAt ? ` — next billing date ${new Date(pl.renewsAt).toLocaleDateString()}` : ""}.`;
+
+  return (
+    <div className="card" style={{ padding: '20px' }}>
+      <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)] font-semibold mb-3">Workspace health</div>
+
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <Linkedin className="w-4 h-4 text-[var(--text-muted)] shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className={`w-1.5 h-1.5 rounded-full ${liDotClass}`} />
+              <p className="text-[13px] font-semibold text-[var(--foreground)]">LinkedIn connection</p>
+            </div>
+            <p className="text-[12px] text-[var(--text-sub)] mt-0.5">{liTitle}</p>
+            {liHint && <p className="text-[11px] text-[var(--text-muted)] mt-1 leading-relaxed">{liHint}</p>}
+          </div>
+        </div>
+
+        <div className="flex items-start gap-3">
+          <CreditCard className="w-4 h-4 text-[var(--text-muted)] shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className={`w-1.5 h-1.5 rounded-full ${plDotClass}`} />
+              <p className="text-[13px] font-semibold text-[var(--foreground)]">Plan</p>
+            </div>
+            <p className="text-[12px] text-[var(--text-sub)] mt-0.5">{plTitle}</p>
+            {plHint && <p className="text-[11px] text-[var(--text-muted)] mt-1 leading-relaxed">{plHint}</p>}
+          </div>
+        </div>
       </div>
     </div>
   );

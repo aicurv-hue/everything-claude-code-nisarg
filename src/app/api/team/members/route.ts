@@ -27,6 +27,53 @@ function tsToMillis(t: unknown): number | null {
   return null;
 }
 
+const TOKEN_WARNING_DAYS = 14;
+
+type LinkedInState = "healthy" | "warning" | "expired" | "disconnected";
+type PlanState = "healthy" | "warning";
+
+async function buildOwnerHealth(ownerUid: string, ownerUserData: FirebaseFirestore.DocumentData) {
+  // LinkedIn — refresh_expires_at is the real "must reconnect" deadline.
+  // access_token auto-refreshes silently until then via /api/linkedin/status.
+  const tokenSnap = await adminDb!.collection("tokens").doc(ownerUid).get();
+  const tokenData = tokenSnap.exists ? tokenSnap.data() : null;
+  const hasAccess = !!tokenData?.access_token;
+  const refreshExpiresAt: number | null =
+    typeof tokenData?.refresh_expires_at === "number" ? tokenData.refresh_expires_at : null;
+
+  let linkedinState: LinkedInState;
+  let daysLeft: number | null = null;
+  if (!hasAccess) {
+    linkedinState = "disconnected";
+  } else if (refreshExpiresAt === null) {
+    linkedinState = "healthy"; // legacy token without refresh_expires_at — assume valid
+  } else {
+    const msLeft = refreshExpiresAt - Date.now();
+    daysLeft = Math.floor(msLeft / (1000 * 60 * 60 * 24));
+    if (msLeft <= 0) linkedinState = "expired";
+    else if (daysLeft < TOKEN_WARNING_DAYS) linkedinState = "warning";
+    else linkedinState = "healthy";
+  }
+
+  // Plan — anything not "active" or "trial" is a warning for the member.
+  const plan: string = (ownerUserData.plan as string) || "free";
+  const planStatus: string = (ownerUserData.planStatus as string) || "free";
+  const planHealthy = planStatus === "active" || planStatus === "trial";
+  const planState: PlanState = planHealthy ? "healthy" : "warning";
+
+  // Renewal/end date only filled when unhealthy — keeps the healthy UI clean.
+  let renewsAt: number | null = null;
+  if (!planHealthy && typeof ownerUserData.subscriptionId === "string") {
+    const subSnap = await adminDb!.collection("subscriptions").doc(ownerUserData.subscriptionId).get();
+    renewsAt = tsToMillis(subSnap.data()?.currentPeriodEnd);
+  }
+
+  return {
+    linkedin: { state: linkedinState, daysLeft, refreshExpiresAt },
+    plan: { state: planState, plan, status: planStatus, renewsAt },
+  };
+}
+
 export async function GET(req: NextRequest) {
   const uid = await verifyToken(req);
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -54,6 +101,7 @@ export async function GET(req: NextRequest) {
       ownerEmail: string | null;
       joinedAt: number | null;
     } | null = null;
+    let ownerHealth: Awaited<ReturnType<typeof buildOwnerHealth>> | null = null;
 
     if (membership) {
       const ownerSnap = await adminDb.collection("users").doc(membership.ownerUid).get();
@@ -66,11 +114,17 @@ export async function GET(req: NextRequest) {
         ownerEmail: (ownerData.email as string) || null,
         joinedAt: joinedAtMs,
       };
+      try {
+        ownerHealth = await buildOwnerHealth(membership.ownerUid, ownerData);
+      } catch {
+        ownerHealth = null;
+      }
     }
 
     return NextResponse.json({
       team: null,
       membership: membershipInfo,
+      ownerHealth,
       plan,
       canUseTeam: canUseTeam(plan),
       seatLimit: effectiveSeatLimit,
