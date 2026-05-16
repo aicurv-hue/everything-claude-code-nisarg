@@ -192,18 +192,22 @@ export default function PostPreviewPage() {
         .catch(() => setLinkedInConnected(false))
     );
 
-    // Load profile — check name (mandatory) + org ID (corporate)
+    // Load profile — check name (mandatory) + org ID (corporate). For team
+    // members posting corporate, the owner's corporate identity (returned as
+    // teamOwnerCorporate) is the source of truth — the member's own corporate
+    // fields are intentionally empty.
     getAuthToken().then(token => {
       if (!token) return;
       fetch("/api/user/profile", { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
         .then(p => {
           const seg = parsed.metadata?.segment || "individual";
-          const name = seg === "corporate" ? p?.corporate?.name : p?.individual?.name;
-          setProfileName(name || null);
           if (seg === "corporate") {
-            const orgId = p?.corporate?.linkedinOrganizationId;
-            if (orgId) setOrganizationId(orgId);
+            const corp = p?.teamOwnerCorporate ?? p?.corporate ?? {};
+            setProfileName(corp.name || null);
+            if (corp.linkedinOrganizationId) setOrganizationId(corp.linkedinOrganizationId);
+          } else {
+            setProfileName(p?.individual?.name || null);
           }
           if (p?.profilePhotoUrl) {
             setProfilePhotoUrl(p.profilePhotoUrl);

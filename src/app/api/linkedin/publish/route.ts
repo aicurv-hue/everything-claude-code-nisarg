@@ -3,6 +3,7 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { savePostMemory } from "@/lib/ai/save-memory";
 import { getUserPlan, canUseCorporate, canUseCarousel } from "@/lib/checkSubscription";
 import { buildCarouselPdf } from "@/lib/linkedin/buildCarouselPdf";
+import { getActiveMembership } from "@/lib/team";
 
 const LI_VERSION = "202604"; // LinkedIn API version header (YYYYMM)
 const TIMEOUT_MS  = 15_000;
@@ -211,7 +212,7 @@ export async function POST(request: NextRequest) {
   let userSub: string | undefined;
   let firebaseUid: string | undefined;
 
-  // ── Step 1: Try Firestore token keyed by Firebase UID (correct multi-user path) ──
+  // ── Step 1: Verify Firebase ID token ──
   const authHeader = request.headers.get("authorization") || "";
   const firebaseToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
@@ -219,19 +220,12 @@ export async function POST(request: NextRequest) {
     try {
       const decoded = await adminAuth.verifyIdToken(firebaseToken);
       firebaseUid = decoded.uid;
-      const snap = await adminDb.collection("tokens").doc(firebaseUid).get();
-      if (snap.exists) {
-        const data = snap.data()!;
-        accessToken = data.access_token;
-        userSub     = data.user_sub;
-        console.log(`[linkedin/publish] Using Firestore token for Firebase UID: ${firebaseUid} (${data.user_email})`);
-      }
     } catch (e) {
-      console.warn("[linkedin/publish] Firebase token verify failed, falling back to cookies:", e);
+      console.warn("[linkedin/publish] Firebase token verify failed:", e);
     }
   }
 
-  if (!accessToken || !userSub) {
+  if (!firebaseUid || !adminDb) {
     return NextResponse.json(
       { error: "Not connected to LinkedIn. Please connect your account in Settings." },
       { status: 401 }
@@ -244,7 +238,7 @@ export async function POST(request: NextRequest) {
     imageUrls,
     carouselTitle,
     segment = "individual",
-    organizationId,
+    organizationId: bodyOrgId,
     topic,
     audience,
     tone,
@@ -255,9 +249,42 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Post content is empty." }, { status: 400 });
   }
 
-  // Plan gate — corporate posting is Pro+ only
-  if (segment === "corporate" && firebaseUid) {
-    const plan = await getUserPlan(firebaseUid);
+  // ── Step 2: Resolve effective publisher UID ──
+  // For team members posting to a company page, the post must go out via the
+  // team owner's LinkedIn token (only they have w_organization_social admin
+  // for the company page) — same routing used by /api/cron/publish-due and
+  // /api/posts/publish-now. For individual posts, member always uses their
+  // own token.
+  let effectiveUid = firebaseUid;
+  let isTeamMemberCorp = false;
+  if (segment === "corporate") {
+    const membership = await getActiveMembership(firebaseUid);
+    if (membership) {
+      effectiveUid = membership.ownerUid;
+      isTeamMemberCorp = true;
+    }
+  }
+
+  // ── Step 3: Load LinkedIn token for the effective publisher ──
+  const tokenSnap = await adminDb.collection("tokens").doc(effectiveUid).get();
+  if (tokenSnap.exists) {
+    const data = tokenSnap.data()!;
+    accessToken = data.access_token;
+    userSub     = data.user_sub;
+  }
+
+  if (!accessToken || !userSub) {
+    const msg = isTeamMemberCorp
+      ? "Team owner has not connected LinkedIn yet — ask them to connect in Settings before you can publish to the company page."
+      : "Not connected to LinkedIn. Please connect your account in Settings.";
+    return NextResponse.json({ error: msg }, { status: 401 });
+  }
+  console.log(`[linkedin/publish] Caller UID: ${firebaseUid} | publishing as effective UID: ${effectiveUid}${isTeamMemberCorp ? " (team owner)" : ""}`);
+
+  // Plan gate — corporate posting is Pro+ only. Use effective publisher's plan
+  // so team members inherit the team owner's Business entitlement.
+  if (segment === "corporate") {
+    const plan = await getUserPlan(effectiveUid);
     if (!canUseCorporate(plan)) {
       return NextResponse.json(
         { error: "Company page posting requires the Pro plan or higher.", code: "PLAN_UPGRADE_REQUIRED" },
@@ -266,11 +293,22 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // ── Step 4: Resolve organization ID ──
+  // For team members, ignore any orgId the client sent (it came from the
+  // member's own empty profile) and read the owner's instead. For solo
+  // corporate posts, fall back to the caller's profile if the body didn't
+  // include one — guards against undefined client state.
+  let resolvedOrgId: string | undefined = bodyOrgId;
+  if (segment === "corporate" && (isTeamMemberCorp || !resolvedOrgId)) {
+    const profileSnap = await adminDb.collection("profiles").doc(effectiveUid).get();
+    resolvedOrgId = profileSnap.data()?.corporate?.linkedinOrganizationId;
+  }
+
   let authorUrn: string;
   try {
-    authorUrn = resolveAuthorUrn(segment, userSub, organizationId);
+    authorUrn = resolveAuthorUrn(segment, userSub, resolvedOrgId);
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: 400 });
   }
 
   console.log(`[linkedin/publish] Posting as ${segment} → ${authorUrn}`);
@@ -282,14 +320,12 @@ export async function POST(request: NextRequest) {
   let documentUrn: string | null = null;
 
   if (isCarousel) {
-    if (firebaseUid) {
-      const plan = await getUserPlan(firebaseUid);
-      if (!canUseCarousel(plan)) {
-        return NextResponse.json(
-          { error: "Carousel posts require the Pro plan or higher.", code: "PLAN_UPGRADE_REQUIRED" },
-          { status: 403 }
-        );
-      }
+    const plan = await getUserPlan(effectiveUid);
+    if (!canUseCarousel(plan)) {
+      return NextResponse.json(
+        { error: "Carousel posts require the Pro plan or higher.", code: "PLAN_UPGRADE_REQUIRED" },
+        { status: 403 }
+      );
     }
     const safeUrls = (imageUrls as string[]).filter(isAllowedImageUrl).slice(0, 5);
     if (safeUrls.length < 2) {
@@ -416,24 +452,25 @@ export async function POST(request: NextRequest) {
   const postId = res.headers.get("x-restli-id") || res.headers.get("location") || "unknown";
   console.log(`[linkedin/publish] ✅ Success — postId: ${postId} | account: ${segment} | image: ${!!imageUrn}`);
 
-  // Save memory after response is sent — after() keeps the function alive until this completes
-  if (firebaseUid) {
-    after(async () => {
-      try {
-        await savePostMemory({
-          content,
-          topic:    topic    || "",
-          audience: audience || "",
-          tone:     tone     || "professional",
-          segment:  segment as "individual" | "corporate",
-          userId:   firebaseUid!,
-          postId:   postDbId || undefined,
-        });
-      } catch (err) {
-        console.error('[Memory] savePostMemory failed:', err);
-      }
-    });
-  }
+  // Save memory after response is sent — after() keeps the function alive
+  // until this completes. Key memory on the effective publisher UID (team
+  // owner for member-drafted corporate posts) so the company-page voice
+  // pools across the team — same routing as cron + publish-now.
+  after(async () => {
+    try {
+      await savePostMemory({
+        content,
+        topic:    topic    || "",
+        audience: audience || "",
+        tone:     tone     || "professional",
+        segment:  segment as "individual" | "corporate",
+        userId:   effectiveUid,
+        postId:   postDbId || undefined,
+      });
+    } catch (err) {
+      console.error('[Memory] savePostMemory failed:', err);
+    }
+  });
 
   return NextResponse.json({
     success:    true,
