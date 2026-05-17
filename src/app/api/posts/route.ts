@@ -170,8 +170,8 @@ export async function POST(req: NextRequest) {
     // Allowlist — only these fields can be set by clients on create
     const POST_ALLOWED = new Set(["content", "topic", "tone", "audience", "length", "custom_instructions",
       "image_url", "image_mode", "image_hook", "image_prompt", "scheduled_at", "schedule_timezone",
-      "best_time_applied", "status", "segment", "organization_id", "campaign_id", "research",
-      "image_urls", "is_carousel", "carousel_title"]);
+      "best_time_applied", "status", "segment", "organization_id", "campaign_id", "research_data",
+      "image_urls", "is_carousel", "carousel_title", "published_at", "linkedin_post_id"]);
     const sanitizedPost: Record<string, any> = {};
     if (post) {
       for (const [k, v] of Object.entries(post)) {
@@ -194,7 +194,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ id: ref.id, ...post, user_id: postOwnerUid, authorUid: uid, teamId });
   } catch (err: any) {
     console.error("[/api/posts POST]", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const msg = typeof err?.message === "string" ? err.message.slice(0, 300) : "Internal server error";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 

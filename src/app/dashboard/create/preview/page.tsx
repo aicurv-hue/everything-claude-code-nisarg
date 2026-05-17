@@ -836,8 +836,9 @@ export default function PostPreviewPage() {
       });
       cleanupRegenSession();
       router.push("/dashboard/drafts");
-    } catch {
-      alert("Failed to save draft.");
+    } catch (err: any) {
+      console.error("[handleSaveDraft] save failed:", err);
+      alert(`Failed to save draft: ${err?.message || "Unknown error"}`);
     } finally {
       setIsSaving(false);
     }
