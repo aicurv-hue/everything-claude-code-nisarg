@@ -117,3 +117,34 @@ Two complementary failure modes were compounding. (1) The prompt had all the rig
 - Stage 1.5 only runs when voice signal exists. Users with no profile + no samples get the raw draft (still post-passed). Acceptable: those users have no voice fingerprint anyway.
 
 ---
+
+## 2026-05-17 — `851c674` — Sensory concreteness, inline doubt escalation, anaphora cap
+
+**Score before → after:** 74.7 → TBD (will measure after next /score-post)
+**Triggered by:** `SCORE_2026-05-17_155900_851c674.json` — batch-wide LLM-judge failures across all 3 posts: `sensory_concreteness` avg 2.0/10 (2, 3, 1), `inline_doubt` avg 3.0/10 (3, 6, 0), `specific_subject` avg 3.67/10. Heuristic `no_anaphora_abuse` failed 1/3 on the Cridl Cortex promo post (`Same hook structure. Same closer. Same filler transitions.`) — three sentences in a row starting with "Same".
+
+**What changed:**
+- `NEEL_RUNTIME.md` COPYWRITING_RULES rule 7 — appended a "scan before output" check requiring at least one woven hedge in the body, with examples and a one-line rationale that authority-only posts read as AI
+- `NEEL_RUNTIME.md` COPYWRITING_RULES rule 12 — renamed "FRAGMENTS WORK" to "FRAGMENTS AND REPEATED OPENERS"; added an anaphora cap (no 3+ consecutive sentences starting with the same word) with the exact failing pattern as a ❌ example
+- `NEEL_RUNTIME.md` COPYWRITING_RULES — added new rule 17 SENSORY/SCENE CONCRETENESS requiring at least one filmable moment (sound, time of day, what was on screen, who said what) in the body, with ✅/❌ examples and a scan-before-output check
+- `src/lib/ai/neel-prompt-sections.ts` COPYWRITING_RULES — mirrored all three edits verbatim
+
+**Why:**
+The model is currently scoring 8/10 on `uncomfortable_truth` and `first_person_conversational` but 2/10 on `sensory_concreteness` — it knows *what* it thinks but defaults to abstraction when describing the moment. The evidence spans across all three posts confirm this: "a crowded inbox", "everyone in our planning calls nodded along enthusiastically", "every post gets flattened into the same rhythm" — all describe *that* something is happening without ever filming it. No existing rule explicitly required scene-level concreteness, only subject-level (rule 1). Rule 17 fills the gap.
+
+Inline doubt (rule 7) was already present but consistently scoring 3.0 across the batch, with the Cridl Cortex post hitting 0/10. The rule existed but had no enforcement check — the model would read it as guidance and ignore it. Adding the same "scan before output" pattern that already works for em-dashes (per `09b7c7b`) gives the rule a concrete trigger condition the model can act on at draft-time.
+
+The anaphora cap on rule 12 is a free win: the scorer's deterministic heuristic catches the pattern, but the prompt never explicitly forbade it (rule 12 only banned tricolons of fragments, not anaphora at sentence-start). One line addition closes the gap.
+
+**Do NOT revert because:**
+- *Sensory concreteness (rule 17):* without it, the model satisfies rule 1 (specific subject) but never paints a scene — posts read as "expert observing an industry" rather than "person who was in the room." Re-removing collapses sensory_concreteness back to 1-2/10 immediately because the model has no other instruction pulling it toward filmable detail.
+- *Rule 7 scan-check:* the previous version of rule 7 had the examples and the ban-on-labeled-doubt clause but no trigger condition. Without an explicit "scan before output: weave one in if zero hedges" check, the model treats inline doubt as optional decoration and skips it on posts where it would be most needed (promo and authoritative-claim posts). The 0/10 on the Cridl Cortex promo is the proof — that post has the strongest claims and the highest authority tone, which is exactly when inline doubt matters most.
+- *Rule 12 anaphora cap:* a stylistic AI tell that the scorer catches but the prompt previously didn't name. If removed, the model returns to "Same X. Same Y. Same Z." trios because that rhythm is heavily reinforced in LinkedIn training data.
+
+**Known tradeoffs / open questions:**
+- Rule 17 may push short promo posts (~150 words) toward feeling slower if the model over-applies the "filmable scene" requirement. Mitigation: the rule explicitly exempts hook and CTA, and asks for ONE filmable moment in the body, not all moments. Watch the next /score-post for `voice_signature` or `word_count_in_range` regressions.
+- Rule 7's scan-check may push some posts toward over-hedging (defensive writing that reads as weak). Watch `uncomfortable_truth` and `voice_signature` scores — if either drops by 2+ points next run, soften the rule to "at least one hedge" rather than implying multiple.
+- `specific_subject` (batch avg 3.67) was NOT addressed this iteration — rule 1 already covers it explicitly, so the failure is either (a) attention-budget exhaustion or (b) the rule needs promotion to OUTPUT_RULES. Defer to next iteration; if the next /score-post still shows 3.67 with this round's edits in place, promote rule 1 to OUTPUT_RULES.
+- `no_x_isnt_y_its_z` (1/3, high severity) NOT addressed — already in OUTPUT_RULES with a scan check. If it recurs at 2+/3 next run, the next escalation is a deterministic post-pass in `src/lib/ai/generate.ts` `sanitizePost()`, paralleling the em-dash treatment from `67059eb`.
+
+---

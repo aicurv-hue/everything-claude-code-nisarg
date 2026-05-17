@@ -1,0 +1,680 @@
+{
+  "date": "2026-05-17",
+  "sha": "851c674",
+  "scorer_version": "v2-2026-05-17",
+  "posts_scored": 3,
+  "average": 74.7,
+  "top_fails": [
+    [
+      "word_count_in_range",
+      1
+    ],
+    [
+      "no_x_isnt_y_its_z",
+      1
+    ],
+    [
+      "no_anaphora_abuse",
+      1
+    ]
+  ],
+  "weak_llm_dims": [
+    [
+      "sensory_concreteness",
+      2
+    ],
+    [
+      "inline_doubt",
+      3
+    ],
+    [
+      "specific_subject",
+      3.6666666666666665
+    ]
+  ],
+  "strong_llm_dims": [
+    [
+      "uncomfortable_truth",
+      8
+    ],
+    [
+      "first_person_conversational",
+      8
+    ],
+    [
+      "earned_insight",
+      7.666666666666667
+    ]
+  ],
+  "posts": [
+    {
+      "label": "2. B2B Sales Cycles (Insight, Long)",
+      "total": 74.4,
+      "categories": {
+        "specificity": {
+          "score": 12.5,
+          "max": 25
+        },
+        "ai_tells": {
+          "score": 25,
+          "max": 25
+        },
+        "voice": {
+          "score": 15.5,
+          "max": 20
+        },
+        "honesty": {
+          "score": 9.6,
+          "max": 15
+        },
+        "structure": {
+          "score": 11.8,
+          "max": 15
+        }
+      },
+      "heuristics": [
+        {
+          "rule": "no_round_percentages",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_hashtags",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_em_dashes",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_en_dashes",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_smart_quotes",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_i_keep_seeing",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_x_isnt_y_its_z",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_its_not_x_its_y",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_cliched_opening",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_heres_the_reveal",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_engagement_bait",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_universal_truth_closer",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_emoji_overuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_corporate_verbs",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_exclamations",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_filler_transitions",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_labeled_imperfection",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "word_count_in_range",
+          "pass": false,
+          "evidence": "387 words",
+          "severity": "low"
+        },
+        {
+          "rule": "no_numbered_lessons",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_tricolon_fragments",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_anaphora_abuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_question_stack_opening",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_ellipsis_abuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_bullet_overuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        }
+      ],
+      "llm_scores": {
+        "specific_subject": 5,
+        "micro_specifics": 6,
+        "sensory_concreteness": 2,
+        "stakes_and_consequence": 4,
+        "inline_doubt": 3,
+        "uncomfortable_truth": 8,
+        "earned_insight": 7,
+        "voice_signature": 5,
+        "first_person_conversational": 7
+      },
+      "targets": [
+        {
+          "kind": "llm",
+          "rule": "sensory_concreteness",
+          "severity": "high",
+          "weight": 3,
+          "evidence": "lands in a crowded inbox as noise, not outreach — This offers a mild sensory image of a 'crowded inbox' but lacks broader environmental details.",
+          "fix": "Describe a filmable scene: sounds, textures, physical spaces, time of day",
+          "score": 2
+        },
+        {
+          "kind": "llm",
+          "rule": "inline_doubt",
+          "severity": "medium",
+          "weight": 2,
+          "evidence": "Maybe you're on it. Maybe you're not. — This phrase introduces a small element of uncertainty, but it's a rhetorical device rather than a genuine admission of the author's own limits.",
+          "fix": "Weave one line of honest doubt INSIDE another sentence (NOT a standalone 'I'm still figuring out X')",
+          "score": 3
+        },
+        {
+          "kind": "llm",
+          "rule": "stakes_and_consequence",
+          "severity": "medium",
+          "weight": 1,
+          "evidence": "a fast way to lose trust you didn't know you had — This implies a consequence (losing trust) but it's not tied to a specific person's livelihood or a dramatic failure.",
+          "fix": "Make consequences specific to a person: 'she missed payroll by 9 days' not 'founders waste money'",
+          "score": 4
+        }
+      ],
+      "post_text": "B2B buyers have already compared you to five competitors before your SDR sends the first email.\n\nThat's the actual shift happening in 2026, and most marketing teams are still building programs around a world that no longer exists.\n\nHere's what changed.\n\nBuyers now run silent evaluations across four to six vendors before they agree to a single call. They read your G2 reviews, watch your demo videos, dissect your pricing page, and compare your positioning against competitors, all without ever raising their hand.\n\nBy the time they book a meeting, they've already formed a shortlist. Maybe you're on it. Maybe you're not.\n\nThe uncomfortable truth: most outbound sequences are written for people who don't know you yet. Your buyers in 2026 often know you better than your AE does on the first call.\n\nSo the sequence that opens with \"I wanted to introduce you to our platform\" lands in a crowded inbox as noise, not outreach.\n\nWhat actually needs to change is how you think about three things.\n\nOutbound first. Cold outreach has to earn its place by adding something buyers can't find on your website. A sharp POV on their specific situation, a data point they haven't seen, a question that reframes how they're thinking about the problem. Lead with insight or don't lead at all.\n\nContent second. I was reviewing a SaaS company's blog last month, around 60 people, Series B, strong product. Their content was almost entirely top-of-funnel awareness pieces. Nothing that helped a buyer in active evaluation mode actually compare options or pressure-test tradeoffs. That's the gap most teams are missing. Buyers doing silent research need comparison guides, honest limitation breakdowns, and use-case specifics, not another \"what is [category]\" explainer.\n\nDemos third. The old demo was a tour. The new demo has to be a consultation. If a buyer has already watched your product walkthrough on YouTube, showing up with a generic deck is a fast way to lose trust you didn't know you had.\n\nThe buyers who reach out in 2026 are further along than they look. They've done the homework.\n\nThe question worth sitting with: does your current content actually help someone evaluate you honestly, or does it only help them discover you?\n\nBecause discovery and evaluation are two completely different jobs, and most marketing teams are only staffed for one."
+    },
+    {
+      "label": "3. Failed Launch (Personal Story)",
+      "total": 83,
+      "categories": {
+        "specificity": {
+          "score": 14.3,
+          "max": 25
+        },
+        "ai_tells": {
+          "score": 25,
+          "max": 25
+        },
+        "voice": {
+          "score": 17.7,
+          "max": 20
+        },
+        "honesty": {
+          "score": 11.399999999999999,
+          "max": 15
+        },
+        "structure": {
+          "score": 14.6,
+          "max": 15
+        }
+      },
+      "heuristics": [
+        {
+          "rule": "no_round_percentages",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_hashtags",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_em_dashes",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_en_dashes",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_smart_quotes",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_i_keep_seeing",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_x_isnt_y_its_z",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_its_not_x_its_y",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_cliched_opening",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_heres_the_reveal",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_engagement_bait",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_universal_truth_closer",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_emoji_overuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_corporate_verbs",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_exclamations",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_filler_transitions",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_labeled_imperfection",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "word_count_in_range",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_numbered_lessons",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_tricolon_fragments",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_anaphora_abuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_question_stack_opening",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_ellipsis_abuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_bullet_overuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        }
+      ],
+      "llm_scores": {
+        "specific_subject": 4,
+        "micro_specifics": 7,
+        "sensory_concreteness": 3,
+        "stakes_and_consequence": 7,
+        "inline_doubt": 6,
+        "uncomfortable_truth": 8,
+        "earned_insight": 9,
+        "voice_signature": 7,
+        "first_person_conversational": 9
+      },
+      "targets": [
+        {
+          "kind": "llm",
+          "rule": "sensory_concreteness",
+          "severity": "medium",
+          "weight": 2,
+          "evidence": "“everyone in our planning calls nodded along enthusiastically.” — While it describes an action, it's a generic observation of a meeting, not a vivid sensory detail of a physical space or atmosphere.",
+          "fix": "Describe a filmable scene: sounds, textures, physical spaces, time of day",
+          "score": 3
+        },
+        {
+          "kind": "llm",
+          "rule": "specific_subject",
+          "severity": "medium",
+          "weight": 1,
+          "evidence": "“We built a feature our team genuinely believed in.” — The subject is a generic 'team' and 'we', lacking specific attributes like size or industry.",
+          "fix": "Add ONE specific anonymized subject with concrete attributes (size, role, stage, $, time)",
+          "score": 4
+        }
+      ],
+      "post_text": "Three months of work. Twelve users. Gone by week four.\n\nWe built a feature our team genuinely believed in. The logic was tight, the design was clean, and everyone in our planning calls nodded along enthusiastically.\n\nNobody actually asked a customer if they wanted it.\n\nThat's the part that still stings. We had convinced ourselves that internal alignment was the same as validated demand. It absolutely is not, and we paid for that confusion in developer salaries, lost momentum, and a quarter we can't get back.\n\nWhen we finally did talk to users after the flop, the feedback came in fast. Three conversations in, the pattern was obvious. The problem we'd solved wasn't painful enough to change behavior. People had a workaround. A clunky one, sure, but comfortable enough.\n\nNow we run a simple test before any feature clears the planning stage: can we find ten people who describe this problem to us unprompted, in their own words, with real frustration?\n\nIf we can't, we don't build.\n\nIt sounds almost embarrassingly simple after the fact. Most hard lessons do.\n\nIf you've killed something your team loved building, I'd genuinely like to know what changed your process afterward."
+    },
+    {
+      "label": "5. Cridl Cortex (Promo)",
+      "total": 66.69999999999999,
+      "categories": {
+        "specificity": {
+          "score": 7.9,
+          "max": 25
+        },
+        "ai_tells": {
+          "score": 22,
+          "max": 25
+        },
+        "voice": {
+          "score": 17.2,
+          "max": 20
+        },
+        "honesty": {
+          "score": 7.8,
+          "max": 15
+        },
+        "structure": {
+          "score": 11.8,
+          "max": 15
+        }
+      },
+      "heuristics": [
+        {
+          "rule": "no_round_percentages",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_hashtags",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_em_dashes",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_en_dashes",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_smart_quotes",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_i_keep_seeing",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_x_isnt_y_its_z",
+          "pass": false,
+          "evidence": "isn't laziness. It's architecture.",
+          "severity": "high"
+        },
+        {
+          "rule": "no_its_not_x_its_y",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_cliched_opening",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_heres_the_reveal",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_engagement_bait",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_universal_truth_closer",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_emoji_overuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_corporate_verbs",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_exclamations",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_filler_transitions",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_labeled_imperfection",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "word_count_in_range",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_numbered_lessons",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_tricolon_fragments",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_anaphora_abuse",
+          "pass": false,
+          "evidence": "3× \"same...\"",
+          "severity": "medium"
+        },
+        {
+          "rule": "no_question_stack_opening",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_ellipsis_abuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_bullet_overuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        }
+      ],
+      "llm_scores": {
+        "specific_subject": 2,
+        "micro_specifics": 3,
+        "sensory_concreteness": 1,
+        "stakes_and_consequence": 3,
+        "inline_doubt": 0,
+        "uncomfortable_truth": 8,
+        "earned_insight": 7,
+        "voice_signature": 7,
+        "first_person_conversational": 8
+      },
+      "targets": [
+        {
+          "kind": "llm",
+          "rule": "inline_doubt",
+          "severity": "high",
+          "weight": 5,
+          "evidence": "Here's what actually breaks that pattern. — The post presents itself with complete authority and offers solutions without any expressed uncertainty or hedging.",
+          "fix": "Weave one line of honest doubt INSIDE another sentence (NOT a standalone 'I'm still figuring out X')",
+          "score": 0
+        },
+        {
+          "kind": "llm",
+          "rule": "sensory_concreteness",
+          "severity": "high",
+          "weight": 4,
+          "evidence": "So every post gets flattened into the same rhythm. — The post describes abstract concepts like 'rhythm' and 'structure' rather than tangible, filmable scenes.",
+          "fix": "Describe a filmable scene: sounds, textures, physical spaces, time of day",
+          "score": 1
+        },
+        {
+          "kind": "heuristic",
+          "rule": "no_x_isnt_y_its_z",
+          "severity": "high",
+          "weight": 3,
+          "evidence": "isn't laziness. It's architecture.",
+          "fix": "Land contrast differently: a specific image, an admission, or a flat statement (don't redefine the noun)"
+        }
+      ],
+      "post_text": "Most AI ghostwriters produce posts that sound like AI ghostwriters. Here's what actually breaks that pattern.\n\nThe problem isn't laziness. It's architecture.\n\nMost tools are built to generate content fast, not to study how a specific person thinks, pauses, pivots, or lands a point. So every post gets flattened into the same rhythm. Same hook structure. Same closer. Same filler transitions that every marketer now skips on instinct.\n\nI worked on a different approach with Cridl Cortex, and three things changed the output meaningfully.\n\nFirst, an angle engine that decides WHAT to say before worrying about how to say it. The angle shapes everything downstream, and skipping it is why most posts feel like they could've been written by anyone.\n\nSecond, style DNA. We capture how someone actually writes, not how they want to sound. Sentence length patterns, punctuation habits, where they drop a fragment for emphasis.\n\nThird, hook diversity. The same opener formula, post after post, trains your audience to scroll past you. Rotating the structure keeps them reading.\n\nThe uncomfortable truth: most people using AI content tools can feel when a post sounds like theirs. They just publish it anyway because it's fast.\n\nThat's the real problem worth solving."
+    }
+  ]
+}

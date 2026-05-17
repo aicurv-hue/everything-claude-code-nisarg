@@ -1,0 +1,262 @@
+{
+  "date": "2026-05-17",
+  "sha": "d86cd67",
+  "scorer_version": "v2-2026-05-17",
+  "posts_scored": 1,
+  "average": 65.3,
+  "top_fails": [
+    [
+      "no_round_percentages",
+      1
+    ],
+    [
+      "no_x_isnt_y_its_z",
+      1
+    ],
+    [
+      "no_corporate_verbs",
+      1
+    ]
+  ],
+  "weak_llm_dims": [
+    [
+      "inline_doubt",
+      0
+    ],
+    [
+      "sensory_concreteness",
+      2
+    ],
+    [
+      "micro_specifics",
+      5
+    ]
+  ],
+  "strong_llm_dims": [
+    [
+      "uncomfortable_truth",
+      8
+    ],
+    [
+      "first_person_conversational",
+      8
+    ],
+    [
+      "earned_insight",
+      7
+    ]
+  ],
+  "posts": [
+    {
+      "label": "4. AI in Hiring (Industry Insight)",
+      "total": 65.3,
+      "categories": {
+        "specificity": {
+          "score": 10.7,
+          "max": 25
+        },
+        "ai_tells": {
+          "score": 22,
+          "max": 25
+        },
+        "voice": {
+          "score": 11,
+          "max": 20
+        },
+        "honesty": {
+          "score": 7.8,
+          "max": 15
+        },
+        "structure": {
+          "score": 13.8,
+          "max": 15
+        }
+      },
+      "heuristics": [
+        {
+          "rule": "no_round_percentages",
+          "pass": false,
+          "evidence": "80%",
+          "severity": "high"
+        },
+        {
+          "rule": "no_hashtags",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_em_dashes",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_en_dashes",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_smart_quotes",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_i_keep_seeing",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_x_isnt_y_its_z",
+          "pass": false,
+          "evidence": "aren't necessarily the best at the job. They're the best at reverse-engineering what an algorithm wants to see.",
+          "severity": "high"
+        },
+        {
+          "rule": "no_its_not_x_its_y",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_cliched_opening",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_heres_the_reveal",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_engagement_bait",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_universal_truth_closer",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_emoji_overuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_corporate_verbs",
+          "pass": false,
+          "evidence": "optimizing",
+          "severity": "medium"
+        },
+        {
+          "rule": "no_exclamations",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_filler_transitions",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_labeled_imperfection",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "word_count_in_range",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_numbered_lessons",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_tricolon_fragments",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_anaphora_abuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_question_stack_opening",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_ellipsis_abuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_bullet_overuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        }
+      ],
+      "llm_scores": {
+        "specific_subject": 6,
+        "micro_specifics": 5,
+        "sensory_concreteness": 2,
+        "stakes_and_consequence": 6,
+        "inline_doubt": 0,
+        "uncomfortable_truth": 8,
+        "earned_insight": 7,
+        "voice_signature": 5,
+        "first_person_conversational": 8
+      },
+      "targets": [
+        {
+          "kind": "llm",
+          "rule": "inline_doubt",
+          "severity": "high",
+          "weight": 5,
+          "evidence": "What worries me more than any individual hire is the downstream effect. — The post presents observations and conclusions with a high degree of certainty, without any woven hedging or admission of limits.",
+          "fix": "Weave one line of honest doubt INSIDE another sentence (NOT a standalone 'I'm still figuring out X')",
+          "score": 0
+        },
+        {
+          "kind": "heuristic",
+          "rule": "no_round_percentages",
+          "severity": "high",
+          "weight": 3,
+          "evidence": "80%",
+          "fix": "Replace with a specific number from research, or remove the %"
+        },
+        {
+          "kind": "heuristic",
+          "rule": "no_x_isnt_y_its_z",
+          "severity": "high",
+          "weight": 3,
+          "evidence": "aren't necessarily the best at the job. They're the best at reverse-engineering what an algorithm wants to see.",
+          "fix": "Land contrast differently: a specific image, an admission, or a flat statement (don't redefine the noun)"
+        }
+      ],
+      "post_text": "The most qualified person in the applicant pool might never get a callback.\n\nNot because they lack the skills. Because they didn't write their resume for a machine.\n\nOver 80% of large companies now run resumes through AI screening before a human ever sees them. That single filter is quietly reshaping who gets hired.\n\nHere's the uncomfortable part: the candidates winning aren't necessarily the best at the job. They're the best at reverse-engineering what an algorithm wants to see. Keyword density. Specific formatting. Phrases lifted directly from job descriptions.\n\nI spoke with a hiring manager at a mid-size tech firm last month. She described reviewing her ATS shortlist and realizing she recognized almost no one. Candidates her team had previously flagged as strong fits had been filtered out entirely.\n\nThe system was optimizing for legibility to itself, not quality of candidate.\n\nWhat worries me more than any individual hire is the downstream effect. When algorithm fluency becomes the hidden prerequisite, companies gradually lose access to unconventional backgrounds, career changers, and people who are genuinely excellent but don't know to play the game.\n\nThe job market gets narrower. Quietly. Without anyone making a deliberate decision to narrow it."
+    }
+  ]
+}

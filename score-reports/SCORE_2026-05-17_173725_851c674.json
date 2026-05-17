@@ -1,0 +1,449 @@
+{
+  "date": "2026-05-17",
+  "sha": "851c674",
+  "scorer_version": "v2-2026-05-17",
+  "posts_scored": 2,
+  "average": 80.69999999999999,
+  "top_fails": [
+    [
+      "word_count_in_range",
+      1
+    ],
+    [
+      "no_en_dashes",
+      1
+    ]
+  ],
+  "weak_llm_dims": [
+    [
+      "sensory_concreteness",
+      3.5
+    ],
+    [
+      "inline_doubt",
+      3.5
+    ]
+  ],
+  "strong_llm_dims": [
+    [
+      "earned_insight",
+      9
+    ],
+    [
+      "uncomfortable_truth",
+      8.5
+    ],
+    [
+      "first_person_conversational",
+      8
+    ]
+  ],
+  "posts": [
+    {
+      "label": "2. B2B Sales Cycles (Insight, Long)",
+      "total": 75.89999999999999,
+      "categories": {
+        "specificity": {
+          "score": 14.399999999999999,
+          "max": 25
+        },
+        "ai_tells": {
+          "score": 25,
+          "max": 25
+        },
+        "voice": {
+          "score": 16.1,
+          "max": 20
+        },
+        "honesty": {
+          "score": 7.8,
+          "max": 15
+        },
+        "structure": {
+          "score": 12.6,
+          "max": 15
+        }
+      },
+      "heuristics": [
+        {
+          "rule": "no_round_percentages",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_hashtags",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_em_dashes",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_en_dashes",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_smart_quotes",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_i_keep_seeing",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_x_isnt_y_its_z",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_its_not_x_its_y",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_cliched_opening",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_heres_the_reveal",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_engagement_bait",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_universal_truth_closer",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_emoji_overuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_corporate_verbs",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_exclamations",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_filler_transitions",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_labeled_imperfection",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "word_count_in_range",
+          "pass": false,
+          "evidence": "392 words",
+          "severity": "low"
+        },
+        {
+          "rule": "no_numbered_lessons",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_tricolon_fragments",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_anaphora_abuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_question_stack_opening",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_ellipsis_abuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_bullet_overuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        }
+      ],
+      "llm_scores": {
+        "specific_subject": 7,
+        "micro_specifics": 6,
+        "sensory_concreteness": 2,
+        "stakes_and_consequence": 5,
+        "inline_doubt": 0,
+        "uncomfortable_truth": 8,
+        "earned_insight": 9,
+        "voice_signature": 6,
+        "first_person_conversational": 7
+      },
+      "targets": [
+        {
+          "kind": "llm",
+          "rule": "inline_doubt",
+          "severity": "high",
+          "weight": 5,
+          "evidence": "There is no hedging or admission of uncertainty; the post presents its observations and solutions with complete authority.",
+          "fix": "Weave one line of honest doubt INSIDE another sentence (NOT a standalone 'I'm still figuring out X')",
+          "score": 0
+        },
+        {
+          "kind": "llm",
+          "rule": "sensory_concreteness",
+          "severity": "high",
+          "weight": 3,
+          "evidence": "“In a meeting last quarter” — This phrase is generic and lacks any specific sensory details about the setting or atmosphere.",
+          "fix": "Describe a filmable scene: sounds, textures, physical spaces, time of day",
+          "score": 2
+        },
+        {
+          "kind": "heuristic",
+          "rule": "word_count_in_range",
+          "severity": "low",
+          "weight": 2,
+          "evidence": "392 words",
+          "fix": "Target 80–220 words (LinkedIn sweet spot). <60 = too thin; >280 = labored"
+        }
+      ],
+      "post_text": "B2B buyers have already compared you to five competitors before your SDR sends the first email.\n\nThat's not a guess. It's the new shape of a B2B purchase decision in 2026.\n\nBuyers now run silent evaluations across four to six vendors. They read your G2 reviews, watch your competitor's demo on YouTube, pull your pricing from Reddit threads, and build a shortlist, all before anyone on your team knows they exist.\n\nBy the time they book a call, they've already formed a lean.\n\nThis is why cycles feel longer. The real evaluation happened without you. You're showing up to a conversation that's already halfway finished.\n\nI was reviewing a pipeline breakdown with a mid-market SaaS team last quarter, 28 reps, solid product, decent win rate. Their outbound sequences were opening fine. Replies were low. When we dug into the lost deals, a pattern showed up: buyers who went dark weren't uninterested. They'd already chosen someone else before the first discovery call.\n\nThe sequence never had a chance. The decision was made in the dark.\n\nSo what actually changes if you accept this?\n\nOutbound has to stop leading with product. A cold email that explains your features to someone who's already read three comparison articles is noise. The emails that get replies in this environment lead with a specific, uncomfortable observation about the buyer's situation, something they haven't fully solved yet, and offer a sharper perspective, not a pitch.\n\nContent has to cover the moments you're not in the room for. That means honest comparison pages, friction-free ROI calculators, and case studies written for the buyer's specific role, not just their industry. If a buyer can't answer \"why you over the alternative\" from your website alone, your content has a gap.\n\nAnd demos need to change the most. A feature walkthrough to someone who's already self-educated reads as a waste of their time. The best demo I've seen recently skipped the intro entirely and opened with the buyer's exact workflow on screen, problems already mapped, questions already waiting.\n\nThat's the shift worth making.\n\nThe buyer's journey got longer because they're doing more of the work themselves. The question is whether your marketing and sales motion shows up inside that process, or only after it ends.\n\nWhere in the silent evaluation phase do you think most teams are losing the deal without realizing it?"
+    },
+    {
+      "label": "3. Failed Launch (Personal Story)",
+      "total": 85.5,
+      "categories": {
+        "specificity": {
+          "score": 17.2,
+          "max": 25
+        },
+        "ai_tells": {
+          "score": 24,
+          "max": 25
+        },
+        "voice": {
+          "score": 17.1,
+          "max": 20
+        },
+        "honesty": {
+          "score": 12.6,
+          "max": 15
+        },
+        "structure": {
+          "score": 14.6,
+          "max": 15
+        }
+      },
+      "heuristics": [
+        {
+          "rule": "no_round_percentages",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_hashtags",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_em_dashes",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_en_dashes",
+          "pass": false,
+          "evidence": "–",
+          "severity": "low"
+        },
+        {
+          "rule": "no_smart_quotes",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_i_keep_seeing",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_x_isnt_y_its_z",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_its_not_x_its_y",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_cliched_opening",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_heres_the_reveal",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_engagement_bait",
+          "pass": true,
+          "evidence": null,
+          "severity": "high"
+        },
+        {
+          "rule": "no_universal_truth_closer",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_emoji_overuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_corporate_verbs",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_exclamations",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_filler_transitions",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_labeled_imperfection",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "word_count_in_range",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_numbered_lessons",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_tricolon_fragments",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_anaphora_abuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "medium"
+        },
+        {
+          "rule": "no_question_stack_opening",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_ellipsis_abuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        },
+        {
+          "rule": "no_bullet_overuse",
+          "pass": true,
+          "evidence": null,
+          "severity": "low"
+        }
+      ],
+      "llm_scores": {
+        "specific_subject": 6,
+        "micro_specifics": 8,
+        "sensory_concreteness": 5,
+        "stakes_and_consequence": 7,
+        "inline_doubt": 7,
+        "uncomfortable_truth": 9,
+        "earned_insight": 9,
+        "voice_signature": 6,
+        "first_person_conversational": 9
+      },
+      "targets": [
+        {
+          "kind": "heuristic",
+          "rule": "no_en_dashes",
+          "severity": "low",
+          "weight": 1,
+          "evidence": "–",
+          "fix": "Replace – with hyphen or comma"
+        }
+      ],
+      "post_text": "Twelve users. Three months of engineering. Four weeks before we pulled the plug.\n\nWe were convinced the feature made sense. Users had complained about the workflow, we had the bandwidth, and the team was excited. That felt like enough.\n\nIt wasn't.\n\nWe shipped in week one. By week three, I was staring at the dashboard at 10pm, watching the same 12 accounts bounce in and out. Some of them were us, testing our own product.\n\nThe uncomfortable truth: we had confused \"users complaining about a problem\" with \"users willing to change their behavior to solve it.\" Those are very different things, and I should have known better.\n\nWhat we do now before a single line gets written:\n\n– Find five people who say they have the problem\n– Ask them what they currently do instead\n– Put a rough prototype in front of them and watch, not explain\n\nThat last step is the one most teams skip. Watching someone use a thing you built, in silence, while they struggle, is brutal. It's also the only feedback that doesn't lie.\n\nWe probably still get this wrong sometimes. But 3 months and 12 users was enough to change how we build permanently.\n\nWhat does your team do before writing code?"
+    }
+  ]
+}
